@@ -254,7 +254,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 // ══════════════════════════════════════════════════
 // CONFIGURATION — Set your Google Sheet ID here
 // ══════════════════════════════════════════════════
-const SHEET_ID = '1JR6EZ6N6J-hwoSwpxU3tlGV25fMoafCX1-x-zPvyku0'; // ← Paste your Google Sheet ID here
+const SHEET_ID = '1JR6EZ6N6J-hwoSwpxU3tlGV25fMoafCX1-x-zPvyku0'; // ElectroBotics Student Data
 // Example: '1aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890'
 // ══════════════════════════════════════════════════
 
@@ -280,19 +280,36 @@ let currentStudent = null;
 // ─── Data Loading ────────────────────────────────
 
 async function fetchSheet(sheetName) {
+  // Method 1: Google Visualization API (works when sheet is published)
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
   const res = await fetch(url);
+  if (!res.ok) throw new Error(`Sheet "${sheetName}" returned ${res.status}`);
   const text = await res.text();
+
   // Google wraps response in a callback — extract the JSON
-  const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
-  const cols = json.table.cols.map(c => c.label || '');
+  const startIdx = text.indexOf('{');
+  const endIdx = text.lastIndexOf('}');
+  if (startIdx < 0 || endIdx < 0) throw new Error(`Invalid response for "${sheetName}"`);
+
+  const json = JSON.parse(text.substring(startIdx, endIdx + 1));
+
+  if (json.status === 'error') {
+    throw new Error(`Sheet "${sheetName}": ${json.errors?.[0]?.detailed_message || 'unknown error'}`);
+  }
+
+  const cols = json.table.cols.map(c => (c.label || '').trim());
   const rows = [];
   for (const row of (json.table.rows || [])) {
     const obj = {};
     row.c.forEach((cell, i) => {
-      obj[cols[i]] = cell ? (cell.v || '') : '';
+      if (cols[i]) {
+        obj[cols[i]] = cell ? (cell.f || cell.v || '') : '';
+      }
     });
-    rows.push(obj);
+    // Skip empty rows
+    if (Object.values(obj).some(v => v !== '')) {
+      rows.push(obj);
+    }
   }
   return rows;
 }
@@ -304,26 +321,79 @@ async function loadData() {
     return;
   }
 
+  // Hide config notice initially
+  document.getElementById('configNotice').style.display = 'none';
+
   try {
-    const [students, progress, projects, levels] = await Promise.all([
-      fetchSheet('Students'),
-      fetchSheet('Progress'),
-      fetchSheet('Projects'),
-      fetchSheet('Levels').catch(() => [])
-    ]);
+    console.log('Loading data from Sheet ID:', SHEET_ID);
+
+    // Load each sheet separately for better error reporting
+    let students, progress, projects, levels;
+
+    try {
+      students = await fetchSheet('Students');
+      console.log('Students loaded:', students.length, 'rows');
+    } catch (e) {
+      console.error('Students sheet error:', e);
+      throw new Error('Could not load "Students" sheet. Make sure: (1) the sheet tab is named exactly "Students" (case-sensitive), (2) the sheet is published to web. Error: ' + e.message);
+    }
+
+    try {
+      progress = await fetchSheet('Progress');
+      console.log('Progress loaded:', progress.length, 'rows');
+    } catch (e) {
+      console.error('Progress sheet error:', e);
+      progress = [];
+    }
+
+    try {
+      projects = await fetchSheet('Projects');
+      console.log('Projects loaded:', projects.length, 'rows');
+    } catch (e) {
+      console.error('Projects sheet error:', e);
+      projects = [];
+    }
+
+    try {
+      levels = await fetchSheet('Levels');
+      console.log('Levels loaded:', levels.length, 'rows');
+    } catch (e) {
+      console.error('Levels sheet error:', e);
+      levels = [];
+    }
+
+    if (students.length === 0) {
+      throw new Error('Students sheet is empty or column headers don\'t match. Expected columns: ID, Name, Current Level, Photo, Join Date');
+    }
+
     allStudents = students;
     allProgress = progress;
     allProjects = projects;
+
     if (levels.length > 0) {
       allLevels = levels.map((l, i) => ({
         num: parseInt(l['Level Number'] || l['num'] || (i + 1)),
-        name: l['Level Name'] || l['name'] || '',
-        desc: l['Description'] || l['desc'] || ''
+        name: (l['Level Name'] || l['name'] || '').trim(),
+        desc: (l['Description'] || l['desc'] || '').trim()
       }));
     }
+
+    console.log('All data loaded successfully.');
+    console.log('Sample student:', allStudents[0]);
+
   } catch (e) {
-    console.error('Error loading sheet:', e);
-    document.getElementById('configNotice').style.display = 'block';
+    console.error('Error loading data:', e);
+    const notice = document.getElementById('configNotice');
+    notice.style.display = 'block';
+    notice.innerHTML = `
+      <strong>Error loading data:</strong> ${e.message}<br><br>
+      <strong>Checklist:</strong><br>
+      1. Your Google Sheet must be <strong>published to the web</strong>: File → Share → Publish to web → Entire Document → Publish<br>
+      2. Sheet tabs must be named exactly: <code>Students</code>, <code>Levels</code>, <code>Progress</code>, <code>Projects</code> (case-sensitive)<br>
+      3. First row of each sheet must have the exact column headers<br>
+      4. Sheet ID in the code: <code>${SHEET_ID}</code><br><br>
+      Loading demo data for preview instead.
+    `;
     loadDemoData();
   }
 }
