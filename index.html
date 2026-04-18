@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ElectroBotics — Student Progress</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f9f9;--surface:#ffffff;--surface-alt:#edf6f7;
+  --border:#d0e4e6;--border-accent:#008fa030;
+  --text:#0a373a;--text-dim:#5a8a8e;--text-light:#8db5b9;
+  --accent:#008fa0;--accent-light:#e0f5f7;--accent-dark:#006d7a;
+  --green:#8ab600;--green-light:#f0f8e0;--green-bg:#e8f5cc;
+  --amber:#eab43a;--amber-light:#fdf6e3;--amber-bg:#faedc5;
+  --red:#d76241;--red-light:#fef0ed;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-body:'DM Sans',sans-serif;
+  --radius:14px;--radius-sm:10px;
+  --shadow:0 2px 16px rgba(0,143,160,0.08);
+  --shadow-lg:0 8px 32px rgba(0,143,160,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh}
+
+/* ─── Header ─── */
+.site-header{background:#fff;border-bottom:1px solid var(--border);padding:16px 24px;position:sticky;top:0;z-index:50;box-shadow:0 1px 8px rgba(0,143,160,0.06)}
+.header-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:14px}
+.header-logo{width:52px;height:52px;flex-shrink:0}
+.header-logo img{width:100%;height:100%;object-fit:contain}
+.header-text{display:flex;flex-direction:column;justify-content:center}
+.header-brand{height:28px;object-fit:contain;object-position:left center;display:block;margin-bottom:2px}
+.header-tagline{font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase}
+
+.app{max-width:960px;margin:0 auto;padding:24px 20px 60px}
+
+/* ─── Login/Search ─── */
+.login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px;animation:fadeUp .5s ease-out}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:40px 36px;max-width:460px;width:100%;box-shadow:var(--shadow-lg);text-align:center}
+.login-icon{width:80px;height:80px;margin:0 auto 16px}
+.login-icon img{width:100%;height:100%;object-fit:contain}
+.login-title{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
+.login-sub{font-size:14px;color:var(--text-dim);margin-bottom:24px;line-height:1.5}
+
+.search-group{position:relative;margin-bottom:16px}
+.search-input{width:100%;padding:14px 18px 14px 44px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:15px;color:var(--text);outline:none;transition:border-color .25s;background:var(--surface-alt)}
+.search-input:focus{border-color:var(--accent);background:#fff}
+.search-input::placeholder{color:var(--text-light)}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--text-light);pointer-events:none}
+
+.or-divider{font-family:var(--font-mono);font-size:11px;color:var(--text-light);margin:12px 0;text-transform:uppercase;letter-spacing:2px}
+
+.id-group{display:flex;gap:10px}
+.id-input{flex:1;padding:14px 18px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:15px;color:var(--text);outline:none;transition:border-color .25s;background:var(--surface-alt);text-align:center;letter-spacing:2px;text-transform:uppercase}
+.id-input:focus{border-color:var(--accent);background:#fff}
+.id-input::placeholder{color:var(--text-light);letter-spacing:0;text-transform:none}
+
+.btn-go{padding:14px 28px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:14px;font-weight:700;cursor:pointer;transition:all .25s}
+.btn-go:hover{background:var(--accent-dark);transform:translateY(-1px)}
+
+/* Search results dropdown */
+.search-results{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:4px;max-height:240px;overflow-y:auto;z-index:10;box-shadow:var(--shadow-lg);display:none}
+.search-results.open{display:block}
+.search-result{padding:12px 18px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background .15s;border-bottom:1px solid var(--border)}
+.search-result:last-child{border-bottom:none}
+.search-result:hover{background:var(--accent-light)}
+.search-result-name{font-weight:600;font-size:14px}
+.search-result-level{font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
+.search-result-id{font-family:var(--font-mono);font-size:11px;color:var(--accent);margin-left:auto}
+
+.error-msg{font-family:var(--font-mono);font-size:12px;color:var(--red);margin-top:8px;display:none}
+.error-msg.show{display:block}
+
+/* ─── Dashboard ─── */
+.dashboard{display:none;animation:fadeUp .5s ease-out}
+.dashboard.active{display:block}
+
+/* Student header */
+.student-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;box-shadow:var(--shadow);display:flex;align-items:center;gap:20px}
+.student-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent-light);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;font-family:var(--font-mono);font-size:24px;font-weight:700;color:var(--accent)}
+.student-avatar img{width:100%;height:100%;object-fit:cover}
+.student-info{flex:1}
+.student-name{font-size:22px;font-weight:700;color:var(--text);margin-bottom:2px}
+.student-meta{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);display:flex;gap:16px;flex-wrap:wrap}
+.student-meta span{display:inline-flex;align-items:center;gap:4px}
+.btn-logout{font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--text-dim);background:none;border:1px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* Level roadmap */
+.roadmap{display:flex;flex-direction:column;gap:16px;margin-bottom:32px}
+.level-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .3s;cursor:pointer}
+.level-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.level-card.current{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+.level-card.completed{border-color:var(--green)}
+.level-card.locked{opacity:.55;cursor:default}
+.level-card.locked:hover{transform:none;box-shadow:none}
+
+.level-top{display:flex;align-items:center;gap:16px;padding:18px 22px}
+.level-num{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:16px;font-weight:700;flex-shrink:0;color:#fff}
+.level-card.completed .level-num{background:var(--green)}
+.level-card.current .level-num{background:var(--accent)}
+.level-card.locked .level-num{background:var(--text-light)}
+.level-card.upcoming .level-num{background:var(--amber)}
+
+.level-info{flex:1;min-width:0}
+.level-name{font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px}
+.level-desc{font-size:13px;color:var(--text-dim);line-height:1.4}
+
+.level-status{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.level-status-badge{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
+.badge-completed{background:var(--green-bg);color:#5a7a00}
+.badge-current{background:var(--accent-light);color:var(--accent-dark)}
+.badge-locked{background:var(--surface-alt);color:var(--text-light)}
+.badge-upcoming{background:var(--amber-bg);color:#9a7200}
+
+.level-progress-bar{width:120px;height:6px;background:var(--surface-alt);border-radius:3px;overflow:hidden}
+.level-progress-fill{height:100%;border-radius:3px;transition:width .5s ease-out}
+.level-card.completed .level-progress-fill{background:var(--green);width:100%}
+.level-card.current .level-progress-fill{background:var(--accent)}
+
+/* Expanded level detail */
+.level-detail{display:none;border-top:1px solid var(--border);padding:20px 22px;background:var(--surface-alt)}
+.level-card.expanded .level-detail{display:block}
+
+.topics-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+
+.topic-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.topic-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);transition:all .2s}
+.topic-check{width:22px;height:22px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.topic-check.done{background:var(--green);color:#fff}
+.topic-check.progress{background:var(--amber);color:#fff}
+.topic-check.locked{background:var(--surface-alt);border:2px solid var(--border)}
+.topic-check svg{width:14px;height:14px}
+.topic-name{font-size:14px;font-weight:500;flex:1}
+.topic-name.done{color:var(--text)}
+.topic-name.progress{color:var(--amber)}
+.topic-name.locked{color:var(--text-light)}
+
+/* Projects section */
+.projects-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.project-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;transition:all .25s}
+.project-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+.project-thumb{width:100%;aspect-ratio:16/9;background:#000;position:relative;overflow:hidden}
+.project-thumb iframe{width:100%;height:100%;border:none}
+.project-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--surface-alt);color:var(--text-light);font-family:var(--font-mono);font-size:12px}
+.project-body{padding:14px 16px}
+.project-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.project-desc{font-size:12px;color:var(--text-dim);line-height:1.4;margin-bottom:10px}
+.project-links{display:flex;gap:8px;flex-wrap:wrap}
+.project-link{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .2s}
+.link-video{background:var(--red-light);color:var(--red)}
+.link-video:hover{background:var(--red);color:#fff}
+.link-code{background:var(--accent-light);color:var(--accent)}
+.link-code:hover{background:var(--accent);color:#fff}
+.link-cert{background:var(--amber-light);color:#9a7200}
+.link-cert:hover{background:var(--amber);color:#fff}
+
+.no-projects{font-size:13px;color:var(--text-light);font-style:italic;padding:12px 0}
+
+/* Loading */
+.loading{display:flex;align-items:center;justify-content:center;padding:60px 0;gap:12px;font-family:var(--font-mono);font-size:13px;color:var(--text-dim)}
+.spinner{width:20px;height:20px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Config notice */
+.config-notice{background:var(--amber-light);border:1px solid var(--amber);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;font-size:13px;color:#7a6200;line-height:1.6}
+.config-notice code{background:#fff;padding:2px 6px;border-radius:4px;font-family:var(--font-mono);font-size:12px}
+
+.footer{text-align:center;margin-top:40px;padding:20px;font-size:12px;color:var(--text-light);font-family:var(--font-mono)}
+
+@media(max-width:600px){
+  .app{padding:16px 12px 40px}
+  .login-card{padding:28px 20px}
+  .student-header{flex-direction:column;text-align:center;gap:12px}
+  .student-meta{justify-content:center}
+  .level-top{flex-wrap:wrap}
+  .level-status{align-items:center;width:100%;flex-direction:row;justify-content:space-between}
+  .projects-grid{grid-template-columns:1fr}
+  .id-group{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <div class="header-inner">
+    <div class="header-logo"><img src="logo-on.png" alt="ElectroBotics" onerror="this.style.display='none'"></div>
+    <div class="header-text">
+      <img src="ElectroBotics_No_Makerspace.png" alt="ElectroBotics" class="header-brand" onerror="this.style.display='none'">
+      <div class="header-tagline">Student Progress</div>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- Login / Search Screen -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="login-icon"><img src="logo-on.png" alt="" onerror="this.parentElement.innerHTML='🤖'"></div>
+      <div class="login-title">Welcome Back!</div>
+      <div class="login-sub">Find your profile to view your learning progress, projects, and certificates.</div>
+
+      <div class="search-group">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="search-input" id="nameSearch" placeholder="Search by name…" autocomplete="off" oninput="onNameSearch()" onfocus="onNameSearch()">
+        <div class="search-results" id="searchResults"></div>
+      </div>
+
+      <div class="or-divider">— or enter your student ID —</div>
+
+      <div class="id-group">
+        <input type="text" class="id-input" id="idInput" placeholder="e.g. EB001" maxlength="10" onkeydown="if(event.key==='Enter')goById()">
+        <button class="btn-go" onclick="goById()">Go</button>
+      </div>
+
+      <div class="error-msg" id="errorMsg">Student not found. Please check your name or ID.</div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard" id="dashboard">
+    <div class="student-header" id="studentHeader">
+      <div class="student-avatar" id="studentAvatar">?</div>
+      <div class="student-info">
+        <div class="student-name" id="studentName">—</div>
+        <div class="student-meta" id="studentMeta"></div>
+      </div>
+      <button class="btn-logout" onclick="logout()">← Back</button>
+    </div>
+
+    <div class="roadmap" id="roadmap">
+      <!-- Level cards rendered here -->
+    </div>
+  </div>
+
+  <!-- Config notice (shown when no sheet ID is set) -->
+  <div class="config-notice" id="configNotice" style="display:none;">
+    <strong>Setup Required:</strong> To connect this app to your student data, you need to:<br><br>
+    1. Create a Google Sheet with sheets named: <code>Students</code>, <code>Levels</code>, <code>Progress</code>, <code>Projects</code><br>
+    2. Publish it: File → Share → Publish to web → Entire Document → CSV<br>
+    3. Copy the Sheet ID from the URL and paste it in the <code>SHEET_ID</code> variable in this file's JavaScript section.<br><br>
+    The Sheet ID is the long string in your Google Sheets URL between <code>/d/</code> and <code>/edit</code>
+  </div>
+
+</div>
+
+<div class="footer">Built by <strong style="color:var(--accent);">ElectroBotics</strong></div>
+
+<script>
+// ══════════════════════════════════════════════════
+// CONFIGURATION — Set your Google Sheet ID here
+// ══════════════════════════════════════════════════
+const SHEET_ID = '1JR6EZ6N6J-hwoSwpxU3tlGV25fMoafCX1-x-zPvyku0'; // ← Paste your Google Sheet ID here
+// Example: '1aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890'
+// ══════════════════════════════════════════════════
+
+// Level definitions (fallback if Levels sheet is empty)
+const DEFAULT_LEVELS = [
+  { num: 1, name: 'Robotics Foundation', desc: 'Learn basics of robotics, sensors, and motors' },
+  { num: 2, name: 'Coding Foundation', desc: 'Programming fundamentals with block and text coding' },
+  { num: 3, name: 'Micro:bit Automation', desc: 'Build smart projects with BBC micro:bit' },
+  { num: 4, name: 'Robotics', desc: 'Advanced robotics with complex mechanisms' },
+  { num: 5, name: 'Mobile App Development', desc: 'Create mobile apps with MIT App Inventor' },
+  { num: 6, name: 'IOT and Python', desc: 'Internet of Things and Python programming' }
+];
+
+// Level colors
+const LEVEL_COLORS = ['#008fa0','#8ab600','#eab43a','#d76241','#6c5ce7','#00b894'];
+
+let allStudents = [];
+let allProgress = [];
+let allProjects = [];
+let allLevels = DEFAULT_LEVELS;
+let currentStudent = null;
+
+// ─── Data Loading ────────────────────────────────
+
+async function fetchSheet(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+  const res = await fetch(url);
+  const text = await res.text();
+  // Google wraps response in a callback — extract the JSON
+  const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+  const cols = json.table.cols.map(c => c.label || '');
+  const rows = [];
+  for (const row of (json.table.rows || [])) {
+    const obj = {};
+    row.c.forEach((cell, i) => {
+      obj[cols[i]] = cell ? (cell.v || '') : '';
+    });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+async function loadData() {
+  if (!SHEET_ID) {
+    document.getElementById('configNotice').style.display = 'block';
+    loadDemoData();
+    return;
+  }
+
+  try {
+    const [students, progress, projects, levels] = await Promise.all([
+      fetchSheet('Students'),
+      fetchSheet('Progress'),
+      fetchSheet('Projects'),
+      fetchSheet('Levels').catch(() => [])
+    ]);
+    allStudents = students;
+    allProgress = progress;
+    allProjects = projects;
+    if (levels.length > 0) {
+      allLevels = levels.map((l, i) => ({
+        num: parseInt(l['Level Number'] || l['num'] || (i + 1)),
+        name: l['Level Name'] || l['name'] || '',
+        desc: l['Description'] || l['desc'] || ''
+      }));
+    }
+  } catch (e) {
+    console.error('Error loading sheet:', e);
+    document.getElementById('configNotice').style.display = 'block';
+    loadDemoData();
+  }
+}
+
+function loadDemoData() {
+  // Demo data for preview
+  allStudents = [
+    { ID: 'EB001', Name: 'Arun Kumar', 'Current Level': 'Micro:bit Automation', Photo: '', 'Join Date': '2025-06' },
+    { ID: 'EB002', Name: 'Priya Sharma', 'Current Level': 'Coding Foundation', Photo: '', 'Join Date': '2025-09' },
+    { ID: 'EB003', Name: 'Ravi Patel', 'Current Level': 'Robotics', Photo: '', 'Join Date': '2025-01' },
+  ];
+  allProgress = [
+    { 'Student ID':'EB001', 'Level Name':'Robotics Foundation', Topic:'Introduction to Robots', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Robotics Foundation', Topic:'Sensors & Actuators', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Robotics Foundation', Topic:'Basic Mechanisms', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Robotics Foundation', Topic:'Project Building', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Coding Foundation', Topic:'Block Coding Basics', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Coding Foundation', Topic:'Variables & Loops', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Coding Foundation', Topic:'Functions', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Coding Foundation', Topic:'Game Development', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Micro:bit Automation', Topic:'micro:bit Basics', Status:'completed' },
+    { 'Student ID':'EB001', 'Level Name':'Micro:bit Automation', Topic:'Sensors & Displays', Status:'in-progress' },
+    { 'Student ID':'EB001', 'Level Name':'Micro:bit Automation', Topic:'Bluetooth Projects', Status:'locked' },
+    { 'Student ID':'EB001', 'Level Name':'Micro:bit Automation', Topic:'Smart Home Project', Status:'locked' },
+  ];
+  allProjects = [
+    { 'Student ID':'EB001', 'Level Name':'Robotics Foundation', 'Project Name':'Line Follower Bot', Description:'Built a robot that follows a black line using IR sensors.', 'YouTube Video ID':'dQw4w9WgXcQ', 'Code Link':'https://makecode.microbit.org', 'Certificate URL':'' },
+    { 'Student ID':'EB001', 'Level Name':'Coding Foundation', 'Project Name':'Space Invaders Game', Description:'Created a space shooter game using Scratch.', 'YouTube Video ID':'', 'Code Link':'https://scratch.mit.edu', 'Certificate URL':'' },
+  ];
+}
+
+// ─── Search & Login ──────────────────────────────
+
+function onNameSearch() {
+  const query = document.getElementById('nameSearch').value.trim().toLowerCase();
+  const results = document.getElementById('searchResults');
+  document.getElementById('errorMsg').classList.remove('show');
+
+  if (query.length < 1) { results.classList.remove('open'); return; }
+
+  const matches = allStudents.filter(s =>
+    (s.Name || '').toLowerCase().includes(query) ||
+    (s.ID || '').toLowerCase().includes(query)
+  ).slice(0, 8);
+
+  if (matches.length === 0) {
+    results.classList.remove('open');
+    return;
+  }
+
+  results.innerHTML = matches.map(s => `
+    <div class="search-result" onclick="selectStudent('${s.ID}')">
+      <div>
+        <div class="search-result-name">${esc(s.Name)}</div>
+        <div class="search-result-level">${esc(s['Current Level'] || 'Not started')}</div>
+      </div>
+      <div class="search-result-id">${esc(s.ID)}</div>
+    </div>
+  `).join('');
+  results.classList.add('open');
+}
+
+function goById() {
+  const id = document.getElementById('idInput').value.trim().toUpperCase();
+  if (!id) return;
+  const student = allStudents.find(s => (s.ID || '').toUpperCase() === id);
+  if (student) {
+    selectStudent(student.ID);
+  } else {
+    document.getElementById('errorMsg').classList.add('show');
+  }
+}
+
+function selectStudent(id) {
+  currentStudent = allStudents.find(s => s.ID === id);
+  if (!currentStudent) return;
+  document.getElementById('searchResults').classList.remove('open');
+  document.getElementById('errorMsg').classList.remove('show');
+  showDashboard();
+}
+
+function logout() {
+  currentStudent = null;
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('nameSearch').value = '';
+  document.getElementById('idInput').value = '';
+}
+
+// Close search results when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-group')) {
+    document.getElementById('searchResults').classList.remove('open');
+  }
+});
+
+// ─── Dashboard ───────────────────────────────────
+
+function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashboard').classList.add('active');
+
+  const s = currentStudent;
+
+  // Avatar
+  const avatar = document.getElementById('studentAvatar');
+  if (s.Photo) {
+    avatar.innerHTML = `<img src="${s.Photo}" alt="${s.Name}" onerror="this.parentElement.textContent='${s.Name.charAt(0)}'">`;
+  } else {
+    avatar.textContent = s.Name.charAt(0).toUpperCase();
+  }
+
+  // Name & meta
+  document.getElementById('studentName').textContent = s.Name;
+  const meta = document.getElementById('studentMeta');
+  meta.innerHTML = `
+    <span>🆔 ${esc(s.ID)}</span>
+    <span>📍 ${esc(s['Current Level'] || 'Not started')}</span>
+    ${s['Join Date'] ? `<span>📅 Joined ${esc(s['Join Date'])}</span>` : ''}
+  `;
+
+  // Build roadmap
+  buildRoadmap();
+}
+
+function buildRoadmap() {
+  const roadmap = document.getElementById('roadmap');
+  const sid = currentStudent.ID;
+  const currentLevelName = currentStudent['Current Level'] || '';
+
+  // Find current level index
+  let currentIdx = allLevels.findIndex(l => l.name === currentLevelName);
+  if (currentIdx < 0) currentIdx = 0;
+
+  roadmap.innerHTML = allLevels.map((level, i) => {
+    let status, badgeClass, badgeText;
+    if (i < currentIdx) {
+      status = 'completed'; badgeClass = 'badge-completed'; badgeText = '✓ Completed';
+    } else if (i === currentIdx) {
+      status = 'current'; badgeClass = 'badge-current'; badgeText = '● In Progress';
+    } else if (i === currentIdx + 1) {
+      status = 'upcoming'; badgeClass = 'badge-upcoming'; badgeText = 'Up Next';
+    } else {
+      status = 'locked'; badgeClass = 'badge-locked'; badgeText = 'Locked';
+    }
+
+    // Get topics for this level
+    const topics = allProgress.filter(p => p['Student ID'] === sid && p['Level Name'] === level.name);
+    const completedTopics = topics.filter(t => t.Status === 'completed').length;
+    const totalTopics = topics.length;
+    const progressPct = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : (status === 'completed' ? 100 : 0);
+
+    // Get projects for this level
+    const projects = allProjects.filter(p => p['Student ID'] === sid && p['Level Name'] === level.name);
+
+    const color = LEVEL_COLORS[i % LEVEL_COLORS.length];
+
+    return `
+      <div class="level-card ${status}" onclick="toggleLevel(this)" data-level="${i}">
+        <div class="level-top">
+          <div class="level-num" style="background:${status === 'locked' ? 'var(--text-light)' : color}">L${level.num}</div>
+          <div class="level-info">
+            <div class="level-name">${esc(level.name)}</div>
+            <div class="level-desc">${esc(level.desc)}</div>
+          </div>
+          <div class="level-status">
+            <span class="level-status-badge ${badgeClass}">${badgeText}</span>
+            ${totalTopics > 0 ? `
+              <div class="level-progress-bar">
+                <div class="level-progress-fill" style="width:${progressPct}%;background:${color}"></div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+        <div class="level-detail">
+          ${topics.length > 0 ? `
+            <div class="topics-title">Topics Progress</div>
+            <div class="topic-list">
+              ${topics.map(t => {
+                const st = t.Status || 'locked';
+                const checkClass = st === 'completed' ? 'done' : st === 'in-progress' ? 'progress' : 'locked';
+                const icon = st === 'completed' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+                           : st === 'in-progress' ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="4"/></svg>'
+                           : '';
+                return `<div class="topic-item">
+                  <div class="topic-check ${checkClass}">${icon}</div>
+                  <span class="topic-name ${checkClass}">${esc(t.Topic)}</span>
+                </div>`;
+              }).join('')}
+            </div>
+          ` : ''}
+          ${projects.length > 0 ? `
+            <div class="projects-title">Projects</div>
+            <div class="projects-grid">
+              ${projects.map(p => {
+                const ytId = p['YouTube Video ID'] || '';
+                const codeLink = p['Code Link'] || '';
+                const certUrl = p['Certificate URL'] || '';
+                return `<div class="project-card">
+                  <div class="project-thumb">
+                    ${ytId ? `<iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen loading="lazy"></iframe>`
+                           : '<div class="project-thumb-placeholder">No video</div>'}
+                  </div>
+                  <div class="project-body">
+                    <div class="project-name">${esc(p['Project Name'])}</div>
+                    <div class="project-desc">${esc(p.Description || '')}</div>
+                    <div class="project-links">
+                      ${ytId ? `<a href="https://youtu.be/${ytId}" target="_blank" class="project-link link-video">▶ Video</a>` : ''}
+                      ${codeLink ? `<a href="${codeLink}" target="_blank" class="project-link link-code">⟨/⟩ Code</a>` : ''}
+                      ${certUrl ? `<a href="${certUrl}" target="_blank" class="project-link link-cert">🏆 Certificate</a>` : ''}
+                    </div>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+          ` : (status === 'completed' || status === 'current') ? '<div class="no-projects">No projects uploaded yet for this level.</div>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleLevel(card) {
+  if (card.classList.contains('locked')) return;
+  const wasExpanded = card.classList.contains('expanded');
+  // Close all
+  document.querySelectorAll('.level-card').forEach(c => c.classList.remove('expanded'));
+  if (!wasExpanded) card.classList.add('expanded');
+}
+
+function esc(t) {
+  if (!t) return '';
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+// ─── Init ────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
