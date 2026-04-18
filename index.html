@@ -29,8 +29,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .header-logo{width:52px;height:52px;flex-shrink:0}
 .header-logo img{width:100%;height:100%;object-fit:contain}
 .header-text{display:flex;flex-direction:column;justify-content:center}
-.header-brand{height:28px;object-fit:contain;object-position:left center;display:block;margin-bottom:2px;margin-left:-5px}
-.header-tagline{font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:-12px}
+.header-brand{height:28px;object-fit:contain;object-position:left center;display:block;margin-bottom:2px}
+.header-tagline{font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase}
 
 .app{max-width:960px;margin:0 auto;padding:24px 20px 60px}
 
@@ -280,13 +280,11 @@ let currentStudent = null;
 // ─── Data Loading ────────────────────────────────
 
 async function fetchSheet(sheetName) {
-  // Method 1: Google Visualization API (works when sheet is published)
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Sheet "${sheetName}" returned ${res.status}`);
   const text = await res.text();
 
-  // Google wraps response in a callback — extract the JSON
   const startIdx = text.indexOf('{');
   const endIdx = text.lastIndexOf('}');
   if (startIdx < 0 || endIdx < 0) throw new Error(`Invalid response for "${sheetName}"`);
@@ -297,16 +295,28 @@ async function fetchSheet(sheetName) {
     throw new Error(`Sheet "${sheetName}": ${json.errors?.[0]?.detailed_message || 'unknown error'}`);
   }
 
-  const cols = json.table.cols.map(c => (c.label || '').trim());
+  let cols = json.table.cols.map(c => (c.label || '').trim());
+  const tableRows = json.table.rows || [];
+
+  // If column labels are empty, use the first data row as headers
+  const hasLabels = cols.some(c => c.length > 0);
+  let dataStartIdx = 0;
+
+  if (!hasLabels && tableRows.length > 0) {
+    cols = tableRows[0].c.map(cell => cell ? String(cell.v || '').trim() : '');
+    dataStartIdx = 1; // skip header row in data
+    console.log(`Sheet "${sheetName}": using first row as headers:`, cols);
+  }
+
   const rows = [];
-  for (const row of (json.table.rows || [])) {
+  for (let r = dataStartIdx; r < tableRows.length; r++) {
+    const row = tableRows[r];
     const obj = {};
     row.c.forEach((cell, i) => {
       if (cols[i]) {
         obj[cols[i]] = cell ? (cell.f || cell.v || '') : '';
       }
     });
-    // Skip empty rows
     if (Object.values(obj).some(v => v !== '')) {
       rows.push(obj);
     }
