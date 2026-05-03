@@ -467,6 +467,9 @@ function buildRoadmap(){
     const pct=total>0?Math.round((done/total)*100):(status==='completed'?100:0);
     const projects=allProjects.filter(p=>p['Student ID']===sid&&p['Level Name']===level.name);
     const cert=allCertificates.find(c=>c['Student ID']===sid&&c['Level Name']===level.name);
+    // Also check if any progress row for this level has a Certificate URL
+    const certFromProgress=topics.find(t=>t['Certificate URL']);
+    const certUrl=(cert&&cert['Certificate URL'])||(certFromProgress&&certFromProgress['Certificate URL'])||'';
     const color=LEVEL_COLORS[i%LEVEL_COLORS.length];
     return `
       <div class="level-card ${status}" onclick="toggleLevel(this)">
@@ -479,7 +482,7 @@ function buildRoadmap(){
           <div class="level-status">
             <span class="level-status-badge ${badgeClass}">${badgeText}</span>
             ${total>0?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
-            ${cert&&cert['Certificate URL']?`<div class="level-cert"><a href="${cert['Certificate URL']}" target="_blank">🏆 Certificate</a></div>`:''}
+            ${certUrl?`<div class="level-cert"><a href="${certUrl}" target="_blank">🏆 Certificate</a></div>`:''}
           </div>
         </div>
         <div class="level-detail">
