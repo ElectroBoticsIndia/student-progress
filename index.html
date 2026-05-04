@@ -105,6 +105,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-info{flex:1;min-width:0}
 .level-name{font-size:16px;font-weight:700;margin-bottom:2px}
 .level-desc{font-size:13px;color:var(--text-dim);line-height:1.4}
+.level-links{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.level-links a{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .2s}
+.level-links .link-cert{background:var(--amber-light);color:#9a7200}
+.level-links .link-cert:hover{background:var(--amber);color:#fff}
+.level-links .link-ref{background:var(--accent-light);color:var(--accent-dark)}
+.level-links .link-ref:hover{background:var(--accent);color:#fff}
 .level-status{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .level-status-badge{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
 .badge-completed{background:var(--green-bg);color:#5a7a00}
@@ -115,10 +121,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-progress-fill{height:100%;border-radius:3px;transition:width .5s ease-out}
 .level-card.completed .level-progress-fill{background:var(--green);width:100%}
 .level-card.current .level-progress-fill{background:var(--accent)}
-.level-cert{margin-top:6px}
-.level-cert a{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-decoration:none;background:var(--amber-light);color:#9a7200;display:inline-flex;align-items:center;gap:4px;transition:all .2s}
-.level-cert a:hover{background:var(--amber);color:#fff}
-.level-cert a.ref-doc:hover{background:var(--accent);color:#fff}
 
 .level-detail{display:none;border-top:1px solid var(--border);padding:20px 22px;background:var(--surface-alt)}
 .level-card.expanded .level-detail{display:block}
@@ -209,8 +211,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   .student-meta{justify-content:center}
   .level-top{flex-wrap:wrap}
   .level-status{align-items:center;width:100%;flex-direction:row;justify-content:space-between;flex-wrap:wrap;gap:8px}
-  .level-cert{width:100%}
-  .level-cert a{width:100%;justify-content:center;padding:8px 10px}
+  .level-links{width:100%}
+  .level-links a{flex:1;justify-content:center;padding:8px 10px}
   .projects-grid{grid-template-columns:1fr}
   .id-group{flex-direction:column}
   .stats-grid{grid-template-columns:1fr 1fr}
@@ -479,12 +481,11 @@ function buildRoadmap(){
           <div class="level-info">
             <div class="level-name">${esc(level.name)}</div>
             <div class="level-desc">${esc(level.desc)}</div>
+            ${certUrl||level.refDoc?`<div class="level-links">${certUrl?`<a href="${certUrl}" target="_blank" class="link-cert" onclick="event.stopPropagation()">🏆 Certificate</a>`:''}${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="link-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}</div>`:''}
           </div>
           <div class="level-status">
             <span class="level-status-badge ${badgeClass}">${badgeText}</span>
             ${total>0?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
-            ${certUrl?`<div class="level-cert"><a href="${certUrl}" target="_blank">🏆 Certificate</a></div>`:''}
-            ${level.refDoc?`<div class="level-cert"><a href="${level.refDoc}" target="_blank" style="background:var(--accent-light);color:var(--accent-dark);">📄 Reference Doc</a></div>`:''}
           </div>
         </div>
         <div class="level-detail">
