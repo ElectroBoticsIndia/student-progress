@@ -488,8 +488,6 @@ function buildRoadmap(){
           </div>
         </div>
         ${certUrl||level.refDoc?`<div class="level-links">${certUrl?`<a href="${certUrl}" target="_blank" class="link-cert" onclick="event.stopPropagation()">🏆 Certificate</a>`:''}${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="link-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}</div>`:''}
-          </div>
-        </div>
         <div class="level-detail">
           ${topics.length>0?`<div class="topics-title">Topics Progress</div><div class="topic-list">${topics.map(t=>{
             const st=t.Status||'locked';const cc=st==='completed'?'done':st==='in-progress'?'progress':'locked';
