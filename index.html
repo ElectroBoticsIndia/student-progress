@@ -118,6 +118,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-cert{margin-top:6px}
 .level-cert a{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-decoration:none;background:var(--amber-light);color:#9a7200;display:inline-flex;align-items:center;gap:4px;transition:all .2s}
 .level-cert a:hover{background:var(--amber);color:#fff}
+.level-cert a.ref-doc:hover{background:var(--accent);color:#fff}
 
 .level-detail{display:none;border-top:1px solid var(--border);padding:20px 22px;background:var(--surface-alt)}
 .level-card.expanded .level-detail{display:block}
@@ -383,7 +384,7 @@ async function loadData(){
     try{certificates=await fetchSheet('Certificates')}catch(e){certificates=[]}
     if(students.length===0)throw new Error('Students sheet is empty');
     allStudents=students;allProgress=progress;allProjects=projects;allCertificates=certificates;
-    if(levels.length>0)allLevels=levels.map((l,i)=>({num:parseInt(l['Level Number']||l['num']||(i+1)),name:(l['Level Name']||l['name']||'').trim(),desc:(l['Description']||l['desc']||'').trim()}));
+    if(levels.length>0)allLevels=levels.map((l,i)=>({num:parseInt(l['Level Number']||l['num']||(i+1)),name:(l['Level Name']||l['name']||'').trim(),desc:(l['Description']||l['desc']||'').trim(),refDoc:(l['Reference Doc']||'').trim()}));
     console.log(`Loaded: ${allStudents.length} students, ${allProgress.length} progress, ${allProjects.length} projects, ${allCertificates.length} certificates`);
   }catch(e){
     console.error('Load error:',e);
@@ -483,6 +484,7 @@ function buildRoadmap(){
             <span class="level-status-badge ${badgeClass}">${badgeText}</span>
             ${total>0?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
             ${certUrl?`<div class="level-cert"><a href="${certUrl}" target="_blank">🏆 Certificate</a></div>`:''}
+            ${level.refDoc?`<div class="level-cert"><a href="${level.refDoc}" target="_blank" style="background:var(--accent-light);color:var(--accent-dark);">📄 Reference Doc</a></div>`:''}
           </div>
         </div>
         <div class="level-detail">
