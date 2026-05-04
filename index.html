@@ -475,7 +475,7 @@ function buildRoadmap(){
     const certUrl=(cert&&cert['Certificate URL'])||(certFromProgress&&certFromProgress['Certificate URL'])||'';
     const color=LEVEL_COLORS[i%LEVEL_COLORS.length];
     return `
-      <div class="level-card ${status}" onclick="toggleLevel(this)">
+      <div class="level-card ${status}" data-level-idx="${i}">
         <div class="level-top">
           <div class="level-num" style="background:${status==='locked'?'var(--text-light)':color}">L${level.num}</div>
           <div class="level-info">
@@ -505,6 +505,16 @@ function buildRoadmap(){
 }
 
 function toggleLevel(card){if(card.classList.contains('locked'))return;const w=card.classList.contains('expanded');document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('expanded'));if(!w)card.classList.add('expanded')}
+
+// Event delegation for level card clicks — more reliable than inline onclick on desktop
+document.addEventListener('click',function(e){
+  // Don't toggle if clicking a link inside the card
+  if(e.target.closest('a'))return;
+  const card=e.target.closest('.level-card');
+  if(card&&document.getElementById('roadmap').contains(card)){
+    toggleLevel(card);
+  }
+});
 
 // ─── Admin ───────────────────────────────────────
 
