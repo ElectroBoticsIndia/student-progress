@@ -105,8 +105,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-info{flex:1;min-width:0}
 .level-name{font-size:16px;font-weight:700;margin-bottom:2px}
 .level-desc{font-size:13px;color:var(--text-dim);line-height:1.4}
-.level-links{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-.level-links a{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .2s}
+.level-links{display:flex;gap:8px;padding:0 22px 14px;flex-wrap:wrap}
+.level-links a{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .2s;flex:1;justify-content:center}
 .level-links .link-cert{background:var(--amber-light);color:#9a7200}
 .level-links .link-cert:hover{background:var(--amber);color:#fff}
 .level-links .link-ref{background:var(--accent-light);color:var(--accent-dark)}
@@ -481,11 +481,13 @@ function buildRoadmap(){
           <div class="level-info">
             <div class="level-name">${esc(level.name)}</div>
             <div class="level-desc">${esc(level.desc)}</div>
-            ${certUrl||level.refDoc?`<div class="level-links">${certUrl?`<a href="${certUrl}" target="_blank" class="link-cert" onclick="event.stopPropagation()">🏆 Certificate</a>`:''}${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="link-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}</div>`:''}
           </div>
           <div class="level-status">
             <span class="level-status-badge ${badgeClass}">${badgeText}</span>
             ${total>0?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
+          </div>
+        </div>
+        ${certUrl||level.refDoc?`<div class="level-links">${certUrl?`<a href="${certUrl}" target="_blank" class="link-cert" onclick="event.stopPropagation()">🏆 Certificate</a>`:''}${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="link-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}</div>`:''}
           </div>
         </div>
         <div class="level-detail">
