@@ -6,6 +6,7 @@
 <title>ElectroBotics — Student Progress</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
@@ -186,6 +187,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:28px}
 .table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
 .table-title{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px}
+.btn-download{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:8px 14px;border:none;border-radius:8px;background:var(--green);color:#fff;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-download:hover{background:#7aa300;transform:translateY(-1px)}
+.table-filter-bar{display:flex;align-items:flex-end;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface-alt);flex-wrap:wrap}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-group label{font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px}
+.filter-group select{font-family:var(--font-body);font-size:13px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none;cursor:pointer;min-width:130px}
+.filter-group select:focus{border-color:var(--accent)}
+.filter-clear{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text-dim);cursor:pointer;transition:all .2s}
+.filter-clear:hover{border-color:var(--red);color:var(--red)}
 .table-filters{display:flex;gap:8px;flex-wrap:wrap}
 .filter-btn{font-family:var(--font-mono);font-size:10px;font-weight:600;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text-dim);cursor:pointer;transition:all .2s}
 .filter-btn:hover{border-color:var(--accent)}
@@ -298,23 +308,39 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
     <div class="stats-grid" id="statsGrid"></div>
     <div class="charts-grid" id="chartsGrid">
       <div class="chart-card"><div class="chart-title">Students per Level</div><div class="chart-container"><canvas id="chartLevel"></canvas></div></div>
-      <div class="chart-card"><div class="chart-title">India vs International</div><div class="chart-container"><canvas id="chartBatch"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Students by Country</div><div class="chart-container"><canvas id="chartBatch"></canvas></div></div>
       <div class="chart-card"><div class="chart-title">Students per Tutor</div><div class="chart-container"><canvas id="chartTutor"></canvas></div></div>
       <div class="chart-card"><div class="chart-title">Enrollment Trend</div><div class="chart-container"><canvas id="chartEnrollment"></canvas></div></div>
     </div>
     <div class="table-card">
       <div class="table-header">
-        <div class="table-title">All Students</div>
-        <div class="table-filters" id="tableFilters">
-          <button class="filter-btn active" onclick="filterTable('all',this)">All</button>
-          <button class="filter-btn" onclick="filterTable('India',this)">India</button>
-          <button class="filter-btn" onclick="filterTable('International',this)">International</button>
-          <button class="filter-btn" onclick="filterTable('Active',this)">Active</button>
-          <button class="filter-btn" onclick="filterTable('Inactive',this)">Inactive</button>
+        <div class="table-title">All Students <span id="tableCount" style="color:var(--accent);"></span></div>
+        <button class="btn-download" onclick="downloadExcel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Excel
+        </button>
+      </div>
+      <div class="table-filter-bar">
+        <div class="filter-group">
+          <label>Country</label>
+          <select id="filterCountry" onchange="applyFilters()"><option value="">All</option></select>
         </div>
+        <div class="filter-group">
+          <label>Level</label>
+          <select id="filterLevel" onchange="applyFilters()"><option value="">All</option></select>
+        </div>
+        <div class="filter-group">
+          <label>Tutor</label>
+          <select id="filterTutor" onchange="applyFilters()"><option value="">All</option></select>
+        </div>
+        <div class="filter-group">
+          <label>Status</label>
+          <select id="filterStatus" onchange="applyFilters()"><option value="">All</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+        </div>
+        <button class="filter-clear" onclick="clearFilters()">Clear</button>
       </div>
       <div class="table-wrap"><table class="data-table" id="studentTable">
-        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Batch</th><th>Tutor</th><th>Status</th><th>Joined</th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Country</th><th>Tutor</th><th>Status</th><th>Joined</th></tr></thead>
         <tbody id="tableBody"></tbody>
       </table></div>
     </div>
@@ -398,9 +424,9 @@ async function loadData(){
 
 function loadDemoData(){
   allStudents=[
-    {ID:'EB001',Name:'Arun Kumar','Current Level':'Micro:bit Automation',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Batch:'India',Status:'Active'},
-    {ID:'EB002',Name:'Priya Sharma','Current Level':'Robotics',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Batch:'India',Status:'Active'},
-    {ID:'EB003',Name:'Ravi Patel','Current Level':'IOT and Python',Photo:'','Join Date':'2024-06',Tutor:'Suresh',Batch:'International',Status:'Active'},
+    {ID:'EB001',Name:'Arun Kumar','Current Level':'Micro:bit Automation',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Country:'India',Status:'Active'},
+    {ID:'EB002',Name:'Priya Sharma','Current Level':'Robotics',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Country:'India',Status:'Active'},
+    {ID:'EB003',Name:'Ravi Patel','Current Level':'IOT and Python',Photo:'','Join Date':'2024-06',Tutor:'Suresh',Country:'USA',Status:'Active'},
   ];
   allProgress=[
     {['Student ID']:'EB001','Level Name':'Robotics Foundation',Topic:'Introduction to Robots',Status:'completed'},
@@ -449,7 +475,7 @@ function showDashboard(){
     <span>📍 ${esc(s['Current Level']||'Not started')}</span>
     ${s['Join Date']?`<span>📅 Joined ${esc(s['Join Date'])}</span>`:''}
     ${s.Tutor?`<span>👨‍🏫 ${esc(s.Tutor)}</span>`:''}
-    ${s.Batch?`<span>🌍 ${esc(s.Batch)}</span>`:''}
+    ${s.Country?`<span>🌍 ${esc(s.Country)}</span>`:''}
   `;
   buildRoadmap();
 }
@@ -556,7 +582,7 @@ function showAdminDashboard(){
   if(adminUser.picture){
     const av=document.getElementById('adminAvatar');av.src=adminUser.picture;av.classList.add('visible');
   }
-  buildStats();buildCharts();buildTable('all');
+  buildStats();buildCharts();buildTable();
 }
 
 function adminLogout(){
@@ -580,14 +606,16 @@ function buildStats(){
   const total=allStudents.length;
   const active=allStudents.filter(s=>(s.Status||'Active').toLowerCase()==='active').length;
   const inactive=total-active;
-  const india=allStudents.filter(s=>(s.Batch||'').toLowerCase()==='india').length;
-  const intl=allStudents.filter(s=>(s.Batch||'').toLowerCase()==='international').length;
+  const countries=new Set(allStudents.map(s=>s.Country||'Unknown').filter(c=>c));
   const tutors=new Set(allStudents.map(s=>s.Tutor||'Unassigned').filter(t=>t));
+  // Top country
+  const countryMap={};allStudents.forEach(s=>{const c=s.Country||'Unknown';countryMap[c]=(countryMap[c]||0)+1});
+  const topCountry=Object.entries(countryMap).sort((a,b)=>b[1]-a[1])[0]||['—',0];
 
   document.getElementById('statsGrid').innerHTML=`
     <div class="stat-card accent"><div class="stat-label">Total Students</div><div class="stat-value">${total}</div><div class="stat-sub">${active} active, ${inactive} inactive</div></div>
-    <div class="stat-card green"><div class="stat-label">India Batch</div><div class="stat-value">${india}</div><div class="stat-sub">${total?Math.round(india/total*100):0}% of total</div></div>
-    <div class="stat-card purple"><div class="stat-label">International</div><div class="stat-value">${intl}</div><div class="stat-sub">${total?Math.round(intl/total*100):0}% of total</div></div>
+    <div class="stat-card green"><div class="stat-label">Countries</div><div class="stat-value">${countries.size}</div><div class="stat-sub">Top: ${esc(topCountry[0])} (${topCountry[1]})</div></div>
+    <div class="stat-card purple"><div class="stat-label">Active Rate</div><div class="stat-value">${total?Math.round(active/total*100):0}%</div><div class="stat-sub">${active} of ${total} students</div></div>
     <div class="stat-card amber"><div class="stat-label">Tutors</div><div class="stat-value">${tutors.size}</div><div class="stat-sub">${total&&tutors.size?Math.round(total/tutors.size):0} students avg</div></div>
   `;
 }
@@ -604,13 +632,11 @@ function buildCharts(){
   const levelCounts=allLevels.map(l=>allStudents.filter(s=>s['Current Level']===l.name).length);
   charts.level=new Chart(document.getElementById('chartLevel'),{type:'bar',data:{labels:allLevels.map(l=>l.name),datasets:[{label:'Students',data:levelCounts,backgroundColor:LEVEL_COLORS,borderRadius:6}]},options:{...chartOpts,scales:{x:{ticks:{font:{family:'JetBrains Mono',size:9},color:'#8db5b9',maxRotation:45}},y:{ticks:{font:{family:'JetBrains Mono',size:10},color:'#8db5b9'},beginAtZero:true}}}});
 
-  // Batch pie
-  const india=allStudents.filter(s=>(s.Batch||'').toLowerCase()==='india').length;
-  const intl=allStudents.filter(s=>(s.Batch||'').toLowerCase()==='international').length;
-  const other=allStudents.length-india-intl;
-  const batchLabels=['India','International'];const batchData=[india,intl];
-  if(other>0){batchLabels.push('Other');batchData.push(other)}
-  charts.batch=new Chart(document.getElementById('chartBatch'),{type:'doughnut',data:{labels:batchLabels,datasets:[{data:batchData,backgroundColor:['#008fa0','#6c5ce7','#8db5b9'],borderWidth:0}]},options:{...chartOpts}});
+  // Country distribution
+  const countryMap={};allStudents.forEach(s=>{const c=s.Country||'Unknown';countryMap[c]=(countryMap[c]||0)+1});
+  const sortedCountries=Object.entries(countryMap).sort((a,b)=>b[1]-a[1]);
+  const countryLabels=sortedCountries.map(c=>c[0]),countryData=sortedCountries.map(c=>c[1]);
+  charts.batch=new Chart(document.getElementById('chartBatch'),{type:'doughnut',data:{labels:countryLabels,datasets:[{data:countryData,backgroundColor:colors,borderWidth:0}]},options:{...chartOpts}});
 
   // Tutor distribution
   const tutorMap={};allStudents.forEach(s=>{const t=s.Tutor||'Unassigned';tutorMap[t]=(tutorMap[t]||0)+1});
@@ -624,21 +650,51 @@ function buildCharts(){
   charts.enrollment=new Chart(document.getElementById('chartEnrollment'),{type:'line',data:{labels:sortedMonths,datasets:[{label:'Total Students',data:cumData,borderColor:'#008fa0',backgroundColor:'#008fa020',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#008fa0'}]},options:{...chartOpts,scales:{x:{ticks:{font:{family:'JetBrains Mono',size:10},color:'#8db5b9'}},y:{ticks:{font:{family:'JetBrains Mono',size:10},color:'#8db5b9'},beginAtZero:true}}}});
 }
 
-// ─── Admin Table ─────────────────────────────────
+// ─── Admin Table & Filters ──────────────────────
 
-function buildTable(filter){
-  let data=allStudents;
-  if(filter==='India')data=data.filter(s=>(s.Batch||'').toLowerCase()==='india');
-  else if(filter==='International')data=data.filter(s=>(s.Batch||'').toLowerCase()==='international');
-  else if(filter==='Active')data=data.filter(s=>(s.Status||'Active').toLowerCase()==='active');
-  else if(filter==='Inactive')data=data.filter(s=>(s.Status||'Active').toLowerCase()==='inactive');
+let filteredStudents = [];
 
-  document.getElementById('tableBody').innerHTML=data.map(s=>`
+function populateFilters(){
+  const countries=[...new Set(allStudents.map(s=>s.Country||'').filter(c=>c))].sort();
+  const levels=allLevels.map(l=>l.name);
+  const tutors=[...new Set(allStudents.map(s=>s.Tutor||'').filter(t=>t))].sort();
+
+  const fillSelect=(id,items)=>{
+    const sel=document.getElementById(id);
+    const current=sel.value;
+    sel.innerHTML='<option value="">All</option>'+items.map(i=>`<option value="${esc(i)}">${esc(i)}</option>`).join('');
+    sel.value=current;
+  };
+  fillSelect('filterCountry',countries);
+  fillSelect('filterLevel',levels);
+  fillSelect('filterTutor',tutors);
+}
+
+function applyFilters(){
+  const country=document.getElementById('filterCountry').value;
+  const level=document.getElementById('filterLevel').value;
+  const tutor=document.getElementById('filterTutor').value;
+  const status=document.getElementById('filterStatus').value;
+
+  filteredStudents=allStudents.filter(s=>{
+    if(country && (s.Country||'')!==country)return false;
+    if(level && (s['Current Level']||'')!==level)return false;
+    if(tutor && (s.Tutor||'')!==tutor)return false;
+    if(status && (s.Status||'Active').toLowerCase()!==status.toLowerCase())return false;
+    return true;
+  });
+
+  renderTable();
+}
+
+function renderTable(){
+  document.getElementById('tableCount').textContent=`(${filteredStudents.length})`;
+  document.getElementById('tableBody').innerHTML=filteredStudents.map(s=>`
     <tr>
       <td><strong>${esc(s.ID)}</strong></td>
       <td>${esc(s.Name)}</td>
       <td>${esc(s['Current Level']||'—')}</td>
-      <td>${esc(s.Batch||'—')}</td>
+      <td>${esc(s.Country||'—')}</td>
       <td>${esc(s.Tutor||'—')}</td>
       <td class="${(s.Status||'Active').toLowerCase()==='active'?'status-active':'status-inactive'}">${esc(s.Status||'Active')}</td>
       <td>${esc(s['Join Date']||'—')}</td>
@@ -646,10 +702,35 @@ function buildTable(filter){
   `).join('');
 }
 
-function filterTable(filter,btn){
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  buildTable(filter);
+function buildTable(){
+  populateFilters();
+  filteredStudents=allStudents.slice();
+  renderTable();
+}
+
+function clearFilters(){
+  document.getElementById('filterCountry').value='';
+  document.getElementById('filterLevel').value='';
+  document.getElementById('filterTutor').value='';
+  document.getElementById('filterStatus').value='';
+  applyFilters();
+}
+
+function downloadExcel(){
+  const rows=filteredStudents.map(s=>({
+    'ID':s.ID||'',
+    'Name':s.Name||'',
+    'Current Level':s['Current Level']||'',
+    'Country':s.Country||'',
+    'Tutor':s.Tutor||'',
+    'Status':s.Status||'Active',
+    'Join Date':s['Join Date']||''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Students');
+  const date=new Date().toISOString().substring(0,10);
+  XLSX.writeFile(wb,`ElectroBotics_Students_${date}.xlsx`);
 }
 
 function esc(t){if(!t)return '';const d=document.createElement('div');d.textContent=t;return d.innerHTML}
