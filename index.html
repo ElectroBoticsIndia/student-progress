@@ -568,24 +568,24 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     ctx.drawImage(img, 0, 0);
 
     // ─── Name overlay ───
-    // Adjust: nameY percentage (0.40 = 40% from top), nameX (0.05 = 5% from left)
-    const nameY = canvas.height * 0.50;
+    // Adjust: nameY percentage (0.45 = 45% from top), nameX (0.07 = 7% from left)
+    const nameY = canvas.height * 0.45;
     const nameFontSize = Math.round(canvas.width * 0.032);
     ctx.fillStyle = '#0a373a';
     ctx.font = `bold ${nameFontSize}px 'DM Sans', sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(studentName, canvas.width * 0.15, nameY);
+    ctx.fillText(studentName, canvas.width * 0.07, nameY);
 
     // ─── Date overlay ───
-    // Adjust: dateY percentage (0.90 = 90% from top), dateX (0.05 = 5% from left)
-    const dateY = canvas.height * 0.80;
+    // Adjust: dateY percentage (0.82 = 82% from top), dateX (0.07 = 7% from left)
+    const dateY = canvas.height * 0.82;
     const dateFontSize = Math.round(canvas.width * 0.016);
     const displayDate = completionDate ? formatDate(completionDate) : new Date().toLocaleDateString('en-IN', {year:'numeric', month:'long', day:'numeric'});
     ctx.fillStyle = '#0a373a';
     ctx.font = `600 ${dateFontSize}px 'DM Sans', sans-serif`;
     ctx.textAlign = 'left';
-    ctx.fillText(displayDate, canvas.width * 0.15, dateY);
+    ctx.fillText(displayDate, canvas.width * 0.07, dateY);
 
     // Download
     const link = document.createElement('a');
