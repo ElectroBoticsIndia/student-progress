@@ -412,7 +412,7 @@ async function loadData(){
     try{certificates=await fetchSheet('Certificates')}catch(e){certificates=[]}
     if(students.length===0)throw new Error('Students sheet is empty');
     allStudents=students;allProgress=progress;allProjects=projects;allCertificates=certificates;
-    if(levels.length>0)allLevels=levels.map((l,i)=>({num:parseInt(l['Level Number']||l['num']||(i+1)),name:(l['Level Name']||l['name']||'').trim(),desc:(l['Description']||l['desc']||'').trim(),refDoc:(l['Reference Doc']||'').trim()}));
+    if(levels.length>0)allLevels=levels.map((l,i)=>({num:parseInt(l['Level Number']||l['num']||(i+1)),name:(l['Level Name']||l['name']||'').trim(),desc:(l['Description']||l['desc']||'').trim(),refDoc:(l['Reference Doc']||'').trim(),certTemplate:(l['Certificate Template']||'').trim()}));
     console.log(`Loaded: ${allStudents.length} students, ${allProgress.length} progress, ${allProjects.length} projects, ${allCertificates.length} certificates`);
   }catch(e){
     console.error('Load error:',e);
@@ -499,6 +499,10 @@ function buildRoadmap(){
     // Also check if any progress row for this level has a Certificate URL
     const certFromProgress=topics.find(t=>t['Certificate URL']);
     const certUrl=(cert&&cert['Certificate URL'])||(certFromProgress&&certFromProgress['Certificate URL'])||'';
+    // Get completion date from certificates or progress
+    const completionDate=(cert&&cert['Completion Date'])||(certFromProgress&&certFromProgress['Completion Date'])||'';
+    // Check if this level has a certificate template for dynamic generation
+    const hasTemplate=level.certTemplate&&(status==='completed'||certUrl||completionDate);
     const color=LEVEL_COLORS[i%LEVEL_COLORS.length];
     return `
       <div class="level-card ${status}" data-level-idx="${i}">
@@ -513,7 +517,7 @@ function buildRoadmap(){
             ${total>0?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
           </div>
         </div>
-        ${certUrl||level.refDoc?`<div class="level-links">${certUrl?`<a href="${certUrl}" target="_blank" class="link-cert" onclick="event.stopPropagation()">🏆 Certificate</a>`:''}${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="link-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}</div>`:''}
+        ${(hasTemplate||certUrl||level.refDoc)?`<div class="level-links">${hasTemplate?`<a href="#" class="link-cert" onclick="event.stopPropagation();event.preventDefault();generateCertificate('${esc(level.certTemplate)}','${esc(currentStudent.Name)}','${esc(completionDate)}','${esc(level.name)}')">🏆 Download Certificate</a>`:certUrl?`<a href="${certUrl}" target="_blank" class="link-cert" onclick="event.stopPropagation()">🏆 Certificate</a>`:''}${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="link-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}</div>`:''}
         <div class="level-detail">
           ${topics.length>0?`<div class="topics-title">Topics Progress</div><div class="topic-list">${topics.map(t=>{
             const st=t.Status||'locked';const cc=st==='completed'?'done':st==='in-progress'?'progress':'locked';
@@ -541,6 +545,75 @@ document.addEventListener('click',function(e){
     toggleLevel(card);
   }
 });
+
+// ─── Certificate Generation ─────────────────────
+
+function generateCertificate(templateUrl, studentName, completionDate, levelName) {
+  // Show a loading state
+  const loadingDiv = document.createElement('div');
+  loadingDiv.id = 'certLoading';
+  loadingDiv.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;';
+  loadingDiv.innerHTML = '<div style="background:#fff;padding:30px 40px;border-radius:14px;text-align:center;max-width:90%;"><div style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;">Generating Certificate...</div><div style="font-size:13px;color:var(--text-dim);">Please wait</div></div>';
+  document.body.appendChild(loadingDiv);
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+
+    // Draw the template
+    ctx.drawImage(img, 0, 0);
+
+    // ─── Name overlay ───
+    // Position: centered horizontally, at ~58% from top (adjust as needed)
+    const nameY = canvas.height * 0.54;
+    const nameFontSize = Math.round(canvas.width * 0.04); // Responsive font size
+    ctx.fillStyle = '#0a373a';
+    ctx.font = `bold ${nameFontSize}px 'DM Sans', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(studentName, canvas.width / 2, nameY);
+
+    // ─── Date overlay ───
+    // Position: centered horizontally, at ~68% from top (adjust as needed)
+    const dateY = canvas.height * 0.66;
+    const dateFontSize = Math.round(canvas.width * 0.02);
+    const displayDate = completionDate ? formatDate(completionDate) : new Date().toLocaleDateString('en-IN', {year:'numeric', month:'long', day:'numeric'});
+    ctx.fillStyle = '#5a8a8e';
+    ctx.font = `600 ${dateFontSize}px 'DM Sans', sans-serif`;
+    ctx.fillText(displayDate, canvas.width / 2, dateY);
+
+    // Download
+    const link = document.createElement('a');
+    const safeName = studentName.replace(/[^a-zA-Z0-9]/g, '_');
+    const safeLevel = levelName.replace(/[^a-zA-Z0-9]/g, '_');
+    link.download = `${safeName}_${safeLevel}_Certificate.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    // Remove loading
+    document.getElementById('certLoading').remove();
+  };
+
+  img.onerror = function() {
+    document.getElementById('certLoading').remove();
+    alert('Could not load the certificate template. Make sure the image is shared publicly on Google Drive.');
+  };
+
+  // Load the template image
+  img.src = templateUrl;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  // Handle various date formats
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr; // Return as-is if can't parse
+  return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+}
 
 // ─── Admin ───────────────────────────────────────
 
