@@ -568,23 +568,24 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     ctx.drawImage(img, 0, 0);
 
     // ─── Name overlay ───
-    // Position: centered horizontally, at ~58% from top (adjust as needed)
-    const nameY = canvas.height * 0.54;
-    const nameFontSize = Math.round(canvas.width * 0.04); // Responsive font size
+    // Position: centered horizontally, on the line between "certify that" and "has completed"
+    const nameY = canvas.height * 0.38;
+    const nameFontSize = Math.round(canvas.width * 0.035);
     ctx.fillStyle = '#0a373a';
     ctx.font = `bold ${nameFontSize}px 'DM Sans', sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(studentName, canvas.width / 2, nameY);
+    ctx.fillText(studentName, canvas.width * 0.35, nameY);
 
     // ─── Date overlay ───
-    // Position: centered horizontally, at ~68% from top (adjust as needed)
-    const dateY = canvas.height * 0.66;
-    const dateFontSize = Math.round(canvas.width * 0.02);
+    // Position: left-aligned, on the line above "Date" label at bottom left
+    const dateY = canvas.height * 0.78;
+    const dateFontSize = Math.round(canvas.width * 0.018);
     const displayDate = completionDate ? formatDate(completionDate) : new Date().toLocaleDateString('en-IN', {year:'numeric', month:'long', day:'numeric'});
-    ctx.fillStyle = '#5a8a8e';
+    ctx.fillStyle = '#0a373a';
     ctx.font = `600 ${dateFontSize}px 'DM Sans', sans-serif`;
-    ctx.fillText(displayDate, canvas.width / 2, dateY);
+    ctx.textAlign = 'center';
+    ctx.fillText(displayDate, canvas.width * 0.13, dateY);
 
     // Download
     const link = document.createElement('a');
