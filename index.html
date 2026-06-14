@@ -197,6 +197,16 @@ table.avail td.occ{border:1px solid transparent}
 .avail-chip{display:flex;align-items:center;justify-content:space-between;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;border-radius:4px;padding:2px 5px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .avail-count{flex:none;background:rgba(255,255,255,.28);border-radius:8px;padding:0 5px;font-weight:700;font-size:9px}
 .avail-free-txt{font-family:var(--font-mono);font-size:9px;color:var(--text-light);opacity:.6}
+.enroll-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.enroll-controls{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
+.enroll-controls select{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer}
+table.enroll-sum{border-collapse:collapse;width:100%;min-width:520px;margin-top:18px;font-family:var(--font-mono)}
+table.enroll-sum th,table.enroll-sum td{text-align:right;padding:7px 12px;font-size:11px;border-bottom:1px solid var(--border)}
+table.enroll-sum th{color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;font-size:10px;font-weight:700}
+table.enroll-sum td:first-child,table.enroll-sum th:first-child{text-align:left;color:var(--text)}
+table.enroll-sum tr:last-child td{border-bottom:none}
+table.enroll-sum .yr-row td{background:var(--bg);font-weight:700;color:var(--text-dim)}
+table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 
 /* Student table */
 .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:28px}
@@ -332,12 +342,28 @@ table.avail td.occ{border:1px solid transparent}
       <div class="chart-card"><div class="chart-title">Students per Level</div><div class="chart-container"><canvas id="chartLevel"></canvas></div></div>
       <div class="chart-card"><div class="chart-title">Students by Country</div><div class="chart-container"><canvas id="chartBatch"></canvas></div></div>
       <div class="chart-card"><div class="chart-title">Students per Tutor</div><div class="chart-container"><canvas id="chartTutor"></canvas></div></div>
-      <div class="chart-card"><div class="chart-title">Enrollment Trend</div><div class="chart-container"><canvas id="chartEnrollment"></canvas></div></div>
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
       <div class="chart-title">Tutor Availability by Day &amp; Time Slot</div>
       <div id="availabilityLegend" class="avail-legend"></div>
       <div class="avail-scroll"><div id="availabilityGrid"></div></div>
+    </div>
+    <div class="chart-card" id="enrollmentCard" style="margin-bottom:28px;">
+      <div class="enroll-head">
+        <div class="chart-title" style="margin-bottom:0;">Enrollment Trend</div>
+        <div class="enroll-controls">
+          <label>Period</label>
+          <select id="enrollPeriod" onchange="buildEnrollmentChart()">
+            <option value="quarter-in">Quarter — Indian Govt (AMJ / JAS / OND / JFM)</option>
+            <option value="quarter-cal">Quarter — Calendar (Q1 JFM / Q2 AMJ / Q3 JAS / Q4 OND)</option>
+            <option value="fy-in">Financial Year — Indian (Apr–Mar)</option>
+            <option value="year">Calendar Year</option>
+            <option value="month">Month</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-container" style="min-height:300px;margin-top:14px;"><canvas id="chartEnrollment"></canvas></div>
+      <div class="avail-scroll"><div id="enrollSummary"></div></div>
     </div>
     <div class="table-card">
       <div class="table-header">
@@ -812,49 +838,112 @@ function buildCharts(){
     }
   });
 
-  // ─── Enrollment Trend (line chart) ───
-  // Parse Join Date robustly: handles "2020-04", "Apr 2020", "01-Apr-2020",
-  // "4/1/2020", "2020/04/15", etc. Falls back to Date parsing, then to a
-  // year-only match so different years never collapse onto the same label.
-  function parseJoinKey(raw){
-    const d=String(raw||'').trim();
-    if(!d)return null;
-    // Already YYYY-MM or YYYY-MM-DD
-    let m=d.match(/^(\d{4})[-/](\d{1,2})/);
-    if(m)return m[1]+'-'+String(m[2]).padStart(2,'0');
-    // Try native Date parsing (covers "Apr 2020", "1 Apr 2020", "4/1/2020", "01-Apr-2020")
-    const dt=new Date(d);
-    if(!isNaN(dt))return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
-    // Last resort: month name + year, or bare year
-    const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
-    const ym=d.toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*[, ]?\s*(\d{4})/);
-    if(ym)return ym[2]+'-'+months[ym[1]];
-    const yr=d.match(/(\d{4})/);
-    if(yr)return yr[1]+'-01';
-    return null;
-  }
-  const monthMap={};allStudents.forEach(s=>{const key=parseJoinKey(s['Join Date']);if(key)monthMap[key]=(monthMap[key]||0)+1});
-  const sortedMonths=Object.keys(monthMap).sort();
-  // Display labels like "Apr 2020" while keeping chronological YYYY-MM sort order
+  buildEnrollmentChart();
+  buildAvailabilityGrid();
+}
+
+// ─── Enrollment Trend (quarterly / yearly / monthly) ──────────────────
+// Parse Join Date robustly into a {year, month} pair, then group by the
+// chosen period. Shows new enrolments per period (bars) + cumulative total
+// (line), plus a period-wise summary table with totals.
+function parseJoinYM(raw){
+  const d=String(raw||'').trim();
+  if(!d)return null;
+  let m=d.match(/^(\d{4})[-/](\d{1,2})/);
+  if(m)return{y:parseInt(m[1]),m:parseInt(m[2])};
+  const dt=new Date(d);
+  if(!isNaN(dt))return{y:dt.getFullYear(),m:dt.getMonth()+1};
+  const months={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  const ym=d.toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*[, ]?\s*(\d{4})/);
+  if(ym)return{y:parseInt(ym[2]),m:months[ym[1]]};
+  const yr=d.match(/(\d{4})/);
+  if(yr)return{y:parseInt(yr[1]),m:1};
+  return null;
+}
+
+function buildEnrollmentChart(){
+  const fontMono='JetBrains Mono';
+  const periodSel=document.getElementById('enrollPeriod');
+  const period=periodSel?periodSel.value:'quarter-in';
   const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const displayLabels=sortedMonths.map(m=>{const[y,mo]=m.split('-');return monthNames[parseInt(mo)-1]+' '+y});
-  let cumulative=0;const cumData=sortedMonths.map(m=>{cumulative+=monthMap[m];return cumulative});
+
+  // Map a {y,m} to a sortable key + display label depending on period.
+  // Indian Govt quarters: AMJ(Apr-Jun), JAS(Jul-Sep), OND(Oct-Dec), JFM(Jan-Mar).
+  function bucket(ym){
+    const{y,m}=ym;
+    if(period==='month'){
+      return{key:y*100+m, label:monthNames[m-1]+' '+y};
+    }
+    if(period==='year'){
+      return{key:y*10+1, label:String(y)};
+    }
+    if(period==='fy-in'){
+      // Indian FY runs Apr→Mar; Jan-Mar belongs to previous FY start year
+      const fy=m>=4?y:y-1;
+      return{key:fy*10+1, label:'FY '+fy+'-'+String((fy+1)%100).padStart(2,'0')};
+    }
+    if(period==='quarter-cal'){
+      const q=Math.floor((m-1)/3)+1; // Q1=JFM ... Q4=OND
+      const names=['JFM','AMJ','JAS','OND'];
+      return{key:y*10+q, label:'Q'+q+' '+names[q-1]+' '+y};
+    }
+    // quarter-in (Indian Govt): AMJ, JAS, OND, JFM
+    // AMJ=Apr-Jun, JAS=Jul-Sep, OND=Oct-Dec belong to year y; JFM=Jan-Mar
+    let qName,qOrd,yLabel=y;
+    if(m>=4&&m<=6){qName='AMJ';qOrd=1;}
+    else if(m>=7&&m<=9){qName='JAS';qOrd=2;}
+    else if(m>=10&&m<=12){qName='OND';qOrd=3;}
+    else{qName='JFM';qOrd=4;} // Jan-Mar is the closing quarter of the FY
+    // Sort JFM after OND of the same FY: treat its sort-year as y-1
+    const sortY=(qOrd===4)?y-1:y;
+    return{key:sortY*10+qOrd, label:qName+' '+yLabel};
+  }
+
+  // Aggregate
+  const buckets={};
+  allStudents.forEach(s=>{
+    const ym=parseJoinYM(s['Join Date']);
+    if(!ym)return;
+    const b=bucket(ym);
+    if(!buckets[b.key])buckets[b.key]={label:b.label,count:0};
+    buckets[b.key].count++;
+  });
+  const keys=Object.keys(buckets).map(Number).sort((a,b)=>a-b);
+  const labels=keys.map(k=>buckets[k].label);
+  const newData=keys.map(k=>buckets[k].count);
+  let cum=0;const cumData=newData.map(n=>{cum+=n;return cum});
+
+  if(charts.enrollment){charts.enrollment.destroy();}
   charts.enrollment=new Chart(document.getElementById('chartEnrollment'),{
-    type:'line',
-    data:{labels:displayLabels,datasets:[{label:'Total Students',data:cumData,borderColor:'#008fa0',backgroundColor:'#008fa020',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#008fa0'}]},
+    data:{labels:labels,datasets:[
+      {type:'bar',label:'New Enrolments',data:newData,backgroundColor:'#008fa0',borderRadius:4,order:2,
+        datalabels:{display:true,anchor:'end',align:'end',color:'#008fa0',font:{family:fontMono,size:10,weight:'bold'},formatter:v=>v||''}},
+      {type:'line',label:'Cumulative Total',data:cumData,borderColor:'#c77d00',backgroundColor:'#c77d0015',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:'#c77d00',order:1,datalabels:{display:false}}
+    ]},
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{
-        legend:{labels:{font:{family:fontMono,size:11},color:'#5a8a8e'}},
-        datalabels:{display:false}
+        legend:{labels:{font:{family:fontMono,size:11},color:'#5a8a8e',usePointStyle:true}},
       },
       scales:{
-        x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'}},
-        y:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true}
+        x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9',maxRotation:45,minRotation:0},grid:{display:false}},
+        y:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,title:{display:true,text:'Students',font:{family:fontMono,size:10},color:'#8db5b9'}}
       }
     }
   });
-  buildAvailabilityGrid();
+
+  // Period-wise summary table
+  const sum=document.getElementById('enrollSummary');
+  if(sum){
+    const total=newData.reduce((a,b)=>a+b,0);
+    const peak=newData.length?Math.max(...newData):0;
+    let rows='';
+    keys.forEach((k,i)=>{
+      const isPeak=newData[i]===peak&&peak>0;
+      rows+=`<tr><td>${esc(buckets[k].label)}</td><td class="${newData[i]?'new-pos':''}">${newData[i]}${isPeak?' ★':''}</td><td>${cumData[i]}</td></tr>`;
+    });
+    sum.innerHTML=`<table class="enroll-sum"><thead><tr><th>Period</th><th>New Enrolments</th><th>Cumulative</th></tr></thead><tbody>${rows}<tr class="yr-row"><td>Total</td><td>${total}</td><td>—</td></tr></tbody></table>`;
+  }
 }
 
 // ─── Tutor Availability Grid (days × time slots) ──────────────────────
