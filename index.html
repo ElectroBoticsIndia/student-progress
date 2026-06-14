@@ -367,8 +367,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 // CONFIGURATION
 // ══════════════════════════════════════════════════
 const SHEET_ID = '1JR6EZ6N6J-hwoSwpxU3tlGV25fMoafCX1-x-zPvyku0';
-const GOOGLE_CLIENT_ID = '1060454695062-vf1ajfodb8siesq7fk906rpind6fjc72.apps.googleusercontent.com'; // ← Paste your Google OAuth Client ID here
-const ADMIN_EMAILS = ['admin@electrobotics.in, chithra@electrobotics.in']; // ← Specific admin emails (any Google account)
+const GOOGLE_CLIENT_ID = ''; // ← Paste your Google OAuth Client ID here
+const ADMIN_EMAILS = ['admin@electrobotics.in']; // ← Specific admin emails (any Google account)
 const ADMIN_DOMAINS = ['electrobotics.in']; // ← Allow ANY account on these Workspace domains. Leave as [] to disable.
 // ══════════════════════════════════════════════════
 
@@ -794,13 +794,36 @@ function buildCharts(){
     }
   });
 
-  // ─── Enrollment Trend (line chart, unchanged) ───
-  const monthMap={};allStudents.forEach(s=>{const d=s['Join Date']||'';if(d){const key=String(d).substring(0,7);monthMap[key]=(monthMap[key]||0)+1}});
+  // ─── Enrollment Trend (line chart) ───
+  // Parse Join Date robustly: handles "2020-04", "Apr 2020", "01-Apr-2020",
+  // "4/1/2020", "2020/04/15", etc. Falls back to Date parsing, then to a
+  // year-only match so different years never collapse onto the same label.
+  function parseJoinKey(raw){
+    const d=String(raw||'').trim();
+    if(!d)return null;
+    // Already YYYY-MM or YYYY-MM-DD
+    let m=d.match(/^(\d{4})[-/](\d{1,2})/);
+    if(m)return m[1]+'-'+String(m[2]).padStart(2,'0');
+    // Try native Date parsing (covers "Apr 2020", "1 Apr 2020", "4/1/2020", "01-Apr-2020")
+    const dt=new Date(d);
+    if(!isNaN(dt))return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+    // Last resort: month name + year, or bare year
+    const months={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
+    const ym=d.toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*[, ]?\s*(\d{4})/);
+    if(ym)return ym[2]+'-'+months[ym[1]];
+    const yr=d.match(/(\d{4})/);
+    if(yr)return yr[1]+'-01';
+    return null;
+  }
+  const monthMap={};allStudents.forEach(s=>{const key=parseJoinKey(s['Join Date']);if(key)monthMap[key]=(monthMap[key]||0)+1});
   const sortedMonths=Object.keys(monthMap).sort();
+  // Display labels like "Apr 2020" while keeping chronological YYYY-MM sort order
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const displayLabels=sortedMonths.map(m=>{const[y,mo]=m.split('-');return monthNames[parseInt(mo)-1]+' '+y});
   let cumulative=0;const cumData=sortedMonths.map(m=>{cumulative+=monthMap[m];return cumulative});
   charts.enrollment=new Chart(document.getElementById('chartEnrollment'),{
     type:'line',
-    data:{labels:sortedMonths,datasets:[{label:'Total Students',data:cumData,borderColor:'#008fa0',backgroundColor:'#008fa020',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#008fa0'}]},
+    data:{labels:displayLabels,datasets:[{label:'Total Students',data:cumData,borderColor:'#008fa0',backgroundColor:'#008fa020',fill:true,tension:0.3,pointRadius:4,pointBackgroundColor:'#008fa0'}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{
