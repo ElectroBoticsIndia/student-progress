@@ -367,8 +367,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 // CONFIGURATION
 // ══════════════════════════════════════════════════
 const SHEET_ID = '1JR6EZ6N6J-hwoSwpxU3tlGV25fMoafCX1-x-zPvyku0';
-const GOOGLE_CLIENT_ID = ''; // ← Paste your Google OAuth Client ID here
-const ADMIN_EMAILS = ['admin@electrobotics.in']; // ← Add authorized admin emails
+const GOOGLE_CLIENT_ID = '1060454695062-vf1ajfodb8siesq7fk906rpind6fjc72.apps.googleusercontent.com'; // ← Paste your Google OAuth Client ID here
+const ADMIN_EMAILS = ['admin@electrobotics.in, chithra@electrobotics.in']; // ← Specific admin emails (any Google account)
+const ADMIN_DOMAINS = ['electrobotics.in']; // ← Allow ANY account on these Workspace domains. Leave as [] to disable.
 // ══════════════════════════════════════════════════
 
 const DEFAULT_LEVELS=[
@@ -425,7 +426,11 @@ async function loadData(){
     try{certificates=await fetchSheet('Certificates')}catch(e){certificates=[]}
     if(students.length===0)throw new Error('Students sheet is empty');
     allStudents=students;allProgress=progress;allProjects=projects;allCertificates=certificates;
-    if(levels.length>0)allLevels=levels.map((l,i)=>({num:parseInt(l['Level Number']||l['num']||(i+1)),name:(l['Level Name']||l['name']||'').trim(),desc:(l['Description']||l['desc']||'').trim(),refDoc:(l['Reference Doc']||'').trim(),certTemplate:(l['Certificate Template']||'').trim()}));
+    if(levels.length>0){
+      const parsed=levels.map((l,i)=>({num:parseInt(l['Level Number']||l['num']||(i+1)),name:(l['Level Name']||l['name']||'').trim(),desc:(l['Description']||l['desc']||'').trim(),refDoc:(l['Reference Doc']||'').trim(),certTemplate:(l['Certificate Template']||'').trim()})).filter(l=>l.name);
+      if(parsed.length>0)allLevels=parsed;
+      else console.warn('Levels sheet returned rows but no usable "Level Name" values — check the header row. Falling back to default levels.');
+    }
     console.log(`Loaded: ${allStudents.length} students, ${allProgress.length} progress, ${allProjects.length} projects, ${allCertificates.length} certificates`);
   }catch(e){
     console.error('Load error:',e);
@@ -661,7 +666,9 @@ function demoAdminLogin(){
 
 function handleGoogleLogin(response){
   const payload=JSON.parse(atob(response.credential.split('.')[1]));
-  if(ADMIN_EMAILS.includes(payload.email)){
+  const emailOk=ADMIN_EMAILS.includes(payload.email);
+  const domainOk=ADMIN_DOMAINS.length>0 && ADMIN_DOMAINS.includes(payload.hd||(payload.email||'').split('@')[1]);
+  if(emailOk||domainOk){
     adminUser={email:payload.email,name:payload.name,picture:payload.picture};
     showAdminDashboard();
   }else{
