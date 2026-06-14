@@ -343,11 +343,6 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div class="chart-card"><div class="chart-title">Students by Country</div><div class="chart-container"><canvas id="chartBatch"></canvas></div></div>
       <div class="chart-card"><div class="chart-title">Students per Tutor</div><div class="chart-container"><canvas id="chartTutor"></canvas></div></div>
     </div>
-    <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
-      <div class="chart-title">Tutor Availability by Day &amp; Time Slot</div>
-      <div id="availabilityLegend" class="avail-legend"></div>
-      <div class="avail-scroll"><div id="availabilityGrid"></div></div>
-    </div>
     <div class="chart-card" id="enrollmentCard" style="margin-bottom:28px;">
       <div class="enroll-head">
         <div class="chart-title" style="margin-bottom:0;">Enrollment Trend</div>
@@ -363,7 +358,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         </div>
       </div>
       <div class="chart-container" style="min-height:300px;margin-top:14px;"><canvas id="chartEnrollment"></canvas></div>
-      <div class="avail-scroll"><div id="enrollSummary"></div></div>
+    </div>
+    <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
+      <div class="chart-title">Tutor Availability by Day &amp; Time Slot</div>
+      <div id="availabilityLegend" class="avail-legend"></div>
+      <div class="avail-scroll"><div id="availabilityGrid"></div></div>
     </div>
     <div class="table-card">
       <div class="table-header">
@@ -931,19 +930,6 @@ function buildEnrollmentChart(){
       }
     }
   });
-
-  // Period-wise summary table
-  const sum=document.getElementById('enrollSummary');
-  if(sum){
-    const total=newData.reduce((a,b)=>a+b,0);
-    const peak=newData.length?Math.max(...newData):0;
-    let rows='';
-    keys.forEach((k,i)=>{
-      const isPeak=newData[i]===peak&&peak>0;
-      rows+=`<tr><td>${esc(buckets[k].label)}</td><td class="${newData[i]?'new-pos':''}">${newData[i]}${isPeak?' ★':''}</td><td>${cumData[i]}</td></tr>`;
-    });
-    sum.innerHTML=`<table class="enroll-sum"><thead><tr><th>Period</th><th>New Enrolments</th><th>Cumulative</th></tr></thead><tbody>${rows}<tr class="yr-row"><td>Total</td><td>${total}</td><td>—</td></tr></tbody></table>`;
-  }
 }
 
 // ─── Tutor Availability Grid (days × time slots) ──────────────────────
