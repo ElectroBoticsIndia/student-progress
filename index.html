@@ -252,6 +252,9 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .id-group{flex-direction:column}
   .stats-grid{grid-template-columns:1fr 1fr}
   .charts-grid{grid-template-columns:1fr}
+  .enroll-head{flex-direction:column;align-items:flex-start;gap:10px}
+  .enroll-controls{width:100%}
+  .enroll-controls select{flex:1;min-width:0;width:100%}
   .header-right .btn-admin span{display:none}
   .table-filter-bar{gap:8px}
   .filter-group select{min-width:100px;font-size:12px}
@@ -803,16 +806,17 @@ function buildCharts(){
     data:{labels:countryLabels,datasets:[{data:countryData,backgroundColor:colors.slice(0,countryLabels.length),borderRadius:6}]},
     options:{
       responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      layout:{padding:{right:48}},
       plugins:{
         legend:{display:false},
         datalabels:{
-          anchor:'end',align:'right',color:'#0a373a',
+          anchor:'end',align:'right',color:'#0a373a',clamp:true,clip:false,
           font:{family:fontMono,size:11,weight:700},
           formatter:(v)=>{const pct=totalStudents?Math.round(v/totalStudents*100):0;return v+' ('+pct+'%)';}
         }
       },
       scales:{
-        x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'25%'},
+        x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'30%'},
         y:{ticks:{font:{family:fontMono,size:11},color:'#5a8a8e'}}
       }
     }
