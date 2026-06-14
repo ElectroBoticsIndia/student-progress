@@ -343,13 +343,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
           <select id="filterTutor" onchange="applyFilters()"><option value="">All</option></select>
         </div>
         <div class="filter-group">
+          <label>Batch</label>
+          <select id="filterBatch" onchange="applyFilters()"><option value="">All</option></select>
+        </div>
+        <div class="filter-group">
           <label>Status</label>
           <select id="filterStatus" onchange="applyFilters()"><option value="">All</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
         </div>
         <button class="filter-clear" onclick="clearFilters()">Clear</button>
       </div>
       <div class="table-wrap"><table class="data-table" id="studentTable">
-        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Country</th><th>Tutor</th><th>Status</th><th>Joined</th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Country</th><th>Tutor</th><th>Batch</th><th>Status</th><th>Joined</th></tr></thead>
         <tbody id="tableBody"></tbody>
       </table></div>
     </div>
@@ -433,9 +437,9 @@ async function loadData(){
 
 function loadDemoData(){
   allStudents=[
-    {ID:'EB001',Name:'Arun Kumar','Current Level':'Micro:bit Automation',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Country:'India',Status:'Active'},
-    {ID:'EB002',Name:'Priya Sharma','Current Level':'Robotics',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Country:'India',Status:'Active'},
-    {ID:'EB003',Name:'Ravi Patel','Current Level':'IOT and Python',Photo:'','Join Date':'2024-06',Tutor:'Suresh',Country:'USA',Status:'Active'},
+    {ID:'EB001',Name:'Arun Kumar','Current Level':'Micro:bit Automation',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Country:'India',Status:'Active',Batch:'Sun - 9:30 am'},
+    {ID:'EB002',Name:'Priya Sharma','Current Level':'Robotics',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Country:'India',Status:'Active',Batch:'Sun - 9:30 am'},
+    {ID:'EB003',Name:'Ravi Patel','Current Level':'IOT and Python',Photo:'','Join Date':'2024-06',Tutor:'Suresh',Country:'USA',Status:'Active',Batch:'Sat - 11:00 am'},
   ];
   allProgress=[
     {['Student ID']:'EB001','Level Name':'Robotics Foundation',Topic:'Introduction to Robots',Status:'completed'},
@@ -812,6 +816,7 @@ function populateFilters(){
   const countries=[...new Set(allStudents.map(s=>s.Country||'').filter(c=>c))].sort();
   const levels=allLevels.map(l=>l.name);
   const tutors=[...new Set(allStudents.map(s=>s.Tutor||'').filter(t=>t))].sort();
+  const batches=[...new Set(allStudents.map(s=>s.Batch||'').filter(b=>b))].sort();
 
   const fillSelect=(id,items)=>{
     const sel=document.getElementById(id);
@@ -822,18 +827,21 @@ function populateFilters(){
   fillSelect('filterCountry',countries);
   fillSelect('filterLevel',levels);
   fillSelect('filterTutor',tutors);
+  fillSelect('filterBatch',batches);
 }
 
 function applyFilters(){
   const country=document.getElementById('filterCountry').value;
   const level=document.getElementById('filterLevel').value;
   const tutor=document.getElementById('filterTutor').value;
+  const batch=document.getElementById('filterBatch').value;
   const status=document.getElementById('filterStatus').value;
 
   filteredStudents=allStudents.filter(s=>{
     if(country && (s.Country||'')!==country)return false;
     if(level && (s['Current Level']||'')!==level)return false;
     if(tutor && (s.Tutor||'')!==tutor)return false;
+    if(batch && (s.Batch||'')!==batch)return false;
     if(status && (s.Status||'Active').toLowerCase()!==status.toLowerCase())return false;
     return true;
   });
@@ -850,6 +858,7 @@ function renderTable(){
       <td>${esc(s['Current Level']||'—')}</td>
       <td>${esc(s.Country||'—')}</td>
       <td>${esc(s.Tutor||'—')}</td>
+      <td>${esc(s.Batch||'—')}</td>
       <td class="${(s.Status||'Active').toLowerCase()==='active'?'status-active':'status-inactive'}">${esc(s.Status||'Active')}</td>
       <td>${esc(s['Join Date']||'—')}</td>
     </tr>
@@ -866,6 +875,7 @@ function clearFilters(){
   document.getElementById('filterCountry').value='';
   document.getElementById('filterLevel').value='';
   document.getElementById('filterTutor').value='';
+  document.getElementById('filterBatch').value='';
   document.getElementById('filterStatus').value='';
   applyFilters();
 }
