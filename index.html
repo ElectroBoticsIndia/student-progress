@@ -256,9 +256,10 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .enroll-controls{width:100%}
   .enroll-controls select{flex:1;min-width:0;width:100%}
   .header-right .btn-admin span{display:none}
-  .table-filter-bar{gap:8px}
-  .filter-group select{min-width:100px;font-size:12px}
-  .filter-group{flex:1;min-width:80px}
+  .table-filter-bar{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;align-items:end}
+  .filter-group{min-width:0}
+  .filter-group select{min-width:0;width:100%;font-size:12px}
+  .table-filter-bar .filter-clear{width:100%;padding:9px 14px;align-self:end}
   .table-header{flex-wrap:wrap;gap:10px}
   .btn-download{width:100%}
   .admin-login-card{padding:28px 20px;margin:40px auto}
@@ -817,7 +818,15 @@ function buildCharts(){
       },
       scales:{
         x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'30%'},
-        y:{ticks:{font:{family:fontMono,size:11},color:'#5a8a8e'}}
+        y:{ticks:{font:{family:fontMono,size:11},color:'#5a8a8e',autoSkip:false,crossAlign:'far',callback:function(val){
+          const lbl=this.getLabelForValue(val);
+          // Split long labels (e.g. "India – Nanganallur") onto two lines
+          if(lbl.length>14&&lbl.includes(' ')){
+            const parts=lbl.split(/\s*[–-]\s*|\s+/);
+            if(parts.length>1)return [parts[0], parts.slice(1).join(' ')];
+          }
+          return lbl;
+        }}}
       }
     }
   });
