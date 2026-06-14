@@ -184,6 +184,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
 .chart-title{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
 .chart-container{position:relative;min-height:280px}
+.avail-scroll{overflow-x:auto}
+.avail-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
+.avail-legend .lg{display:inline-flex;align-items:center;gap:6px}
+.avail-legend .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
+table.avail{border-collapse:separate;border-spacing:4px;width:100%;min-width:680px}
+table.avail th{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;padding:6px 4px;text-align:center}
+table.avail th.slot-h{text-align:right;white-space:nowrap;color:var(--text-light);font-weight:600}
+table.avail td{border-radius:7px;padding:6px;vertical-align:top;min-width:72px;height:46px;background:var(--bg);border:1px dashed var(--border)}
+table.avail td.free{background:var(--bg);border:1px dashed var(--border)}
+table.avail td.occ{border:1px solid transparent}
+.avail-chip{display:flex;align-items:center;justify-content:space-between;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;border-radius:4px;padding:2px 5px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avail-count{flex:none;background:rgba(255,255,255,.28);border-radius:8px;padding:0 5px;font-weight:700;font-size:9px}
+.avail-free-txt{font-family:var(--font-mono);font-size:9px;color:var(--text-light);opacity:.6}
 
 /* Student table */
 .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:28px}
@@ -320,6 +333,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
       <div class="chart-card"><div class="chart-title">Students by Country</div><div class="chart-container"><canvas id="chartBatch"></canvas></div></div>
       <div class="chart-card"><div class="chart-title">Students per Tutor</div><div class="chart-container"><canvas id="chartTutor"></canvas></div></div>
       <div class="chart-card"><div class="chart-title">Enrollment Trend</div><div class="chart-container"><canvas id="chartEnrollment"></canvas></div></div>
+    </div>
+    <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
+      <div class="chart-title">Tutor Availability by Day &amp; Time Slot</div>
+      <div id="availabilityLegend" class="avail-legend"></div>
+      <div class="avail-scroll"><div id="availabilityGrid"></div></div>
     </div>
     <div class="table-card">
       <div class="table-header">
@@ -836,9 +854,91 @@ function buildCharts(){
       }
     }
   });
+  buildAvailabilityGrid();
 }
 
-// ─── Admin Table & Filters ──────────────────────
+// ─── Tutor Availability Grid (days × time slots) ──────────────────────
+// Parses the Batch column (e.g. "Sun - 9:30 am") to map each tutor to the
+// day + time slot they teach, then renders a colour-coded matrix so free
+// slots and available tutors are easy to spot.
+function buildAvailabilityGrid(){
+  const grid=document.getElementById('availabilityGrid');
+  const legend=document.getElementById('availabilityLegend');
+  if(!grid)return;
+
+  const DAY_ORDER=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const DAY_ALIAS={mon:'Mon',monday:'Mon',tue:'Tue',tues:'Tue',tuesday:'Tue',wed:'Wed',weds:'Wed',wednesday:'Wed',thu:'Thu',thur:'Thu',thurs:'Thu',thursday:'Thu',fri:'Fri',friday:'Fri',sat:'Sat',saturday:'Sat',sun:'Sun',sunday:'Sun'};
+  const PALETTE=['#008fa0','#c77d00','#7048a8','#2e8b57','#b03060','#3a6ea5','#9a6324','#d4496a','#46887f','#8a5a00'];
+
+  // Parse "Sun - 9:30 am" → {day:'Sun', slot:'9:30 am', mins:570}
+  function parseBatch(raw){
+    const s=String(raw||'').trim();
+    if(!s)return null;
+    const dm=s.match(/^([A-Za-z]+)/);
+    if(!dm)return null;
+    const day=DAY_ALIAS[dm[1].toLowerCase()];
+    if(!day)return null;
+    const tm=s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+    if(!tm)return null;
+    let h=parseInt(tm[1]),min=tm[2]?parseInt(tm[2]):0;
+    const ap=tm[3].toLowerCase();
+    if(ap==='pm'&&h!==12)h+=12;
+    if(ap==='am'&&h===12)h=0;
+    const mins=h*60+min;
+    const slot=(((h%12)||12))+':'+String(min).padStart(2,'0')+' '+ap;
+    return{day,slot,mins};
+  }
+
+  // Build: occupancy[mins][day] = Map of tutor → student count ; track all slots & tutors
+  const occupancy={}, slotMins={}, tutorsSet=new Set();
+  allStudents.forEach(s=>{
+    const tutor=(s.Tutor||'').trim();
+    const p=parseBatch(s.Batch);
+    if(!tutor||!p)return;
+    tutorsSet.add(tutor);
+    slotMins[p.mins]=p.slot;
+    (occupancy[p.mins]=occupancy[p.mins]||{});
+    const cell=(occupancy[p.mins][p.day]=occupancy[p.mins][p.day]||{});
+    cell[tutor]=(cell[tutor]||0)+1;
+  });
+
+  const tutors=[...tutorsSet].sort();
+  const slots=Object.keys(slotMins).map(Number).sort((a,b)=>a-b);
+
+  if(slots.length===0){
+    legend.innerHTML='';
+    grid.innerHTML='<p style="font-family:var(--font-mono);font-size:12px;color:var(--text-light);">No batch/time data found. Add values like <strong>Sun - 9:30 am</strong> in the Batch column of the Students sheet.</p>';
+    return;
+  }
+
+  // Assign each tutor a colour
+  const colorOf={};tutors.forEach((t,i)=>colorOf[t]=PALETTE[i%PALETTE.length]);
+
+  // Legend
+  legend.innerHTML=tutors.map(t=>`<span class="lg"><span class="sw" style="background:${colorOf[t]}"></span>${esc(t)}</span>`).join('')
+    +`<span class="lg"><span class="sw" style="background:var(--bg);border:1px dashed var(--border)"></span>Free</span>`;
+
+  // Table
+  let html='<table class="avail"><thead><tr><th class="slot-h">Time</th>'+DAY_ORDER.map(d=>`<th>${d}</th>`).join('')+'</tr></thead><tbody>';
+  slots.forEach(mins=>{
+    html+=`<tr><th class="slot-h">${esc(slotMins[mins])}</th>`;
+    DAY_ORDER.forEach(day=>{
+      const cell=occupancy[mins]&&occupancy[mins][day]?occupancy[mins][day]:null;
+      const here=cell?Object.keys(cell).sort():[];
+      if(here.length){
+        const chips=here.map(t=>`<span class="avail-chip" style="background:${colorOf[t]}" title="${esc(t)} — ${cell[t]} student${cell[t]===1?'':'s'}">${esc(t)} <span class="avail-count">${cell[t]}</span></span>`).join('');
+        const freeTutors=tutors.filter(t=>!here.includes(t));
+        const freeNote=freeTutors.length?`<span class="avail-free-txt" title="Free: ${esc(freeTutors.join(', '))}">+${freeTutors.length} free</span>`:'';
+        html+=`<td class="occ">${chips}${freeNote}</td>`;
+      }else{
+        html+=`<td class="free"><span class="avail-free-txt">All free</span></td>`;
+      }
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  grid.innerHTML=html;
+}
 
 let filteredStudents = [];
 
