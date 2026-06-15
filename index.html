@@ -125,6 +125,51 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-card.completed .level-progress-fill{background:var(--green);width:100%}
 .level-card.current .level-progress-fill{background:var(--accent)}
 
+/* Redesigned level status line */
+.level-statusline{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.level-topic-count{font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
+.level-pct{font-family:var(--font-mono);font-size:15px;font-weight:700}
+.level-info .level-progress-bar{width:100%;max-width:none;height:8px;margin-top:8px}
+.level-chevron{flex-shrink:0;width:24px;height:24px;color:var(--text-light);transition:transform .3s;align-self:center}
+.level-card.expanded .level-chevron{transform:rotate(180deg)}
+.level-card.locked .level-chevron{opacity:.3}
+.level-actions{display:flex;gap:8px;padding:0 22px 16px;flex-wrap:wrap}
+.lvl-btn{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:9px 14px;border-radius:8px;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .2s;border:none;cursor:pointer;flex:1;justify-content:center;min-width:120px}
+.lvl-btn-cert{background:var(--amber-light);color:#9a7200}
+.lvl-btn-cert:hover{background:var(--amber);color:#fff}
+.lvl-btn-ref{background:var(--accent-light);color:var(--accent-dark)}
+.lvl-btn-ref:hover{background:var(--accent);color:#fff}
+.lvl-btn-share{background:var(--green-bg);color:#5a7a00}
+.lvl-btn-share:hover{background:var(--green);color:#fff}
+
+/* Overall progress summary */
+.progress-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 26px;margin-bottom:24px;box-shadow:var(--shadow);display:flex;align-items:center;gap:26px}
+.progress-ring-wrap{flex-shrink:0;width:120px;height:120px}
+.progress-ring{width:120px;height:120px}
+.progress-ring .ring-pct{font-family:var(--font-mono);font-size:26px;font-weight:700;fill:var(--text)}
+.progress-ring .ring-sub{font-family:var(--font-mono);font-size:10px;fill:var(--text-dim);text-transform:uppercase;letter-spacing:1px}
+.progress-summary-info{flex:1;min-width:0}
+.progress-summary-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
+.progress-summary-stats{font-family:var(--font-mono);font-size:13px;color:var(--text-dim);display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.progress-summary-stats strong{color:var(--accent);font-weight:700}
+.progress-summary-stats .dot{opacity:.4}
+.btn-share-overall{font-family:var(--font-mono);font-size:13px;font-weight:700;padding:10px 20px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer;transition:all .2s}
+.btn-share-overall:hover{background:var(--accent-dark)}
+
+/* Share modal */
+.share-preview{display:flex;justify-content:center;margin-bottom:18px;min-height:60px}
+.share-cert-img{max-width:100%;border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.share-cert-link{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-dark);background:var(--accent-light);padding:14px 20px;border-radius:10px;text-decoration:none}
+.share-loading{font-family:var(--font-mono);font-size:13px;color:var(--text-dim);padding:30px;text-align:center}
+.share-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px}
+.share-btn{font-family:var(--font-mono);font-size:12px;font-weight:600;padding:14px 8px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;justify-content:center;transition:all .2s}
+.share-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.share-ico{width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff}
+.share-native .share-ico{background:var(--accent)}
+.share-copy .share-ico{background:var(--text-dim)}
+.share-img .share-ico{background:var(--amber)}
+.share-note{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:16px;text-align:center;line-height:1.6}
+
 .level-detail{display:none;border-top:1px solid var(--border);padding:20px 22px;background:var(--surface-alt)}
 .level-card.expanded .level-detail{display:block}
 .topics-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
@@ -275,6 +320,10 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .app{padding:16px 12px 40px}
   .login-card{padding:28px 20px}
   .student-header{flex-direction:column;text-align:center;gap:12px}
+  .progress-summary{flex-direction:column;text-align:center;gap:16px;padding:22px 18px}
+  .progress-summary-stats{justify-content:center}
+  .btn-share-overall{width:100%}
+  .level-statusline{justify-content:flex-start}
   .student-meta{justify-content:center}
   .level-top{flex-wrap:wrap}
   .level-status{align-items:center;width:100%;flex-direction:row;justify-content:space-between;flex-wrap:wrap;gap:8px}
@@ -326,8 +375,19 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 <div class="app">
   <div class="config-notice" id="configNotice" style="display:none;"></div>
 
+  <!-- Student Google Login Gate -->
+  <div class="login-screen" id="studentLoginScreen" style="display:none;">
+    <div class="login-card">
+      <div class="login-icon"><img src="logo-on.png" alt="" onerror="this.parentElement.innerHTML='🤖'"></div>
+      <div class="login-title">Student Sign In</div>
+      <div class="login-sub">Sign in with the Google account you registered with to view your learning progress.</div>
+      <div id="studentSignInBtn" style="display:flex;justify-content:center;margin:18px 0;"></div>
+      <div class="error-msg" id="studentLoginError">This Google account isn't on our list yet. Please use the email you registered with, or contact ElectroBotics.</div>
+    </div>
+  </div>
+
   <!-- Student Login Screen -->
-  <div class="login-screen" id="loginScreen">
+  <div class="login-screen" id="loginScreen" style="display:none;">
     <div class="login-card">
       <div class="login-icon"><img src="logo-on.png" alt="" onerror="this.parentElement.innerHTML='🤖'"></div>
       <div class="login-title">Welcome Back!</div>
@@ -356,6 +416,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
       <button class="btn-logout" onclick="logout()">← Back</button>
     </div>
+    <div id="progressSummary"></div>
     <div class="roadmap" id="roadmap"></div>
   </div>
 
@@ -506,6 +567,25 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   </div>
 </div>
 
+<!-- ── Share Progress Modal ── -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal-card" style="max-width:420px;">
+    <div class="modal-head">
+      <h3 id="shareModalTitle">Share Progress</h3>
+      <button class="modal-close" onclick="closeShare()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="share-preview" id="sharePreview"></div>
+      <div class="share-grid">
+        <button class="share-btn share-native" id="shareNativeBtn" onclick="shareTo('native')"><span class="share-ico">↗</span>Share via apps</button>
+        <button class="share-btn share-copy" onclick="shareTo('copy')"><span class="share-ico">⧉</span><span id="copyLabel">Copy message</span></button>
+        <button class="share-btn share-img" onclick="shareTo('download')"><span class="share-ico">⬇</span>Download</button>
+      </div>
+      <p class="share-note">On a phone, “Share via apps” sends the certificate image straight to WhatsApp, Instagram, LinkedIn, etc. On a computer, use “Download” then attach it to your post.</p>
+    </div>
+  </div>
+</div>
+
 <div class="footer">Built by <strong style="color:var(--accent);">ElectroBotics</strong></div>
 
 <script>
@@ -517,17 +597,27 @@ const GOOGLE_CLIENT_ID = '1060454695062-vf1ajfodb8siesq7fk906rpind6fjc72.apps.go
 const ADMIN_EMAILS = ['admin@electrobotics.in']; // ← Specific admin emails (any Google account)
 const ADMIN_DOMAINS = ['electrobotics.in']; // ← Allow ANY account on these Workspace domains. Leave as [] to disable.
 const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVAfyQCdYsEiLD-c4LBvpBSTFdn59FatOCW_N9EX1wgK3ySJUZVW1336HXUOXsxoRD/exec'; // ← Paste your Google Apps Script Web App URL here to enable Add/Edit (see setup instructions)
+// ── Student-side login: approved parent/student Gmail addresses ──
+// Students must sign in with one of these Google accounts to view progress.
+// Add the Gmail IDs you collect from parents here. Leave [] to disable the
+// student login gate (anyone can view).
+const STUDENT_EMAILS = ['ganesh.rajendiran@gmail.com','nithya.chithra@gmail.com'];
+const STUDENT_DOMAINS = []; // Optionally allow whole domains, e.g. ['electrobotics.in']
+// Where the app is hosted — used to build shareable links for social media.
+const PUBLIC_SITE_URL = ''; // e.g. 'https://yourname.github.io/student-progress' (leave '' to auto-detect)
 // ══════════════════════════════════════════════════
 
 const DEFAULT_LEVELS=[
-  {num:1,name:'Robotics Foundation',desc:'Learn basics of robotics, sensors, and motors'},
-  {num:2,name:'Coding Foundation',desc:'Programming fundamentals with block and text coding'},
-  {num:3,name:'Micro:bit Automation',desc:'Build smart projects with BBC micro:bit'},
-  {num:4,name:'Robotics',desc:'Advanced robotics with complex mechanisms'},
-  {num:5,name:'Mobile App Development',desc:'Create mobile apps with MIT App Inventor'},
-  {num:6,name:'IOT and Python',desc:'Internet of Things and Python programming'}
+  {num:1,name:'Robotics Foundations',desc:'Learn basics of robotics, sensors, and motors'},
+  {num:2,name:'Coding & Problem Solving',desc:'Programming fundamentals and computational thinking'},
+  {num:3,name:'Smart Automation & AI',desc:'Build smart, automated projects with AI concepts'},
+  {num:4,name:'Advanced Robotics',desc:'Advanced robotics with complex mechanisms'},
+  {num:5,name:'App Design & Development',desc:'Design and build mobile and web apps'},
+  {num:6,name:'Programming with Python',desc:'Core Python programming'},
+  {num:7,name:'IoT & Connected Systems',desc:'Internet of Things and connected devices'},
+  {num:8,name:'3D Design & Product Innovation',desc:'3D modelling and product design'}
 ];
-const LEVEL_COLORS=['#008fa0','#8ab600','#eab43a','#d76241','#6c5ce7','#00b894'];
+const LEVEL_COLORS=['#008fa0','#8ab600','#eab43a','#d76241','#6c5ce7','#00b894','#0984e3','#e17055'];
 
 let allStudents=[],allProgress=[],allProjects=[],allLevels=DEFAULT_LEVELS;
 let allCertificates=[]; // Student ID + Level Name + Certificate URL
@@ -585,6 +675,7 @@ async function loadData(){
     n.innerHTML=`<strong>Error:</strong> ${e.message}<br><br>Check sheet is published and tab names match: <code>Students</code>, <code>Levels</code>, <code>Progress</code>, <code>Projects</code>, <code>Certificates</code>`;
     loadDemoData();
   }
+  initStudentView();
 }
 
 function loadDemoData(){
@@ -625,6 +716,59 @@ function selectStudent(id){currentStudent=allStudents.find(s=>s.ID===id);if(!cur
 function logout(){currentStudent=null;document.getElementById('dashboard').classList.remove('active');document.getElementById('loginScreen').style.display='flex';document.getElementById('nameSearch').value='';document.getElementById('idInput').value=''}
 document.addEventListener('click',e=>{if(!e.target.closest('.search-group'))document.getElementById('searchResults').classList.remove('open')});
 
+// ─── Student Login Gate (Google Sign-In, parent-email allowlist) ─────────
+let studentUser=null;
+
+function studentLoginEnabled(){
+  return (STUDENT_EMAILS&&STUDENT_EMAILS.length>0)||(STUDENT_DOMAINS&&STUDENT_DOMAINS.length>0);
+}
+
+function showStudentGate(){
+  // Hide search until signed in
+  document.getElementById('loginScreen').style.display='none';
+  const gate=document.getElementById('studentLoginScreen');
+  gate.style.display='flex';
+  document.getElementById('studentLoginError').classList.remove('show');
+  if(GOOGLE_CLIENT_ID){
+    try{
+      google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleStudentLogin});
+      google.accounts.id.renderButton(document.getElementById('studentSignInBtn'),{theme:'filled_blue',size:'large',text:'signin_with',shape:'pill'});
+    }catch(e){console.error('Student Sign-In error:',e);}
+  }else{
+    document.getElementById('studentSignInBtn').innerHTML='<button class="google-btn" onclick="demoStudentLogin()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">Sign in with Google</button><p style="font-size:11px;color:var(--text-light);margin-top:8px;">Google Client ID not set — using demo sign-in.</p>';
+  }
+}
+
+function demoStudentLogin(){
+  studentUser={email:'demo@student',name:'Student'};
+  enterSearchScreen();
+}
+
+function handleStudentLogin(response){
+  const payload=JSON.parse(atob(response.credential.split('.')[1]));
+  const email=(payload.email||'').toLowerCase();
+  const domain=payload.hd||email.split('@')[1];
+  const emailOk=STUDENT_EMAILS.map(e=>e.toLowerCase()).includes(email);
+  const domainOk=STUDENT_DOMAINS.length>0&&STUDENT_DOMAINS.includes(domain);
+  if(emailOk||domainOk){
+    studentUser={email:payload.email,name:payload.name,picture:payload.picture};
+    enterSearchScreen();
+  }else{
+    document.getElementById('studentLoginError').classList.add('show');
+  }
+}
+
+function enterSearchScreen(){
+  document.getElementById('studentLoginScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+}
+
+// Decide what the student sees on first load
+function initStudentView(){
+  if(studentLoginEnabled()){showStudentGate();}
+  else{document.getElementById('loginScreen').style.display='flex';}
+}
+
 // ─── Student Dashboard ──────────────────────────
 
 function showDashboard(){
@@ -645,37 +789,55 @@ function showDashboard(){
   buildRoadmap();
 }
 
+// Normalize a level name for forgiving comparison across sheets:
+// lowercases, collapses spaces, treats "&"="and", ignores punctuation.
+// This means minor spelling differences (case, spacing, &/and) between the
+// Levels, Progress, Projects and Certificates sheets won't break matching.
+function normLevel(name){
+  return String(name||'')
+    .toLowerCase()
+    .replace(/&/g,' and ')
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim()
+    .replace(/\s+/g,' ');
+}
+
 function buildRoadmap(){
   const roadmap=document.getElementById('roadmap'),sid=currentStudent.ID;
   const curLvl=currentStudent['Current Level']||'';
-  let curIdx=allLevels.findIndex(l=>l.name===curLvl);if(curIdx<0)curIdx=0;
-  roadmap.innerHTML=allLevels.map((level,i)=>{
-    const allTopics=allProgress.filter(p=>p['Student ID']===sid&&p['Level Name']===level.name);
-    // Check if all topics are not-applicable — if so, skip this level entirely
-    const naTopics=allTopics.filter(t=>(t.Status||'').toLowerCase()==='not-applicable');
-    if(naTopics.length>0&&naTopics.length===allTopics.length) return ''; // Hide this level
+  let curIdx=allLevels.findIndex(l=>normLevel(l.name)===normLevel(curLvl));if(curIdx<0)curIdx=0;
 
-    // Filter out NA topics for progress calculation and display
+  let completedLevels=0, visibleLevels=0, totalPctSum=0;
+
+  const cardsHtml=allLevels.map((level,i)=>{
+    const allTopics=allProgress.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(level.name));
+    const naTopics=allTopics.filter(t=>(t.Status||'').toLowerCase()==='not-applicable');
+    if(naTopics.length>0&&naTopics.length===allTopics.length) return ''; // Hide NA-only level
     const topics=allTopics.filter(t=>(t.Status||'').toLowerCase()!=='not-applicable');
 
     let status,badgeClass,badgeText;
     if(i<curIdx){status='completed';badgeClass='badge-completed';badgeText='✓ Completed'}
     else if(i===curIdx){status='current';badgeClass='badge-current';badgeText='● In Progress'}
     else if(i===curIdx+1){status='upcoming';badgeClass='badge-upcoming';badgeText='Up Next'}
-    else{status='locked';badgeClass='badge-locked';badgeText='Locked'}
+    else{status='locked';badgeClass='badge-locked';badgeText='🔒 Locked'}
     const done=topics.filter(t=>t.Status==='completed').length;
     const total=topics.length;
     const pct=total>0?Math.round((done/total)*100):(status==='completed'?100:0);
-    const projects=allProjects.filter(p=>p['Student ID']===sid&&p['Level Name']===level.name);
-    const cert=allCertificates.find(c=>c['Student ID']===sid&&c['Level Name']===level.name);
-    // Also check if any progress row for this level has a Certificate URL
+
+    // Tally for overall summary
+    visibleLevels++;
+    if(status==='completed')completedLevels++;
+    totalPctSum+=(status==='completed'?100:pct);
+
+    const projects=allProjects.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(level.name));
+    const cert=allCertificates.find(c=>c['Student ID']===sid&&normLevel(c['Level Name'])===normLevel(level.name));
     const certFromProgress=topics.find(t=>t['Certificate URL']);
     const certUrl=(cert&&cert['Certificate URL'])||(certFromProgress&&certFromProgress['Certificate URL'])||'';
-    // Get completion date from certificates or progress
     const completionDate=(cert&&cert['Completion Date'])||(certFromProgress&&certFromProgress['Completion Date'])||'';
-    // Check if this level has a certificate template for dynamic generation
     const hasTemplate=level.certTemplate&&(status==='completed'||certUrl||completionDate);
     const color=LEVEL_COLORS[i%LEVEL_COLORS.length];
+    const canShare=status==='completed'&&(hasTemplate||certUrl);
+
     return `
       <div class="level-card ${status}" data-level-idx="${i}">
         <div class="level-top">
@@ -683,13 +845,20 @@ function buildRoadmap(){
           <div class="level-info">
             <div class="level-name">${esc(level.name)}</div>
             <div class="level-desc">${esc(level.desc)}</div>
+            <div class="level-statusline">
+              <span class="level-status-badge ${badgeClass}">${badgeText}</span>
+              ${total>0?`<span class="level-topic-count">${done}/${total} topics</span>`:''}
+              ${(total>0||status==='completed')?`<span class="level-pct" style="color:${status==='locked'?'var(--text-light)':color}">${pct}%</span>`:''}
+            </div>
+            ${(total>0||status==='completed')?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
           </div>
-          <div class="level-status">
-            <span class="level-status-badge ${badgeClass}">${badgeText}</span>
-            ${total>0?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
-          </div>
+          <div class="level-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
         </div>
-        ${(hasTemplate||certUrl||level.refDoc)?`<div class="level-links">${hasTemplate?`<a href="#" class="link-cert" onclick="event.stopPropagation();event.preventDefault();generateCertificate('${esc(level.certTemplate)}','${esc(currentStudent.Name)}','${esc(completionDate)}','${esc(level.name)}')">🏆 Download Certificate</a>`:certUrl?`<a href="${certUrl}" target="_blank" class="link-cert" onclick="event.stopPropagation()">🏆 Certificate</a>`:''}${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="link-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}</div>`:''}
+        ${(hasTemplate||certUrl||level.refDoc||canShare)?`<div class="level-actions">
+          ${hasTemplate?`<button class="lvl-btn lvl-btn-cert" onclick="event.stopPropagation();generateCertificate('${esc(level.certTemplate)}','${esc(currentStudent.Name)}','${esc(completionDate)}','${esc(level.name)}')">🏆 Download Certificate</button>`:certUrl?`<a href="${certUrl}" target="_blank" class="lvl-btn lvl-btn-cert" onclick="event.stopPropagation()">🏆 Certificate</a>`:''}
+          ${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="lvl-btn lvl-btn-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}
+          ${canShare?`<button class="lvl-btn lvl-btn-share" onclick="event.stopPropagation();shareCertificate(${i})">↗ Share Certificate</button>`:''}
+        </div>`:''}
         <div class="level-detail">
           ${topics.length>0?`<div class="topics-title">Topics Progress</div><div class="topic-list">${topics.map(t=>{
             const st=t.Status||'locked';const cc=st==='completed'?'done':st==='in-progress'?'progress':'locked';
@@ -704,14 +873,133 @@ function buildRoadmap(){
         </div>
       </div>`;
   }).join('');
+
+  // ── Overall progress summary with ring ──
+  const overallPct=visibleLevels>0?Math.round(totalPctSum/visibleLevels):0;
+  const ringCirc=2*Math.PI*52;
+  const ringOffset=ringCirc*(1-overallPct/100);
+  document.getElementById('progressSummary').innerHTML=`
+    <div class="progress-summary">
+      <div class="progress-ring-wrap">
+        <svg viewBox="0 0 120 120" class="progress-ring">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface-alt)" stroke-width="12"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="12" stroke-linecap="round"
+            stroke-dasharray="${ringCirc}" stroke-dashoffset="${ringOffset}" transform="rotate(-90 60 60)"/>
+          <text x="60" y="58" text-anchor="middle" class="ring-pct">${overallPct}%</text>
+          <text x="60" y="76" text-anchor="middle" class="ring-sub">complete</text>
+        </svg>
+      </div>
+      <div class="progress-summary-info">
+        <div class="progress-summary-title">Learning Progress</div>
+        <div class="progress-summary-stats">
+          <span><strong>${completedLevels}</strong> of <strong>${visibleLevels}</strong> levels completed</span>
+          <span class="dot">•</span>
+          <span>Currently in <strong>${esc(curLvl||allLevels[curIdx]?.name||'—')}</strong></span>
+        </div>
+      </div>
+    </div>`;
+
+  roadmap.innerHTML=cardsHtml;
 }
 
 function toggleLevel(card){if(card.classList.contains('locked'))return;const w=card.classList.contains('expanded');document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('expanded'));if(!w)card.classList.add('expanded')}
 
+// ─── Share Progress ───────────────────────────────────────────────────
+let shareBlob=null, shareFileName='certificate.png', shareMessage='';
+
+function siteUrl(){
+  if(PUBLIC_SITE_URL)return PUBLIC_SITE_URL;
+  return location.origin+location.pathname;
+}
+
+// Triggered from a completed level's "Share Certificate" button.
+function shareCertificate(levelIdx){
+  const lvl=allLevels[levelIdx];const s=currentStudent;const sid=s.ID;
+  const cert=allCertificates.find(c=>c['Student ID']===sid&&normLevel(c['Level Name'])===normLevel(lvl.name));
+  const topics=allProgress.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(lvl.name));
+  const certFromProgress=topics.find(t=>t['Certificate URL']);
+  const certUrl=(cert&&cert['Certificate URL'])||(certFromProgress&&certFromProgress['Certificate URL'])||'';
+  const completionDate=(cert&&cert['Completion Date'])||(certFromProgress&&certFromProgress['Completion Date'])||'';
+
+  shareMessage=`🎉 ${s.Name} has successfully completed "${lvl.name}" at ElectroBotics! Proud of this milestone in robotics & coding. 🤖✨`;
+  shareFileName=`${s.Name.replace(/[^a-zA-Z0-9]/g,'_')}_${lvl.name.replace(/[^a-zA-Z0-9]/g,'_')}_Certificate.png`;
+
+  // Prepare the modal in a loading state
+  openShareModal(lvl.name, s.Name);
+
+  if(level_hasTemplate(lvl)){
+    // Render the real certificate from the template into a blob
+    generateCertificate(lvl.certTemplate, s.Name, completionDate, lvl.name, (canvas)=>{
+      canvas.toBlob(b=>{
+        shareBlob=b;
+        document.getElementById('sharePreview').innerHTML=`<img src="${URL.createObjectURL(b)}" alt="Certificate preview" class="share-cert-img">`;
+        enableShareButtons(true);
+      },'image/png');
+    });
+  }else if(certUrl){
+    // Only an external certificate URL exists — can't attach the file, share the link instead
+    shareBlob=null;
+    document.getElementById('sharePreview').innerHTML=`<a href="${certUrl}" target="_blank" class="share-cert-link">🏆 View Certificate</a>`;
+    shareMessage+=`
+`+certUrl;
+    enableShareButtons(false);
+  }
+}
+
+function level_hasTemplate(lvl){return !!lvl.certTemplate;}
+
+function openShareModal(levelName, name){
+  document.getElementById('shareModalTitle').textContent='Share Certificate';
+  document.getElementById('sharePreview').innerHTML='<div class="share-loading">Preparing certificate…</div>';
+  document.getElementById('copyLabel').textContent='Copy message';
+  document.getElementById('shareModal').classList.add('open');
+  shareBlob=null;
+}
+
+function enableShareButtons(hasImage){
+  // Show the native-share button only if the browser can share files (mostly mobile)
+  const nativeBtn=document.getElementById('shareNativeBtn');
+  if(!nativeBtn)return;
+  let canShareFiles=false;
+  try{
+    canShareFiles=hasImage && !!navigator.canShare && navigator.canShare({files:[new File([new Blob(['x'],{type:'image/png'})],'x.png',{type:'image/png'})]});
+  }catch(e){canShareFiles=false;}
+  nativeBtn.style.display=canShareFiles?'flex':'none';
+}
+
+function closeShare(){document.getElementById('shareModal').classList.remove('open');shareBlob=null;}
+
+async function shareTo(platform){
+  if(platform==='native'){
+    if(shareBlob&&navigator.share){
+      const file=new File([shareBlob],shareFileName,{type:'image/png'});
+      try{
+        await navigator.share({files:[file],text:shareMessage,title:'ElectroBotics Certificate'});
+      }catch(e){/* user cancelled */}
+    }
+    return;
+  }
+  if(platform==='copy'){
+    navigator.clipboard.writeText(shareMessage).then(()=>{
+      document.getElementById('copyLabel').textContent='Copied ✓';
+      setTimeout(()=>{document.getElementById('copyLabel').textContent='Copy message';},1500);
+    });
+    return;
+  }
+  if(platform==='download'){
+    if(shareBlob){
+      const a=document.createElement('a');a.href=URL.createObjectURL(shareBlob);a.download=shareFileName;a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    }
+    return;
+  }
+}
+
+
 // Event delegation for level card clicks — more reliable than inline onclick on desktop
 document.addEventListener('click',function(e){
-  // Don't toggle if clicking a link inside the card
-  if(e.target.closest('a'))return;
+  // Don't toggle if clicking a link or button inside the card
+  if(e.target.closest('a')||e.target.closest('button'))return;
   const card=e.target.closest('.level-card');
   if(card&&document.getElementById('roadmap').contains(card)){
     toggleLevel(card);
@@ -720,12 +1008,13 @@ document.addEventListener('click',function(e){
 
 // ─── Certificate Generation ─────────────────────
 
-function generateCertificate(templateUrl, studentName, completionDate, levelName) {
-  // Show a loading state
+function generateCertificate(templateUrl, studentName, completionDate, levelName, onReady) {
+  // onReady(canvas) optional — if provided, we hand back the rendered canvas
+  // (for sharing) instead of auto-downloading.
   const loadingDiv = document.createElement('div');
   loadingDiv.id = 'certLoading';
   loadingDiv.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;';
-  loadingDiv.innerHTML = '<div style="background:#fff;padding:30px 40px;border-radius:14px;text-align:center;max-width:90%;"><div style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;">Generating Certificate...</div><div style="font-size:13px;color:var(--text-dim);">Please wait</div></div>';
+  loadingDiv.innerHTML = '<div style="background:#fff;padding:30px 40px;border-radius:14px;text-align:center;max-width:90%;"><div style="font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;">Preparing Certificate...</div><div style="font-size:13px;color:var(--text-dim);">Please wait</div></div>';
   document.body.appendChild(loadingDiv);
 
   const img = new Image();
@@ -735,12 +1024,9 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     canvas.width = img.width;
     canvas.height = img.height;
     const ctx = canvas.getContext('2d');
-
-    // Draw the template
     ctx.drawImage(img, 0, 0);
 
-    // ─── Name overlay ───
-    // Adjust: nameY percentage (0.40 = 40% from top), nameX (0.05 = 5% from left)
+    // Name overlay
     const nameY = canvas.height * 0.45;
     const nameFontSize = Math.round(canvas.width * 0.040);
     ctx.fillStyle = '#0a373a';
@@ -749,8 +1035,7 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     ctx.textBaseline = 'bottom';
     ctx.fillText(studentName, canvas.width * 0.10, nameY);
 
-    // ─── Date overlay ───
-    // Adjust: dateY percentage (0.90 = 90% from top), dateX (0.05 = 5% from left)
+    // Date overlay
     const dateY = canvas.height * 0.80;
     const dateFontSize = Math.round(canvas.width * 0.016);
     const displayDate = completionDate ? formatDate(completionDate) : new Date().toLocaleDateString('en-IN', {year:'numeric', month:'long', day:'numeric'});
@@ -759,16 +1044,19 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     ctx.textAlign = 'left';
     ctx.fillText(displayDate, canvas.width * 0.10, dateY);
 
-    // Download
-    const link = document.createElement('a');
-    const safeName = studentName.replace(/[^a-zA-Z0-9]/g, '_');
-    const safeLevel = levelName.replace(/[^a-zA-Z0-9]/g, '_');
-    link.download = `${safeName}_${safeLevel}_Certificate.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-
-    // Remove loading
     document.getElementById('certLoading').remove();
+
+    if (typeof onReady === 'function') {
+      onReady(canvas);
+    } else {
+      // Default behaviour: download
+      const link = document.createElement('a');
+      const safeName = studentName.replace(/[^a-zA-Z0-9]/g, '_');
+      const safeLevel = levelName.replace(/[^a-zA-Z0-9]/g, '_');
+      link.download = `${safeName}_${safeLevel}_Certificate.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
   };
 
   img.onerror = function() {
@@ -776,7 +1064,6 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     alert('Could not load the certificate template. Make sure the image is shared publicly on Google Drive.');
   };
 
-  // Load the template image
   img.src = templateUrl;
 }
 
@@ -838,11 +1125,13 @@ function adminLogout(){
   document.getElementById('adminAvatar').classList.remove('visible');
   document.getElementById('adminBtn').classList.remove('active');
   hideAll();
-  document.getElementById('loginScreen').style.display='flex';
+  if(studentLoginEnabled()&&!studentUser){showStudentGate();}
+  else{document.getElementById('loginScreen').style.display='flex';}
 }
 
 function hideAll(){
   document.getElementById('loginScreen').style.display='none';
+  document.getElementById('studentLoginScreen').style.display='none';
   document.getElementById('dashboard').classList.remove('active');
   document.getElementById('adminLoginScreen').classList.remove('active');
   document.getElementById('adminDashboard').classList.remove('active');
@@ -880,7 +1169,7 @@ function buildCharts(){
   Chart.register(ChartDataLabels);
 
   // ─── Students per Level (bar with counts on top, no legend) ───
-  const levelCounts=allLevels.map(l=>allStudents.filter(s=>s['Current Level']===l.name).length);
+  const levelCounts=allLevels.map(l=>allStudents.filter(s=>normLevel(s['Current Level'])===normLevel(l.name)).length);
   charts.level=new Chart(document.getElementById('chartLevel'),{
     type:'bar',
     data:{labels:allLevels.map(l=>l.name),datasets:[{data:levelCounts,backgroundColor:LEVEL_COLORS,borderRadius:6}]},
