@@ -295,7 +295,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .filter-group select{min-width:0;width:100%;font-size:12px}
   .table-filter-bar .filter-clear{width:100%;padding:9px 14px;align-self:end}
   .table-header{flex-wrap:wrap;gap:10px}
-  .btn-download{width:100%}
+  .table-actions{display:flex;gap:10px;width:100%;flex-wrap:nowrap}
+  .table-actions .btn-add,.table-actions .btn-download{flex:1;min-width:0;justify-content:center;white-space:nowrap}
   .admin-login-card{padding:28px 20px;margin:40px auto}
   .stats-grid{grid-template-columns:1fr 1fr}
 }
@@ -405,7 +406,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     <div class="table-card">
       <div class="table-header">
         <div class="table-title">All Students <span id="tableCount" style="color:var(--accent);"></span></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div class="table-actions" style="display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn-add" onclick="openStudentForm()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Student
