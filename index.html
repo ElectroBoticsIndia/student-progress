@@ -221,6 +221,35 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 .filter-group select:focus{border-color:var(--accent)}
 .filter-clear{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text-dim);cursor:pointer;transition:all .2s}
 .filter-clear:hover{border-color:var(--red);color:var(--red)}
+.btn-add{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:13px;font-weight:600;padding:9px 16px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer;transition:all .2s}
+.btn-add:hover{background:var(--accent-dark)}
+.btn-edit{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .2s}
+.btn-edit:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(6,31,34,.55);z-index:1000;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal-card{background:var(--surface);border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(6,31,34,.35);overflow:hidden;animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.modal-head h3{font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--text);margin:0}
+.modal-close{background:none;border:none;font-size:26px;line-height:1;color:var(--text-light);cursor:pointer;padding:0 4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:18px 22px;max-height:60vh;overflow-y:auto}
+.form-row{margin-bottom:14px;display:flex;flex-direction:column;gap:5px}
+.form-row label{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+.form-row .req{color:var(--red)}
+.form-row input,.form-row select{font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
+.form-row input:focus,.form-row select:focus{border-color:var(--accent)}
+.form-row input:disabled{background:var(--surface-alt);color:var(--text-light);cursor:not-allowed}
+.form-row small{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.modal-msg{padding:0 22px;font-family:var(--font-mono);font-size:12px;min-height:0}
+.modal-msg.err{color:var(--red);padding-bottom:8px}
+.modal-msg.ok{color:var(--accent);padding-bottom:8px}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border)}
+.btn-cancel{font-family:var(--font-mono);font-size:13px;font-weight:600;padding:9px 18px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text-dim);cursor:pointer}
+.btn-cancel:hover{border-color:var(--text-dim)}
+.btn-save{font-family:var(--font-mono);font-size:13px;font-weight:600;padding:9px 22px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer}
+.btn-save:hover{background:var(--accent-dark)}
+.btn-save:disabled{opacity:.6;cursor:wait}
 .table-filters{display:flex;gap:8px;flex-wrap:wrap}
 .filter-btn{font-family:var(--font-mono);font-size:10px;font-weight:600;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text-dim);cursor:pointer;transition:all .2s}
 .filter-btn:hover{border-color:var(--accent)}
@@ -371,10 +400,16 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     <div class="table-card">
       <div class="table-header">
         <div class="table-title">All Students <span id="tableCount" style="color:var(--accent);"></span></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-add" onclick="openStudentForm()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Student
+        </button>
         <button class="btn-download" onclick="downloadExcel()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Download Excel
         </button>
+        </div>
       </div>
       <div class="table-filter-bar">
         <div class="filter-group">
@@ -400,9 +435,67 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <button class="filter-clear" onclick="clearFilters()">Clear</button>
       </div>
       <div class="table-wrap"><table class="data-table" id="studentTable">
-        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Country</th><th>Tutor</th><th>Batch</th><th>Status</th><th>Joined</th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Country</th><th>Tutor</th><th>Batch</th><th>Status</th><th>Joined</th><th></th></tr></thead>
         <tbody id="tableBody"></tbody>
       </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Student Add/Edit Modal ── -->
+<div class="modal-overlay" id="studentModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3 id="studentModalTitle">Add Student</h3>
+      <button class="modal-close" onclick="closeStudentForm()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Student ID</label>
+        <input type="text" id="f_ID" placeholder="e.g. EB077">
+        <small id="f_ID_note"></small>
+      </div>
+      <div class="form-row">
+        <label>Name <span class="req">*</span></label>
+        <input type="text" id="f_Name" placeholder="Full name">
+      </div>
+      <div class="form-row">
+        <label>Current Level</label>
+        <input type="text" id="f_Level" placeholder="e.g. Robotics Advanced" list="levelOptions">
+        <datalist id="levelOptions"></datalist>
+      </div>
+      <div class="form-row">
+        <label>Country</label>
+        <input type="text" id="f_Country" placeholder="e.g. India – OMR" list="countryOptions">
+        <datalist id="countryOptions"></datalist>
+      </div>
+      <div class="form-row">
+        <label>Tutor</label>
+        <input type="text" id="f_Tutor" placeholder="Tutor name" list="tutorOptions">
+        <datalist id="tutorOptions"></datalist>
+      </div>
+      <div class="form-row">
+        <label>Batch</label>
+        <input type="text" id="f_Batch" placeholder="e.g. Sun - 9:30 am" list="batchOptions">
+        <datalist id="batchOptions"></datalist>
+      </div>
+      <div class="form-row">
+        <label>Status</label>
+        <select id="f_Status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+      </div>
+      <div class="form-row">
+        <label>Join Date</label>
+        <input type="text" id="f_JoinDate" placeholder="e.g. 2026-06 or Jun 2026">
+      </div>
+      <div class="form-row">
+        <label>Photo URL</label>
+        <input type="text" id="f_Photo" placeholder="https://… (optional)">
+      </div>
+    </div>
+    <div class="modal-msg" id="studentModalMsg"></div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeStudentForm()">Cancel</button>
+      <button class="btn-save" id="studentSaveBtn" onclick="saveStudent()">Save</button>
     </div>
   </div>
 </div>
@@ -417,6 +510,7 @@ const SHEET_ID = '1JR6EZ6N6J-hwoSwpxU3tlGV25fMoafCX1-x-zPvyku0';
 const GOOGLE_CLIENT_ID = '1060454695062-vf1ajfodb8siesq7fk906rpind6fjc72.apps.googleusercontent.com'; // ← Paste your Google OAuth Client ID here
 const ADMIN_EMAILS = ['admin@electrobotics.in']; // ← Specific admin emails (any Google account)
 const ADMIN_DOMAINS = ['electrobotics.in']; // ← Allow ANY account on these Workspace domains. Leave as [] to disable.
+const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVAfyQCdYsEiLD-c4LBvpBSTFdn59FatOCW_N9EX1wgK3ySJUZVW1336HXUOXsxoRD/exec'; // ← Paste your Google Apps Script Web App URL here to enable Add/Edit (see setup instructions)
 // ══════════════════════════════════════════════════
 
 const DEFAULT_LEVELS=[
@@ -1079,6 +1173,7 @@ function renderTable(){
       <td>${esc(s.Batch||'—')}</td>
       <td class="${(s.Status||'Active').toLowerCase()==='active'?'status-active':'status-inactive'}">${esc(s.Status||'Active')}</td>
       <td>${esc(s['Join Date']||'—')}</td>
+      <td><button class="btn-edit" onclick="openStudentForm('${esc(s.ID)}')" title="Edit ${esc(s.Name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></td>
     </tr>
   `).join('');
 }
@@ -1087,6 +1182,108 @@ function buildTable(){
   populateFilters();
   document.getElementById('filterStatus').value='Active';
   applyFilters();
+}
+
+// ─── Student Add / Edit Form ──────────────────────────────────────────
+let editingStudentId=null;
+
+// Field map: form input id → Students sheet column name
+const STUDENT_FIELDS={f_ID:'ID',f_Name:'Name',f_Level:'Current Level',f_Country:'Country',f_Tutor:'Tutor',f_Batch:'Batch',f_Status:'Status',f_JoinDate:'Join Date',f_Photo:'Photo'};
+
+function nextStudentId(){
+  // Find highest numeric suffix among existing EB### ids and increment
+  let max=0,prefix='EB',pad=3;
+  allStudents.forEach(s=>{
+    const m=String(s.ID||'').match(/^([A-Za-z]+)(\d+)$/);
+    if(m){const n=parseInt(m[2]);if(n>max){max=n;prefix=m[1];pad=m[2].length;}}
+  });
+  return prefix+String(max+1).padStart(pad,'0');
+}
+
+function fillDatalist(id,values){
+  const el=document.getElementById(id);
+  if(el)el.innerHTML=[...new Set(values.filter(v=>v))].sort().map(v=>`<option value="${esc(v)}">`).join('');
+}
+
+function openStudentForm(id){
+  editingStudentId=id||null;
+  const msg=document.getElementById('studentModalMsg');msg.textContent='';msg.className='modal-msg';
+  // Populate datalists from existing data for quick entry
+  fillDatalist('levelOptions',allStudents.map(s=>s['Current Level']));
+  fillDatalist('countryOptions',allStudents.map(s=>s.Country));
+  fillDatalist('tutorOptions',allStudents.map(s=>s.Tutor));
+  fillDatalist('batchOptions',allStudents.map(s=>s.Batch));
+  const idInput=document.getElementById('f_ID');
+  const note=document.getElementById('f_ID_note');
+
+  if(id){ // EDIT
+    const s=allStudents.find(x=>x.ID===id);
+    if(!s)return;
+    document.getElementById('studentModalTitle').textContent='Edit Student';
+    document.getElementById('f_Name').value=s.Name||'';
+    document.getElementById('f_Level').value=s['Current Level']||'';
+    document.getElementById('f_Country').value=s.Country||'';
+    document.getElementById('f_Tutor').value=s.Tutor||'';
+    document.getElementById('f_Batch').value=s.Batch||'';
+    document.getElementById('f_Status').value=s.Status||'Active';
+    document.getElementById('f_JoinDate').value=s['Join Date']||'';
+    document.getElementById('f_Photo').value=s.Photo||'';
+    idInput.value=s.ID;idInput.disabled=true;note.textContent='ID cannot be changed';
+  }else{ // ADD
+    document.getElementById('studentModalTitle').textContent='Add Student';
+    ['f_Name','f_Level','f_Country','f_Tutor','f_Batch','f_JoinDate','f_Photo'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('f_Status').value='Active';
+    idInput.value=nextStudentId();idInput.disabled=true;note.textContent='Auto-generated (edit if needed)';
+    // allow manual override of generated ID on add
+    idInput.disabled=false;
+  }
+  document.getElementById('studentModal').classList.add('open');
+}
+
+function closeStudentForm(){document.getElementById('studentModal').classList.remove('open');editingStudentId=null;}
+
+async function saveStudent(){
+  const msg=document.getElementById('studentModalMsg');
+  const btn=document.getElementById('studentSaveBtn');
+  const rec={};Object.entries(STUDENT_FIELDS).forEach(([fid,col])=>{rec[col]=document.getElementById(fid).value.trim();});
+
+  if(!rec.Name){msg.textContent='Name is required.';msg.className='modal-msg err';return;}
+  if(!rec.ID){msg.textContent='ID is required.';msg.className='modal-msg err';return;}
+  // Duplicate ID check only when adding (or changing to an existing id)
+  if(!editingStudentId && allStudents.some(s=>String(s.ID).toUpperCase()===rec.ID.toUpperCase())){
+    msg.textContent='That ID already exists. Choose a unique ID.';msg.className='modal-msg err';return;
+  }
+  const mode=editingStudentId?'update':'add';
+
+  if(!SHEET_WEBAPP_URL){
+    msg.textContent='Save endpoint not configured (SHEET_WEBAPP_URL is empty). See setup instructions.';
+    msg.className='modal-msg err';return;
+  }
+
+  btn.disabled=true;btn.textContent='Saving…';msg.textContent='';msg.className='modal-msg';
+  try{
+    // Apps Script web apps require a simple (no-preflight) request; send as text/plain.
+    const res=await fetch(SHEET_WEBAPP_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({mode:mode,key:editingStudentId||rec.ID,record:rec})
+    });
+    const data=await res.json();
+    if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Save failed on the server.');
+
+    // Update local data so the table reflects the change immediately
+    if(mode==='add'){allStudents.push(rec);}
+    else{const idx=allStudents.findIndex(s=>s.ID===editingStudentId);if(idx>-1)allStudents[idx]=rec;}
+
+    msg.textContent=mode==='add'?'Student added ✓':'Student updated ✓';msg.className='modal-msg ok';
+    // Refresh everything that depends on student data
+    populateFilters();applyFilters();buildStats();buildCharts();
+    setTimeout(closeStudentForm,700);
+  }catch(e){
+    msg.textContent='Error: '+e.message;msg.className='modal-msg err';
+  }finally{
+    btn.disabled=false;btn.textContent='Save';
+  }
 }
 
 function clearFilters(){
