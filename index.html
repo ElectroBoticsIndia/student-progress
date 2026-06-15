@@ -36,7 +36,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .header-logo img{width:100%;height:100%;object-fit:contain}
 .header-text{display:flex;flex-direction:column;justify-content:center}
 .header-brand{height:24px;object-fit:contain;object-position:left center;display:block;margin-bottom:1px}
-.header-tagline{font-family:var(--font-mono);font-size:9px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase;text-indent:3px}
+.header-tagline{font-family:var(--font-mono);font-size:9px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase;text-indent:1px}
 .header-right{display:flex;align-items:center;gap:10px}
 .btn-admin{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text-dim);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
 .btn-admin:hover{border-color:var(--accent);color:var(--accent)}
@@ -54,6 +54,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .login-icon{width:80px;height:80px;margin:0 auto 16px}
 .login-icon img{width:100%;height:100%;object-fit:contain}
 .login-title{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
+.picker-list{display:flex;flex-direction:column;gap:10px;margin-top:20px;text-align:left}
+.picker-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:all .2s;width:100%}
+.picker-card:hover{border-color:var(--accent);box-shadow:var(--shadow);transform:translateY(-1px)}
+.picker-avatar{width:46px;height:46px;border-radius:50%;background:var(--accent-light);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:18px;flex-shrink:0;overflow:hidden}
+.picker-avatar img{width:100%;height:100%;object-fit:cover}
+.picker-info{flex:1;min-width:0}
+.picker-name{font-size:16px;font-weight:700;color:var(--text)}
+.picker-level{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:2px}
+.picker-arrow{width:20px;height:20px;color:var(--text-light);flex-shrink:0}
 .login-sub{font-size:14px;color:var(--text-dim);margin-bottom:24px;line-height:1.5}
 .search-group{position:relative;margin-bottom:16px}
 .search-input{width:100%;padding:14px 18px 14px 44px;border:2px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:15px;color:var(--text);outline:none;transition:border-color .25s;background:var(--surface-alt)}
@@ -387,6 +396,16 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     </div>
   </div>
 
+  <!-- Student Picker (parent with multiple children) -->
+  <div class="login-screen" id="studentPickerScreen" style="display:none;">
+    <div class="login-card">
+      <div class="login-icon"><img src="logo-on.png" alt="" onerror="this.parentElement.innerHTML='🤖'"></div>
+      <div class="login-title">Choose a Student</div>
+      <div class="login-sub">You have more than one student linked to this account. Select one to view their progress.</div>
+      <div class="picker-list" id="studentPickerList"></div>
+    </div>
+  </div>
+
   <!-- Student Login Screen -->
   <div class="login-screen" id="loginScreen" style="display:none;">
     <div class="login-card">
@@ -556,6 +575,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <input type="text" id="f_JoinDate" placeholder="e.g. 2026-06 or Jun 2026">
       </div>
       <div class="form-row">
+        <label>Parent / Student Email</label>
+        <input type="text" id="f_Email" placeholder="parent@gmail.com (comma-separate for multiple)">
+        <small>Used for login. Separate multiple emails with commas.</small>
+      </div>
+      <div class="form-row">
         <label>Photo URL</label>
         <input type="text" id="f_Photo" placeholder="https://… (optional)">
       </div>
@@ -598,12 +622,14 @@ const GOOGLE_CLIENT_ID = '1060454695062-vf1ajfodb8siesq7fk906rpind6fjc72.apps.go
 const ADMIN_EMAILS = ['admin@electrobotics.in']; // ← Specific admin emails (any Google account)
 const ADMIN_DOMAINS = ['electrobotics.in']; // ← Allow ANY account on these Workspace domains. Leave as [] to disable.
 const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVAfyQCdYsEiLD-c4LBvpBSTFdn59FatOCW_N9EX1wgK3ySJUZVW1336HXUOXsxoRD/exec'; // ← Apps Script Web App URL
-// ── Student-side login: approved parent/student Gmail addresses ──
-// Students must sign in with one of these Google accounts to view progress.
-// Add the Gmail IDs you collect from parents here. Leave [] to disable the
-// student login gate (anyone can view).
-const STUDENT_EMAILS = ['ganesh.rajendiran@gmail.com','nithya.chithra@gmail.com','visumickey@gmail.com'];
-const STUDENT_DOMAINS = []; // Optionally allow whole domains, e.g. ['electrobotics.in']
+// ── Student-side login ──
+// Access is driven by the Students sheet: a parent/student can log in if their
+// Gmail appears in the "Email" column of any student row (comma-separated emails
+// are supported for multiple parents). Admins (below) are the exception — they
+// log in via code config and can search all students.
+// Set STUDENT_LOGIN_REQUIRED=false to disable the student gate entirely (open access).
+const STUDENT_LOGIN_REQUIRED = true;
+const STUDENT_DOMAINS = []; // Optionally allow whole domains to log in & search, e.g. ['electrobotics.in']
 // Where the app is hosted — used to build shareable links for social media.
 const PUBLIC_SITE_URL = ''; // e.g. 'https://yourname.github.io/student-progress' (leave '' to auto-detect)
 // ══════════════════════════════════════════════════
@@ -729,14 +755,48 @@ function onNameSearch(){
 }
 function goById(){const id=document.getElementById('idInput').value.trim().toUpperCase();if(!id)return;const s=allStudents.find(x=>(x.ID||'').toUpperCase()===id);if(s)selectStudent(s.ID);else document.getElementById('errorMsg').classList.add('show')}
 function selectStudent(id){currentStudent=allStudents.find(s=>s.ID===id);if(!currentStudent)return;document.getElementById('searchResults').classList.remove('open');document.getElementById('errorMsg').classList.remove('show');showDashboard()}
-function logout(){currentStudent=null;document.getElementById('dashboard').classList.remove('active');document.getElementById('loginScreen').style.display='flex';document.getElementById('nameSearch').value='';document.getElementById('idInput').value=''}
+function logout(){
+  currentStudent=null;
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('nameSearch').value='';
+  document.getElementById('idInput').value='';
+  // Route "back" based on how this person got here
+  if(myStudents&&myStudents.length>1){
+    // Parent with multiple children → back to the picker
+    showStudentPicker(myStudents);
+  }else if(myStudents&&myStudents.length===1){
+    // Single-child parent → back to sign-in (nothing else to choose)
+    backToStudentGate();
+  }else{
+    // Admin / viewer / open access → search screen
+    document.getElementById('loginScreen').style.display='flex';
+  }
+}
+
+function backToStudentGate(){
+  hideAll();
+  if(studentLoginEnabled()){showStudentGate();}
+  else{document.getElementById('loginScreen').style.display='flex';}
+}
 document.addEventListener('click',e=>{if(!e.target.closest('.search-group'))document.getElementById('searchResults').classList.remove('open')});
 
 // ─── Student Login Gate (Google Sign-In, parent-email allowlist) ─────────
 let studentUser=null;
+let myStudents=[]; // students mapped to the logged-in parent (empty for admin/viewer)
 
 function studentLoginEnabled(){
-  return (STUDENT_EMAILS&&STUDENT_EMAILS.length>0)||(STUDENT_DOMAINS&&STUDENT_DOMAINS.length>0);
+  return STUDENT_LOGIN_REQUIRED===true;
+}
+
+// Return all students whose Email column includes the given email (comma-separated supported).
+function studentsForEmail(email){
+  const e=(email||'').trim().toLowerCase();
+  if(!e)return [];
+  return allStudents.filter(s=>{
+    const raw=(s.Email||s['Email']||s['Parent Email']||'').toLowerCase();
+    if(!raw)return false;
+    return raw.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean).includes(e);
+  });
 }
 
 function showStudentGate(){
@@ -768,14 +828,54 @@ function handleStudentLogin(response){
   const payload=JSON.parse(atob(response.credential.split('.')[1]));
   const email=(payload.email||'').toLowerCase();
   const domain=payload.hd||email.split('@')[1];
-  const emailOk=STUDENT_EMAILS.map(e=>e.toLowerCase()).includes(email);
-  const domainOk=STUDENT_DOMAINS.length>0&&STUDENT_DOMAINS.includes(domain);
-  if(emailOk||domainOk){
-    studentUser={email:payload.email,name:payload.name,picture:payload.picture};
+  studentUser={email:payload.email,name:payload.name,picture:payload.picture};
+
+  // 1) Admin (by email or domain) → full search workflow
+  const isAdminEmail=ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(email);
+  const isAdminDomain=ADMIN_DOMAINS.length>0&&ADMIN_DOMAINS.includes(domain);
+  // 2) Domain explicitly allowed to browse as a viewer
+  const isViewerDomain=STUDENT_DOMAINS.length>0&&STUDENT_DOMAINS.includes(domain);
+
+  if(isAdminEmail||isAdminDomain||isViewerDomain){
+    myStudents=[];
     enterSearchScreen();
+    return;
+  }
+
+  // 3) Parent/student → students mapped to this email in the sheet
+  const mine=studentsForEmail(email);
+  myStudents=mine;
+  if(mine.length===1){
+    selectStudent(mine[0].ID);
+  }else if(mine.length>1){
+    showStudentPicker(mine);
   }else{
+    // No mapping and not admin → deny
+    myStudents=[];
     document.getElementById('studentLoginError').classList.add('show');
   }
+}
+
+// Show a chooser when one login maps to multiple students (e.g. siblings).
+function showStudentPicker(students){
+  document.getElementById('studentLoginScreen').style.display='none';
+  const screen=document.getElementById('studentPickerScreen');
+  screen.style.display='flex';
+  document.getElementById('studentPickerList').innerHTML=students.map(s=>{
+    const lvl=s['Current Level']||'Not started';
+    const initial=(s.Name||'?').charAt(0).toUpperCase();
+    const photo=s.Photo?`<img src="${esc(s.Photo)}" alt="" onerror="this.parentElement.textContent='${initial}'">`:initial;
+    return `<button class="picker-card" onclick="pickStudent('${esc(s.ID)}')">
+      <div class="picker-avatar">${photo}</div>
+      <div class="picker-info"><div class="picker-name">${esc(s.Name)}</div><div class="picker-level">${esc(lvl)}</div></div>
+      <svg class="picker-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>`;
+  }).join('');
+}
+
+function pickStudent(id){
+  document.getElementById('studentPickerScreen').style.display='none';
+  selectStudent(id);
 }
 
 function enterSearchScreen(){
@@ -800,6 +900,8 @@ function initStudentView(){
 
 function showDashboard(){
   document.getElementById('loginScreen').style.display='none';
+  document.getElementById('studentLoginScreen').style.display='none';
+  document.getElementById('studentPickerScreen').style.display='none';
   document.getElementById('dashboard').classList.add('active');
   const s=currentStudent;
   const avatar=document.getElementById('studentAvatar');
@@ -1158,6 +1260,7 @@ function adminLogout(){
 function hideAll(){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('studentLoginScreen').style.display='none';
+  document.getElementById('studentPickerScreen').style.display='none';
   document.getElementById('dashboard').classList.remove('active');
   document.getElementById('adminLoginScreen').classList.remove('active');
   document.getElementById('adminDashboard').classList.remove('active');
@@ -1542,7 +1645,7 @@ function buildTable(){
 let editingStudentId=null;
 
 // Field map: form input id → Students sheet column name
-const STUDENT_FIELDS={f_ID:'ID',f_Name:'Name',f_Level:'Current Level',f_Country:'Country',f_Tutor:'Tutor',f_Batch:'Batch',f_Status:'Status',f_JoinDate:'Join Date',f_Photo:'Photo'};
+const STUDENT_FIELDS={f_ID:'ID',f_Name:'Name',f_Level:'Current Level',f_Country:'Country',f_Tutor:'Tutor',f_Batch:'Batch',f_Status:'Status',f_JoinDate:'Join Date',f_Email:'Email',f_Photo:'Photo'};
 
 function nextStudentId(){
   // Find highest numeric suffix among existing EB### ids and increment
@@ -1581,11 +1684,12 @@ function openStudentForm(id){
     document.getElementById('f_Batch').value=s.Batch||'';
     document.getElementById('f_Status').value=s.Status||'Active';
     document.getElementById('f_JoinDate').value=s['Join Date']||'';
+    document.getElementById('f_Email').value=s.Email||'';
     document.getElementById('f_Photo').value=s.Photo||'';
     idInput.value=s.ID;idInput.disabled=true;note.textContent='ID cannot be changed';
   }else{ // ADD
     document.getElementById('studentModalTitle').textContent='Add Student';
-    ['f_Name','f_Level','f_Country','f_Tutor','f_Batch','f_JoinDate','f_Photo'].forEach(f=>document.getElementById(f).value='');
+    ['f_Name','f_Level','f_Country','f_Tutor','f_Batch','f_JoinDate','f_Email','f_Photo'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('f_Status').value='Active';
     idInput.value=nextStudentId();idInput.disabled=true;note.textContent='Auto-generated (edit if needed)';
     // allow manual override of generated ID on add
