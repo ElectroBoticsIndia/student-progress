@@ -1238,6 +1238,26 @@ function openStudentForm(id){
     idInput.disabled=false;
   }
   document.getElementById('studentModal').classList.add('open');
+  setupDatalistFocus();
+}
+
+// Browsers collapse a datalist to the single matching option when the input
+// already holds that value (the Edit case). On focus we clear the field so the
+// full suggestion list appears; if the user clicks away without choosing, the
+// previous value is restored. Add-mode (empty fields) is unaffected.
+function setupDatalistFocus(){
+  ['f_Level','f_Country','f_Tutor','f_Batch'].forEach(fid=>{
+    const el=document.getElementById(fid);
+    if(!el||el.dataset.dlBound)return;
+    el.dataset.dlBound='1';
+    el.addEventListener('focus',function(){
+      this.dataset.prev=this.value;
+      this.value='';
+    });
+    el.addEventListener('blur',function(){
+      if(this.value==='' && this.dataset.prev!==undefined)this.value=this.dataset.prev;
+    });
+  });
 }
 
 function closeStudentForm(){document.getElementById('studentModal').classList.remove('open');editingStudentId=null;}
