@@ -197,6 +197,9 @@ table.avail td.occ{border:1px solid transparent}
 .avail-chip{display:flex;align-items:center;justify-content:space-between;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;border-radius:4px;padding:2px 5px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .avail-count{flex:none;background:rgba(255,255,255,.28);border-radius:8px;padding:0 5px;font-weight:700;font-size:9px}
 .avail-free-txt{font-family:var(--font-mono);font-size:9px;color:var(--text-light);opacity:.6}
+.avail-chip-click{cursor:pointer;transition:transform .12s,box-shadow .12s}
+.avail-chip-click:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(6,31,34,.25)}
+#chartLevel,#chartBatch,#chartTutor{cursor:pointer}
 .enroll-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
 .enroll-controls{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
 .enroll-controls select{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer}
@@ -284,6 +287,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .enroll-head{flex-direction:column;align-items:flex-start;gap:10px}
   .enroll-controls{width:100%}
   .enroll-controls select{flex:1;min-width:0;width:100%}
+  .avail-chip{padding:5px 7px;font-size:11px}
+  table.avail td{min-width:84px;height:auto}
   .header-right .btn-admin span{display:none}
   .table-filter-bar{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;align-items:end}
   .filter-group{min-width:0}
@@ -880,6 +885,8 @@ function buildCharts(){
     data:{labels:allLevels.map(l=>l.name),datasets:[{data:levelCounts,backgroundColor:LEVEL_COLORS,borderRadius:6}]},
     options:{
       responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false,axis:'x'},
+      onClick:(e,els)=>{if(els.length){const lbl=allLevels.map(l=>l.name)[els[0].index];drillToTable('level',lbl);}},
       plugins:{
         legend:{display:false},
         datalabels:{anchor:'end',align:'top',color:'#0a373a',font:{family:fontMono,size:12,weight:700},formatter:v=>v>0?v:''}
@@ -901,7 +908,9 @@ function buildCharts(){
     data:{labels:countryLabels,datasets:[{data:countryData,backgroundColor:colors.slice(0,countryLabels.length),borderRadius:6}]},
     options:{
       responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      interaction:{mode:'index',intersect:false,axis:'y'},
       layout:{padding:{right:48}},
+      onClick:(e,els)=>{if(els.length){const lbl=countryLabels[els[0].index];drillToTable('country',lbl);}},
       plugins:{
         legend:{display:false},
         datalabels:{
@@ -933,6 +942,8 @@ function buildCharts(){
     data:{labels:tutorLabels,datasets:[{data:tutorData,backgroundColor:colors.slice(0,tutorLabels.length),borderRadius:6}]},
     options:{
       responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      interaction:{mode:'index',intersect:false,axis:'y'},
+      onClick:(e,els)=>{if(els.length){const lbl=tutorLabels[els[0].index];drillToTable('tutor',lbl);}},
       plugins:{
         legend:{display:false},
         datalabels:{anchor:'end',align:'right',color:'#0a373a',font:{family:fontMono,size:12,weight:700},formatter:v=>v>0?v:''}
@@ -1072,7 +1083,7 @@ function buildAvailabilityGrid(){
   }
 
   // Build: occupancy[mins][day] = Map of tutor → student count ; track all slots & tutors
-  const occupancy={}, slotMins={}, tutorsSet=new Set();
+  const occupancy={}, slotMins={}, tutorsSet=new Set(), rawBatch={};
   allStudents.forEach(s=>{
     const tutor=(s.Tutor||'').trim();
     const p=parseBatch(s.Batch);
@@ -1082,6 +1093,8 @@ function buildAvailabilityGrid(){
     (occupancy[p.mins]=occupancy[p.mins]||{});
     const cell=(occupancy[p.mins][p.day]=occupancy[p.mins][p.day]||{});
     cell[tutor]=(cell[tutor]||0)+1;
+    // Remember a representative raw Batch string for this tutor+day+slot
+    rawBatch[p.mins+'|'+p.day+'|'+tutor]=(s.Batch||'').trim();
   });
 
   const tutors=[...tutorsSet].sort();
@@ -1108,7 +1121,7 @@ function buildAvailabilityGrid(){
       const cell=occupancy[mins]&&occupancy[mins][day]?occupancy[mins][day]:null;
       const here=cell?Object.keys(cell).sort():[];
       if(here.length){
-        const chips=here.map(t=>`<span class="avail-chip" style="background:${colorOf[t]}" title="${esc(t)} — ${cell[t]} student${cell[t]===1?'':'s'}">${esc(t)} <span class="avail-count">${cell[t]}</span></span>`).join('');
+        const chips=here.map(t=>{const rb=rawBatch[mins+'|'+day+'|'+t]||'';return `<span class="avail-chip avail-chip-click" style="background:${colorOf[t]}" title="${esc(t)} — ${cell[t]} student${cell[t]===1?'':'s'} · click to view in table" onclick="drillToTable('tutorbatch',{tutor:'${esc(t).replace(/'/g,"\\'")}',batch:'${esc(rb).replace(/'/g,"\\'")}'})">${esc(t)} <span class="avail-count">${cell[t]}</span></span>`;}).join('');
         const freeTutors=tutors.filter(t=>!here.includes(t));
         const freeNote=freeTutors.length?`<span class="avail-free-txt" title="Free: ${esc(freeTutors.join(', '))}">+${freeTutors.length} free</span>`:'';
         html+=`<td class="occ">${chips}${freeNote}</td>`;
@@ -1140,6 +1153,31 @@ function populateFilters(){
   fillSelect('filterLevel',levels);
   fillSelect('filterTutor',tutors);
   fillSelect('filterBatch',batches);
+}
+
+// ─── Chart click-through: filter the All Students table by the clicked item ──
+// Replaces existing filters with the single chosen criterion, then scrolls
+// down to the table. Status is reset to "All" so counts aren't hidden.
+function drillToTable(type,value){
+  ['filterCountry','filterLevel','filterTutor','filterBatch','filterStatus'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  const map={country:'filterCountry',level:'filterLevel',tutor:'filterTutor',batch:'filterBatch'};
+  const selId=map[type];
+  if(selId&&value){
+    const sel=document.getElementById(selId);
+    const ok=[...sel.options].some(o=>o.value===value);
+    if(ok)sel.value=value;
+  }
+  if(type==='tutorbatch'){
+    const t=value.tutor,b=value.batch;
+    const ts=document.getElementById('filterTutor'),bs=document.getElementById('filterBatch');
+    if([...ts.options].some(o=>o.value===t))ts.value=t;
+    if([...bs.options].some(o=>o.value===b))bs.value=b;
+  }
+  applyFilters();
+  const card=document.querySelector('.table-card');
+  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function applyFilters(){
