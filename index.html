@@ -597,12 +597,12 @@ const SHEET_ID = '1JR6EZ6N6J-hwoSwpxU3tlGV25fMoafCX1-x-zPvyku0';
 const GOOGLE_CLIENT_ID = '1060454695062-vf1ajfodb8siesq7fk906rpind6fjc72.apps.googleusercontent.com'; // ← Paste your Google OAuth Client ID here
 const ADMIN_EMAILS = ['admin@electrobotics.in']; // ← Specific admin emails (any Google account)
 const ADMIN_DOMAINS = ['electrobotics.in']; // ← Allow ANY account on these Workspace domains. Leave as [] to disable.
-const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVAfyQCdYsEiLD-c4LBvpBSTFdn59FatOCW_N9EX1wgK3ySJUZVW1336HXUOXsxoRD/exec'; // ← Paste your Google Apps Script Web App URL here to enable Add/Edit (see setup instructions)
+const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVAfyQCdYsEiLD-c4LBvpBSTFdn59FatOCW_N9EX1wgK3ySJUZVW1336HXUOXsxoRD/exec'; // ← Apps Script Web App URL
 // ── Student-side login: approved parent/student Gmail addresses ──
 // Students must sign in with one of these Google accounts to view progress.
 // Add the Gmail IDs you collect from parents here. Leave [] to disable the
 // student login gate (anyone can view).
-const STUDENT_EMAILS = ['ganesh.rajendiran@gmail.com','nithya.chithra@gmail.com', 'visumickey@gmail.com];
+const STUDENT_EMAILS = ['ganesh.rajendiran@gmail.com','nithya.chithra@gmail.com','visumickey@gmail.com'];
 const STUDENT_DOMAINS = []; // Optionally allow whole domains, e.g. ['electrobotics.in']
 // Where the app is hosted — used to build shareable links for social media.
 const PUBLIC_SITE_URL = ''; // e.g. 'https://yourname.github.io/student-progress' (leave '' to auto-detect)
@@ -745,11 +745,15 @@ function showStudentGate(){
   const gate=document.getElementById('studentLoginScreen');
   gate.style.display='flex';
   document.getElementById('studentLoginError').classList.remove('show');
-  if(GOOGLE_CLIENT_ID){
+  if(GOOGLE_CLIENT_ID && typeof google!=='undefined' && google.accounts && google.accounts.id){
     try{
       google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleStudentLogin});
       google.accounts.id.renderButton(document.getElementById('studentSignInBtn'),{theme:'filled_blue',size:'large',text:'signin_with',shape:'pill'});
     }catch(e){console.error('Student Sign-In error:',e);}
+  }else if(GOOGLE_CLIENT_ID){
+    // Google script not ready yet — retry shortly so the button still appears
+    document.getElementById('studentSignInBtn').innerHTML='<div style="font-family:var(--font-mono);font-size:12px;color:var(--text-light);">Loading sign-in…</div>';
+    setTimeout(showStudentGate,600);
   }else{
     document.getElementById('studentSignInBtn').innerHTML='<button class="google-btn" onclick="demoStudentLogin()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">Sign in with Google</button><p style="font-size:11px;color:var(--text-light);margin-top:8px;">Google Client ID not set — using demo sign-in.</p>';
   }
@@ -781,8 +785,15 @@ function enterSearchScreen(){
 
 // Decide what the student sees on first load
 function initStudentView(){
-  if(studentLoginEnabled()){showStudentGate();}
-  else{document.getElementById('loginScreen').style.display='flex';}
+  try{
+    if(studentLoginEnabled()){showStudentGate();}
+    else{document.getElementById('loginScreen').style.display='flex';}
+  }catch(e){
+    console.error('initStudentView error:',e);
+    // Last-resort fallback: always show the search screen so the page is never blank
+    try{document.getElementById('studentLoginScreen').style.display='none';}catch(_){}
+    document.getElementById('loginScreen').style.display='flex';
+  }
 }
 
 // ─── Student Dashboard ──────────────────────────
