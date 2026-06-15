@@ -99,6 +99,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .student-meta span{display:inline-flex;align-items:center;gap:4px}
 .btn-logout{font-family:var(--font-mono);font-size:13px;font-weight:700;color:#fff;background:var(--accent);border:none;border-radius:9px;padding:9px 18px;cursor:pointer;transition:all .2s;flex-shrink:0;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,143,160,0.25)}
 .btn-logout:hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,143,160,0.35)}
+.btn-logout .back-arrow{display:inline-block;line-height:1;transform:translateY(-1px);font-size:15px}
 
 /* Level cards */
 .roadmap{display:flex;flex-direction:column;gap:16px;margin-bottom:32px}
@@ -328,7 +329,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 @media(max-width:600px){
   .app{padding:16px 12px 40px}
   .login-card{padding:28px 20px}
-  .student-header{flex-direction:column;text-align:center;gap:12px}
+  .student-header{flex-direction:column;text-align:center;gap:12px;position:relative;padding-top:56px}
+  .student-header .btn-logout{position:absolute;top:14px;right:14px;padding:7px 14px;font-size:12px}
   .progress-summary{flex-direction:column;text-align:center;gap:16px;padding:22px 18px}
   .progress-summary-stats{justify-content:center}
   .btn-share-overall{width:100%}
@@ -434,7 +436,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <div class="student-name" id="studentName">—</div>
         <div class="student-meta" id="studentMeta"></div>
       </div>
-      <button class="btn-logout" onclick="logout()">← Back</button>
+      <button class="btn-logout" onclick="logout()"><span class="back-arrow">←</span> Back</button>
     </div>
     <div id="progressSummary"></div>
     <div class="roadmap" id="roadmap"></div>
