@@ -1734,11 +1734,22 @@ function setupDatalistFocus(){
     if(!el||el.dataset.dlBound)return;
     el.dataset.dlBound='1';
     el.addEventListener('focus',function(){
+      // Remember the value, temporarily clear so the full datalist shows,
+      // and reset the "touched" flag.
       this.dataset.prev=this.value;
+      this.dataset.touched='';
       this.value='';
     });
+    el.addEventListener('input',function(){
+      // The user actively typed or cleared — honour whatever they leave.
+      this.dataset.touched='1';
+    });
     el.addEventListener('blur',function(){
-      if(this.value==='' && this.dataset.prev!==undefined)this.value=this.dataset.prev;
+      // Only restore the old value if the user never interacted (e.g. just
+      // tabbed through). If they edited it — including clearing it — keep theirs.
+      if(this.value==='' && this.dataset.touched!=='1' && this.dataset.prev!==undefined){
+        this.value=this.dataset.prev;
+      }
     });
   });
 }
