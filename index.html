@@ -582,6 +582,14 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <small>Used for login. Separate multiple emails with commas.</small>
       </div>
       <div class="form-row">
+        <label>Contact Number</label>
+        <input type="text" id="f_Contact" placeholder="e.g. +91 98765 43210">
+      </div>
+      <div class="form-row">
+        <label>Monthly Fee</label>
+        <input type="text" id="f_Fee" placeholder="e.g. 1500" inputmode="decimal">
+      </div>
+      <div class="form-row">
         <label>Photo URL</label>
         <input type="text" id="f_Photo" placeholder="https://… (optional)">
       </div>
@@ -932,6 +940,12 @@ function normLevel(name){
     .trim()
     .replace(/\s+/g,' ');
 }
+
+// A student counts as "active" unless Status is explicitly set to something
+// other than Active. Used by all admin dashboard charts so they reflect only
+// the current active roster.
+function isActive(s){return (s.Status||'Active').toLowerCase()==='active';}
+function activeStudents(){return allStudents.filter(isActive);}
 
 function buildRoadmap(){
   const roadmap=document.getElementById('roadmap'),sid=currentStudent.ID;
@@ -1303,7 +1317,7 @@ function buildCharts(){
   Chart.register(ChartDataLabels);
 
   // ─── Students per Level (bar with counts on top, no legend) ───
-  const levelCounts=allLevels.map(l=>allStudents.filter(s=>normLevel(s['Current Level'])===normLevel(l.name)).length);
+  const levelCounts=allLevels.map(l=>activeStudents().filter(s=>normLevel(s['Current Level'])===normLevel(l.name)).length);
   charts.level=new Chart(document.getElementById('chartLevel'),{
     type:'bar',
     data:{labels:allLevels.map(l=>l.name),datasets:[{data:levelCounts,backgroundColor:allLevels.map((l,i)=>levelColor(l.name,i)),borderRadius:6}]},
@@ -1323,10 +1337,11 @@ function buildCharts(){
   });
 
   // ─── Students by Country (horizontal bar with count + %) ───
-  const countryMap={};allStudents.forEach(s=>{const c=s.Country||'Unknown';countryMap[c]=(countryMap[c]||0)+1});
+  const activeList=activeStudents();
+  const countryMap={};activeList.forEach(s=>{const c=s.Country||'Unknown';countryMap[c]=(countryMap[c]||0)+1});
   const sortedCountries=Object.entries(countryMap).sort((a,b)=>b[1]-a[1]);
   const countryLabels=sortedCountries.map(c=>c[0]),countryData=sortedCountries.map(c=>c[1]);
-  const totalStudents=allStudents.length;
+  const totalStudents=activeList.length;
   charts.batch=new Chart(document.getElementById('chartBatch'),{
     type:'bar',
     data:{labels:countryLabels,datasets:[{data:countryData,backgroundColor:colors.slice(0,countryLabels.length),borderRadius:6}]},
@@ -1359,7 +1374,7 @@ function buildCharts(){
   });
 
   // ─── Students per Tutor (horizontal bar with counts, no legend) ───
-  const tutorMap={};allStudents.forEach(s=>{const t=s.Tutor||'Unassigned';tutorMap[t]=(tutorMap[t]||0)+1});
+  const tutorMap={};activeStudents().forEach(s=>{const t=s.Tutor||'Unassigned';tutorMap[t]=(tutorMap[t]||0)+1});
   const tutorLabels=Object.keys(tutorMap),tutorData=Object.values(tutorMap);
   charts.tutor=new Chart(document.getElementById('chartTutor'),{
     type:'bar',
@@ -1508,7 +1523,7 @@ function buildAvailabilityGrid(){
 
   // Build: occupancy[mins][day] = Map of tutor → student count ; track all slots & tutors
   const occupancy={}, slotMins={}, tutorsSet=new Set(), rawBatch={};
-  allStudents.forEach(s=>{
+  activeStudents().forEach(s=>{
     const tutor=(s.Tutor||'').trim();
     const p=parseBatch(s.Batch);
     if(!tutor||!p)return;
@@ -1586,6 +1601,9 @@ function drillToTable(type,value){
   ['filterCountry','filterLevel','filterTutor','filterBatch','filterStatus'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
+  // Charts show active students only, so the table drill-through matches that
+  const statusSel=document.getElementById('filterStatus');
+  if(statusSel&&[...statusSel.options].some(o=>o.value==='Active'))statusSel.value='Active';
   const map={country:'filterCountry',level:'filterLevel',tutor:'filterTutor',batch:'filterBatch'};
   const selId=map[type];
   if(selId&&value){
@@ -1650,7 +1668,7 @@ function buildTable(){
 let editingStudentId=null;
 
 // Field map: form input id → Students sheet column name
-const STUDENT_FIELDS={f_ID:'ID',f_Name:'Name',f_Level:'Current Level',f_Country:'Country',f_Tutor:'Tutor',f_Batch:'Batch',f_Status:'Status',f_JoinDate:'Join Date',f_Email:'Email',f_Photo:'Photo'};
+const STUDENT_FIELDS={f_ID:'ID',f_Name:'Name',f_Level:'Current Level',f_Country:'Country',f_Tutor:'Tutor',f_Batch:'Batch',f_Status:'Status',f_JoinDate:'Join Date',f_Email:'Email',f_Contact:'Contact',f_Fee:'Monthly Fee',f_Photo:'Photo'};
 
 function nextStudentId(){
   // Find highest numeric suffix among existing EB### ids and increment
@@ -1690,11 +1708,13 @@ function openStudentForm(id){
     document.getElementById('f_Status').value=s.Status||'Active';
     document.getElementById('f_JoinDate').value=s['Join Date']||'';
     document.getElementById('f_Email').value=s.Email||'';
+    document.getElementById('f_Contact').value=s.Contact||'';
+    document.getElementById('f_Fee').value=s['Monthly Fee']||'';
     document.getElementById('f_Photo').value=s.Photo||'';
     idInput.value=s.ID;idInput.disabled=true;note.textContent='ID cannot be changed';
   }else{ // ADD
     document.getElementById('studentModalTitle').textContent='Add Student';
-    ['f_Name','f_Level','f_Country','f_Tutor','f_Batch','f_JoinDate','f_Email','f_Photo'].forEach(f=>document.getElementById(f).value='');
+    ['f_Name','f_Level','f_Country','f_Tutor','f_Batch','f_JoinDate','f_Email','f_Contact','f_Fee','f_Photo'].forEach(f=>document.getElementById(f).value='');
     document.getElementById('f_Status').value='Active';
     idInput.value=nextStudentId();idInput.disabled=true;note.textContent='Auto-generated (edit if needed)';
     // allow manual override of generated ID on add
@@ -1785,8 +1805,12 @@ function downloadExcel(){
     'Current Level':s['Current Level']||'',
     'Country':s.Country||'',
     'Tutor':s.Tutor||'',
+    'Batch':s.Batch||'',
     'Status':s.Status||'Active',
-    'Join Date':s['Join Date']||''
+    'Join Date':s['Join Date']||'',
+    'Email':s.Email||'',
+    'Contact':s.Contact||'',
+    'Monthly Fee':s['Monthly Fee']||''
   }));
   const ws=XLSX.utils.json_to_sheet(rows);
   const wb=XLSX.utils.book_new();
