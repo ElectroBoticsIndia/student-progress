@@ -637,8 +637,9 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 // ══════════════════════════════════════════════════
 const SHEET_ID = '1JR6EZ6N6J-hwoSwpxU3tlGV25fMoafCX1-x-zPvyku0';
 const GOOGLE_CLIENT_ID = '1060454695062-vf1ajfodb8siesq7fk906rpind6fjc72.apps.googleusercontent.com'; // ← Paste your Google OAuth Client ID here
-const ADMIN_EMAILS = ['admin@electrobotics.in']; // ← Specific admin emails (any Google account)
-const ADMIN_DOMAINS = ['electrobotics.in']; // ← Allow ANY account on these Workspace domains. Leave as [] to disable.
+// Admin & tutor access is driven by the "Users" sheet (Email + Role columns),
+// not by code. Role 'admin' → full admin dashboard + student search.
+// Role 'tutor' → student search/view only (no admin dashboard).
 const SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVAfyQCdYsEiLD-c4LBvpBSTFdn59FatOCW_N9EX1wgK3ySJUZVW1336HXUOXsxoRD/exec'; // ← Apps Script Web App URL
 // ── Student-side login ──
 // Access is driven by the Students sheet: a parent/student can log in if their
@@ -681,7 +682,25 @@ function levelColor(name,i){
 
 let allStudents=[],allProgress=[],allProjects=[],allLevels=DEFAULT_LEVELS;
 let allCertificates=[]; // Student ID + Level Name + Certificate URL
+let allUsers=[]; // Users sheet: Email + Role (admin / tutor)
 let currentStudent=null,adminUser=null;
+
+// Look up a signed-in email's role from the Users sheet. Email column may be
+// comma-separated; Role is 'admin' or 'tutor' (case-insensitive). Returns
+// 'admin', 'tutor', or '' if not listed.
+function roleForEmail(email){
+  const e=(email||'').trim().toLowerCase();
+  if(!e)return '';
+  for(const u of allUsers){
+    const raw=(u.Email||u['Email']||'').toLowerCase();
+    if(!raw)continue;
+    const emails=raw.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
+    if(emails.includes(e)){
+      return (u.Role||u['Role']||'').trim().toLowerCase();
+    }
+  }
+  return '';
+}
 
 // ─── Data Loading ────────────────────────────────
 
@@ -721,6 +740,7 @@ async function loadData(){
     try{projects=await fetchSheet('Projects')}catch(e){projects=[]}
     try{levels=await fetchSheet('Levels')}catch(e){levels=[]}
     try{certificates=await fetchSheet('Certificates')}catch(e){certificates=[]}
+    try{const users=await fetchSheet('Users');allUsers=Array.isArray(users)?users:[];}catch(e){allUsers=[];}
     if(students.length===0)throw new Error('Students sheet is empty');
     allStudents=students;allProgress=progress;allProjects=projects;allCertificates=certificates;
     if(levels.length>0){
@@ -732,7 +752,7 @@ async function loadData(){
   }catch(e){
     console.error('Load error:',e);
     const n=document.getElementById('configNotice');n.style.display='block';
-    n.innerHTML=`<strong>Error:</strong> ${e.message}<br><br>Check sheet is published and tab names match: <code>Students</code>, <code>Levels</code>, <code>Progress</code>, <code>Projects</code>, <code>Certificates</code>`;
+    n.innerHTML=`<strong>Error:</strong> ${e.message}<br><br>Check sheet is published and tab names match: <code>Students</code>, <code>Levels</code>, <code>Progress</code>, <code>Projects</code>, <code>Certificates</code>, <code>Users</code>`;
     loadDemoData();
   }
   initStudentView();
@@ -801,6 +821,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-group'))docu
 // ─── Student Login Gate (Google Sign-In, parent-email allowlist) ─────────
 let studentUser=null;
 let myStudents=[]; // students mapped to the logged-in parent (empty for admin/viewer)
+let userRole=''; // role of the signed-in user from Users sheet: 'admin', 'tutor', or ''
 
 function studentLoginEnabled(){
   return STUDENT_LOGIN_REQUIRED===true;
@@ -848,19 +869,21 @@ function handleStudentLogin(response){
   const domain=payload.hd||email.split('@')[1];
   studentUser={email:payload.email,name:payload.name,picture:payload.picture};
 
-  // 1) Admin (by email or domain) → full search workflow
-  const isAdminEmail=ADMIN_EMAILS.map(e=>e.toLowerCase()).includes(email);
-  const isAdminDomain=ADMIN_DOMAINS.length>0&&ADMIN_DOMAINS.includes(domain);
-  // 2) Domain explicitly allowed to browse as a viewer
+  // 1) Admin or Tutor (from Users sheet) → student search workflow.
+  //    Admins additionally get the Admin dashboard button; tutors are blocked
+  //    from the dashboard (handled in showAdminLogin / hasAdminAccess).
+  const role=roleForEmail(email);
+  userRole=role; // 'admin', 'tutor', or ''
+  // Domain explicitly allowed to browse as a viewer (optional)
   const isViewerDomain=STUDENT_DOMAINS.length>0&&STUDENT_DOMAINS.includes(domain);
 
-  if(isAdminEmail||isAdminDomain||isViewerDomain){
+  if(role==='admin'||role==='tutor'||isViewerDomain){
     myStudents=[];
     enterSearchScreen();
     return;
   }
 
-  // 3) Parent/student → students mapped to this email in the sheet
+  // 2) Parent/student → students mapped to this email in the Students sheet
   const mine=studentsForEmail(email);
   myStudents=mine;
   if(mine.length===1){
@@ -868,7 +891,7 @@ function handleStudentLogin(response){
   }else if(mine.length>1){
     showStudentPicker(mine);
   }else{
-    // No mapping and not admin → deny
+    // Not a known user and no student mapping → deny
     myStudents=[];
     document.getElementById('studentLoginError').classList.add('show');
   }
@@ -1244,8 +1267,29 @@ function formatDate(dateStr) {
 function showAdminLogin(){
   hideAll();
   if(adminUser){showAdminDashboard();return}
+  // If the user is already signed in (via the student gate), use their known role
+  // instead of asking them to sign in again.
+  if(studentUser&&studentUser.email){
+    const role=roleForEmail(studentUser.email);
+    if(role==='admin'){
+      adminUser={email:studentUser.email,name:studentUser.name,picture:studentUser.picture};
+      showAdminDashboard();
+      return;
+    }
+    if(role==='tutor'){
+      // Tutors can view students but not the admin dashboard
+      document.getElementById('adminLoginScreen').classList.add('active');
+      document.getElementById('adminBtn').classList.add('active');
+      document.getElementById('googleSignInBtn').innerHTML='';
+      document.getElementById('adminError').textContent='Your account has tutor access. The admin dashboard is restricted to administrators. You can search and view students from the main screen.';
+      document.getElementById('adminError').classList.add('show');
+      return;
+    }
+  }
   document.getElementById('adminLoginScreen').classList.add('active');
   document.getElementById('adminBtn').classList.add('active');
+  document.getElementById('adminError').textContent='Access denied. Your account is not authorized as an admin.';
+  document.getElementById('adminError').classList.remove('show');
   // Render Google Sign-In button
   if(GOOGLE_CLIENT_ID && typeof google!=='undefined' && google.accounts && google.accounts.id){
     try{
@@ -1267,12 +1311,17 @@ function demoAdminLogin(){
 
 function handleGoogleLogin(response){
   const payload=JSON.parse(atob(response.credential.split('.')[1]));
-  const emailOk=ADMIN_EMAILS.includes(payload.email);
-  const domainOk=ADMIN_DOMAINS.length>0 && ADMIN_DOMAINS.includes(payload.hd||(payload.email||'').split('@')[1]);
-  if(emailOk||domainOk){
+  const email=(payload.email||'').toLowerCase();
+  const role=roleForEmail(email);
+  if(role==='admin'){
     adminUser={email:payload.email,name:payload.name,picture:payload.picture};
     showAdminDashboard();
+  }else if(role==='tutor'){
+    document.getElementById('googleSignInBtn').innerHTML='';
+    document.getElementById('adminError').textContent='Your account has tutor access. The admin dashboard is restricted to administrators. You can search and view students from the main screen.';
+    document.getElementById('adminError').classList.add('show');
   }else{
+    document.getElementById('adminError').textContent='Access denied. Your account is not authorized as an admin.';
     document.getElementById('adminError').classList.add('show');
   }
 }
