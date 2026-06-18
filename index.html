@@ -839,6 +839,9 @@ function studentsForEmail(email){
 }
 
 function showStudentGate(){
+  // Returning to the sign-in screen resets the session
+  studentUser=null;userRole='';myStudents=[];
+  applyAdminBtnVisibility();
   // Hide search until signed in
   document.getElementById('loginScreen').style.display='none';
   const gate=document.getElementById('studentLoginScreen');
@@ -874,6 +877,7 @@ function handleStudentLogin(response){
   //    from the dashboard (handled in showAdminLogin / hasAdminAccess).
   const role=roleForEmail(email);
   userRole=role; // 'admin', 'tutor', or ''
+  applyAdminBtnVisibility();
   // Domain explicitly allowed to browse as a viewer (optional)
   const isViewerDomain=STUDENT_DOMAINS.length>0&&STUDENT_DOMAINS.includes(domain);
 
@@ -922,6 +926,19 @@ function pickStudent(id){
 function enterSearchScreen(){
   document.getElementById('studentLoginScreen').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
+}
+
+// Show the Admin button only for admins. Hidden for tutors and parents/students.
+// Before login (userRole==='' but no one signed in) it stays visible by default.
+function applyAdminBtnVisibility(){
+  const btn=document.getElementById('adminBtn');
+  if(!btn)return;
+  // Hide once someone is signed in and they are NOT an admin
+  if(studentUser && userRole!=='admin'){
+    btn.style.display='none';
+  }else{
+    btn.style.display='';
+  }
 }
 
 // Decide what the student sees on first load
