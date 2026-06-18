@@ -1455,26 +1455,32 @@ function buildEnrollmentChart(){
     return{key:sortY*10+qOrd, label:qName+' '+yLabel};
   }
 
-  // Aggregate
+  // Aggregate (total + India/International split)
   const buckets={};
   allStudents.forEach(s=>{
     const ym=parseJoinYM(s['Join Date']);
     if(!ym)return;
     const b=bucket(ym);
-    if(!buckets[b.key])buckets[b.key]={label:b.label,count:0};
+    if(!buckets[b.key])buckets[b.key]={label:b.label,count:0,india:0,intl:0};
     buckets[b.key].count++;
+    const isIndia=String(s.Country||'').toLowerCase().includes('india');
+    if(isIndia)buckets[b.key].india++;else buckets[b.key].intl++;
   });
   const keys=Object.keys(buckets).map(Number).sort((a,b)=>a-b);
   const labels=keys.map(k=>buckets[k].label);
   const newData=keys.map(k=>buckets[k].count);
   let cum=0;const cumData=newData.map(n=>{cum+=n;return cum});
+  let cumIn=0;const cumIndia=keys.map(k=>{cumIn+=buckets[k].india;return cumIn});
+  let cumIntl=0;const cumInternational=keys.map(k=>{cumIntl+=buckets[k].intl;return cumIntl});
 
   if(charts.enrollment){charts.enrollment.destroy();}
   charts.enrollment=new Chart(document.getElementById('chartEnrollment'),{
     data:{labels:labels,datasets:[
-      {type:'bar',label:'New Enrolments',data:newData,backgroundColor:'#008fa0',borderRadius:4,order:2,
+      {type:'bar',label:'New Enrolments',data:newData,backgroundColor:'#008fa0',borderRadius:4,order:3,
         datalabels:{display:true,anchor:'end',align:'end',color:'#008fa0',font:{family:fontMono,size:10,weight:'bold'},formatter:v=>v||''}},
-      {type:'line',label:'Cumulative Total',data:cumData,borderColor:'#c77d00',backgroundColor:'#c77d0015',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:'#c77d00',order:1,datalabels:{display:false}}
+      {type:'line',label:'Cumulative Total',data:cumData,borderColor:'#c77d00',backgroundColor:'#c77d0015',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:'#c77d00',order:2,datalabels:{display:false}},
+      {type:'line',label:'India (cumulative)',data:cumIndia,borderColor:'#8ab600',backgroundColor:'transparent',borderDash:[6,4],fill:false,tension:0.3,pointRadius:2,pointBackgroundColor:'#8ab600',order:1,datalabels:{display:false}},
+      {type:'line',label:'International (cumulative)',data:cumInternational,borderColor:'#6c5ce7',backgroundColor:'transparent',borderDash:[6,4],fill:false,tension:0.3,pointRadius:2,pointBackgroundColor:'#6c5ce7',order:0,datalabels:{display:false}}
     ]},
     options:{
       responsive:true,maintainAspectRatio:false,
