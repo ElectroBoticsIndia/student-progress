@@ -172,6 +172,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .share-cert-link{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent-dark);background:var(--accent-light);padding:14px 20px;border-radius:10px;text-decoration:none}
 .share-loading{font-family:var(--font-mono);font-size:13px;color:var(--text-dim);padding:30px;text-align:center}
 .share-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px}
+.share-msg-wrap{margin-bottom:14px;text-align:left}
+.share-msg-label{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px}
+.share-msg-input{width:100%;font-family:var(--font-body);font-size:14px;line-height:1.5;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);outline:none;resize:vertical;min-height:84px;box-sizing:border-box}
+.share-msg-input:focus{border-color:var(--accent)}
 .share-btn{font-family:var(--font-mono);font-size:12px;font-weight:600;padding:14px 8px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;justify-content:center;transition:all .2s}
 .share-btn:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
 .share-ico{width:30px;height:30px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff}
@@ -611,12 +615,16 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     </div>
     <div class="modal-body">
       <div class="share-preview" id="sharePreview"></div>
+      <div class="share-msg-wrap">
+        <label class="share-msg-label">Message</label>
+        <textarea id="shareMsgInput" class="share-msg-input" rows="4" oninput="onShareMsgEdit()" placeholder="Write a message to share with the certificate…"></textarea>
+      </div>
       <div class="share-grid">
         <button class="share-btn share-native" id="shareNativeBtn" onclick="shareTo('native')"><span class="share-ico">↗</span>Share via apps</button>
         <button class="share-btn share-copy" onclick="shareTo('copy')"><span class="share-ico">⧉</span><span id="copyLabel">Copy message</span></button>
         <button class="share-btn share-img" onclick="shareTo('download')"><span class="share-ico">⬇</span>Download</button>
       </div>
-      <p class="share-note">On a phone, “Share via apps” sends the certificate image straight to WhatsApp, Instagram, LinkedIn, etc. On a computer, use “Download” then attach it to your post.</p>
+      <p class="share-note">Edit the message above if you like. On a phone, “Share via apps” sends the certificate image with your message to WhatsApp, Instagram, LinkedIn, etc. On a computer, use “Download” then attach it to your post.</p>
     </div>
   </div>
 </div>
@@ -1068,7 +1076,7 @@ function shareCertificate(levelIdx){
   shareMessage=`🎉 ${s.Name} has successfully completed "${lvl.name}" at ElectroBotics! Proud of this milestone in robotics & coding. 🤖✨`;
   shareFileName=`${s.Name.replace(/[^a-zA-Z0-9]/g,'_')}_${lvl.name.replace(/[^a-zA-Z0-9]/g,'_')}_Certificate.png`;
 
-  // Prepare the modal in a loading state
+  // Prepare the modal in a loading state (this also fills the editable message box)
   openShareModal(lvl.name, s.Name);
 
   if(level_hasTemplate(lvl)){
@@ -1086,6 +1094,8 @@ function shareCertificate(levelIdx){
     document.getElementById('sharePreview').innerHTML=`<a href="${certUrl}" target="_blank" class="share-cert-link">🏆 View Certificate</a>`;
     shareMessage+=`
 `+certUrl;
+    // Reflect the appended link in the editable box too
+    document.getElementById('shareMsgInput').value=shareMessage;
     enableShareButtons(false);
   }
 }
@@ -1096,8 +1106,15 @@ function openShareModal(levelName, name){
   document.getElementById('shareModalTitle').textContent='Share Certificate';
   document.getElementById('sharePreview').innerHTML='<div class="share-loading">Preparing certificate…</div>';
   document.getElementById('copyLabel').textContent='Copy message';
+  // Pre-fill the editable message box with the default text
+  document.getElementById('shareMsgInput').value=shareMessage;
   document.getElementById('shareModal').classList.add('open');
   shareBlob=null;
+}
+
+// Keep shareMessage in sync as the parent edits the box.
+function onShareMsgEdit(){
+  shareMessage=document.getElementById('shareMsgInput').value;
 }
 
 function enableShareButtons(hasImage){
@@ -1114,6 +1131,9 @@ function enableShareButtons(hasImage){
 function closeShare(){document.getElementById('shareModal').classList.remove('open');shareBlob=null;}
 
 async function shareTo(platform){
+  // Always use the current (possibly edited) message from the box
+  const box=document.getElementById('shareMsgInput');
+  if(box)shareMessage=box.value;
   if(platform==='native'){
     if(shareBlob&&navigator.share){
       const file=new File([shareBlob],shareFileName,{type:'image/png'});
