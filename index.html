@@ -1154,6 +1154,10 @@ function buildRoadmap(){
   const curLvl=currentStudent['Current Level']||'';
   let curIdx=allLevels.findIndex(l=>normLevel(l.name)===normLevel(curLvl));if(curIdx<0)curIdx=0;
 
+  // Option A: if the student has NO progress rows at all, don't infer any
+  // completion from their level position — overall progress stays 0%.
+  const hasAnyProgress=allProgress.some(p=>p['Student ID']===sid);
+
   let completedLevels=0, visibleLevels=0, totalPctSum=0;
 
   const cardsHtml=allLevels.map((level,i)=>{
@@ -1169,12 +1173,12 @@ function buildRoadmap(){
     else{status='locked';badgeClass='badge-locked';badgeText='🔒 Locked'}
     const done=topics.filter(t=>t.Status==='completed').length;
     const total=topics.length;
-    const pct=total>0?Math.round((done/total)*100):(status==='completed'?100:0);
+    const pct=total>0?Math.round((done/total)*100):((status==='completed'&&hasAnyProgress)?100:0);
 
     // Tally for overall summary
     visibleLevels++;
-    if(status==='completed')completedLevels++;
-    totalPctSum+=(status==='completed'?100:pct);
+    if(status==='completed'&&hasAnyProgress)completedLevels++;
+    totalPctSum+=(status==='completed'&&hasAnyProgress?100:pct);
 
     const projects=allProjects.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(level.name));
     const cert=allCertificates.find(c=>c['Student ID']===sid&&normLevel(c['Level Name'])===normLevel(level.name));
@@ -2048,6 +2052,9 @@ function openStudentForm(id){
     ['f_Name','f_JoinDate','f_Email','f_Contact','f_Address','f_Fee','f_Photo'].forEach(f=>document.getElementById(f).value='');
     ['f_Level','f_Country','f_Tutor','f_Batch','f_School'].forEach(f=>setComboValue(f,''));
     document.getElementById('f_Status').value='Active';
+    // Pre-fill Join Date with today's date (YYYY-MM-DD, local time)
+    const t=new Date();
+    document.getElementById('f_JoinDate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
     idInput.value=nextStudentId();idInput.disabled=true;note.textContent='Auto-generated (edit if needed)';
     // allow manual override of generated ID on add
     idInput.disabled=false;
