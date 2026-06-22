@@ -274,6 +274,12 @@ table.avail td.occ{border:1px solid transparent}
 .avail-chip-click:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(6,31,34,.25)}
 #chartLevel,#chartBatch,#chartTutor{cursor:pointer}
 .enroll-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.enroll-scroll{overflow-x:auto;overflow-y:hidden;margin-top:14px;-webkit-overflow-scrolling:touch}
+.enroll-canvas-wrap{height:300px;position:relative;min-width:100%}
+.enroll-scroll::-webkit-scrollbar{height:8px}
+.enroll-scroll::-webkit-scrollbar-track{background:var(--bg);border-radius:4px}
+.enroll-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.enroll-scroll::-webkit-scrollbar-thumb:hover{background:var(--text-light)}
 .enroll-controls{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
 .enroll-controls select{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer}
 table.enroll-sum{border-collapse:collapse;width:100%;min-width:520px;margin-top:18px;font-family:var(--font-mono)}
@@ -313,8 +319,18 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 .form-row{margin-bottom:14px;display:flex;flex-direction:column;gap:5px}
 .form-row label{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
 .form-row .req{color:var(--red)}
-.form-row input,.form-row select{font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
-.form-row input:focus,.form-row select:focus{border-color:var(--accent)}
+.form-row input,.form-row select,.form-row textarea{font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--accent)}
+.form-row textarea{resize:vertical;min-height:48px;box-sizing:border-box}
+.form-row input.invalid,.form-row select.invalid,.form-row textarea.invalid{border-color:var(--red);background:var(--red-light)}
+.form-divider{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:1px;margin:18px 0 12px;padding-top:14px;border-top:1px solid var(--border)}
+.combo{display:flex;gap:6px;align-items:stretch}
+.combo .combo-select{flex:1;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
+.combo .combo-select:focus{border-color:var(--accent)}
+.combo .combo-new{flex:1}
+.combo .combo-back{flex:none;width:40px;border:1px solid var(--border);border-radius:8px;background:var(--surface-alt);color:var(--text-dim);font-size:16px;cursor:pointer;transition:all .2s}
+.combo .combo-back:hover{border-color:var(--accent);color:var(--accent)}
+.combo.invalid .combo-select,.combo.invalid .combo-new{border-color:var(--red);background:var(--red-light)}
 .form-row input:disabled{background:var(--surface-alt);color:var(--text-light);cursor:not-allowed}
 .form-row small{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
 .modal-msg{padding:0 22px;font-family:var(--font-mono);font-size:12px;min-height:0}
@@ -503,7 +519,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
           </select>
         </div>
       </div>
-      <div class="chart-container" style="min-height:300px;margin-top:14px;"><canvas id="chartEnrollment"></canvas></div>
+      <div class="enroll-scroll"><div class="enroll-canvas-wrap" id="enrollCanvasWrap"><canvas id="chartEnrollment"></canvas></div></div>
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
       <div class="chart-title">Tutor Availability by Day &amp; Time Slot</div>
@@ -573,41 +589,66 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <input type="text" id="f_Name" placeholder="Full name">
       </div>
       <div class="form-row">
-        <label>Current Level</label>
-        <input type="text" id="f_Level" placeholder="e.g. Robotics Advanced" list="levelOptions">
-        <datalist id="levelOptions"></datalist>
+        <label>Current Level <span class="req">*</span></label>
+        <div class="combo" data-field="f_Level">
+          <select class="combo-select" onchange="onComboSelect('f_Level')"></select>
+          <input type="text" class="combo-new" id="f_Level" placeholder="Type a new level" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('f_Level')" style="display:none;" title="Back to list">↩</button>
+        </div>
       </div>
       <div class="form-row">
-        <label>Country</label>
-        <input type="text" id="f_Country" placeholder="e.g. India – OMR" list="countryOptions">
-        <datalist id="countryOptions"></datalist>
+        <label>Country <span class="req">*</span></label>
+        <div class="combo" data-field="f_Country">
+          <select class="combo-select" onchange="onComboSelect('f_Country')"></select>
+          <input type="text" class="combo-new" id="f_Country" placeholder="Type a new country" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('f_Country')" style="display:none;" title="Back to list">↩</button>
+        </div>
       </div>
       <div class="form-row">
-        <label>Tutor</label>
-        <input type="text" id="f_Tutor" placeholder="Tutor name" list="tutorOptions">
-        <datalist id="tutorOptions"></datalist>
+        <label>Tutor <span class="req">*</span></label>
+        <div class="combo" data-field="f_Tutor">
+          <select class="combo-select" onchange="onComboSelect('f_Tutor')"></select>
+          <input type="text" class="combo-new" id="f_Tutor" placeholder="Type a new tutor" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('f_Tutor')" style="display:none;" title="Back to list">↩</button>
+        </div>
       </div>
       <div class="form-row">
-        <label>Batch</label>
-        <input type="text" id="f_Batch" placeholder="e.g. Sun - 9:30 am" list="batchOptions">
-        <datalist id="batchOptions"></datalist>
+        <label>Batch <span class="req">*</span></label>
+        <div class="combo" data-field="f_Batch">
+          <select class="combo-select" onchange="onComboSelect('f_Batch')"></select>
+          <input type="text" class="combo-new" id="f_Batch" placeholder="Type a new batch (e.g. Sun - 9:30 am)" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('f_Batch')" style="display:none;" title="Back to list">↩</button>
+        </div>
       </div>
       <div class="form-row">
-        <label>Status</label>
+        <label>Status <span class="req">*</span></label>
         <select id="f_Status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
       </div>
       <div class="form-row">
-        <label>Join Date</label>
-        <input type="text" id="f_JoinDate" placeholder="e.g. 2026-06 or Jun 2026">
+        <label>Join Date <span class="req">*</span></label>
+        <input type="date" id="f_JoinDate">
       </div>
       <div class="form-row">
-        <label>Parent / Student Email</label>
+        <label>Parent / Student Email <span class="req">*</span></label>
         <input type="text" id="f_Email" placeholder="parent@gmail.com (comma-separate for multiple)">
         <small>Used for login. Separate multiple emails with commas.</small>
       </div>
       <div class="form-row">
-        <label>Contact Number</label>
+        <label>Contact Number <span class="req">*</span></label>
         <input type="text" id="f_Contact" placeholder="e.g. +91 98765 43210">
+      </div>
+      <div class="form-divider">Optional</div>
+      <div class="form-row">
+        <label>School</label>
+        <div class="combo" data-field="f_School">
+          <select class="combo-select" onchange="onComboSelect('f_School')"></select>
+          <input type="text" class="combo-new" id="f_School" placeholder="Type a new school" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('f_School')" style="display:none;" title="Back to list">↩</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Address</label>
+        <textarea id="f_Address" rows="2" placeholder="Home address (optional)"></textarea>
       </div>
       <div class="form-row">
         <label>Monthly Fee</label>
@@ -1667,6 +1708,15 @@ function buildEnrollmentChart(){
   let cumIn=0;const cumIndia=keys.map(k=>{cumIn+=buckets[k].india;return cumIn});
   let cumIntl=0;const cumInternational=keys.map(k=>{cumIntl+=buckets[k].intl;return cumIntl});
 
+  // Size the scroll area: ~62px per period so bars stay readable; the chart
+  // fills the card when few periods, and overflows to scroll when many.
+  const wrap=document.getElementById('enrollCanvasWrap');
+  if(wrap){
+    const minW=Math.max(keys.length*62, 320);
+    wrap.style.width=minW+'px';
+    wrap.style.minWidth='100%';
+  }
+
   if(charts.enrollment){charts.enrollment.destroy();}
   charts.enrollment=new Chart(document.getElementById('chartEnrollment'),{
     data:{labels:labels,datasets:[
@@ -1868,7 +1918,9 @@ function buildTable(){
 let editingStudentId=null;
 
 // Field map: form input id → Students sheet column name
-const STUDENT_FIELDS={f_ID:'ID',f_Name:'Name',f_Level:'Current Level',f_Country:'Country',f_Tutor:'Tutor',f_Batch:'Batch',f_Status:'Status',f_JoinDate:'Join Date',f_Email:'Email',f_Contact:'Contact',f_Fee:'Monthly Fee',f_Photo:'Photo'};
+const STUDENT_FIELDS={f_ID:'ID',f_Name:'Name',f_Level:'Current Level',f_Country:'Country',f_Tutor:'Tutor',f_Batch:'Batch',f_Status:'Status',f_JoinDate:'Join Date',f_Email:'Email',f_Contact:'Contact',f_School:'School',f_Address:'Address',f_Fee:'Monthly Fee',f_Photo:'Photo'};
+// Fields required on save (form id → friendly label)
+const REQUIRED_FIELDS={f_Name:'Name',f_Level:'Current Level',f_Country:'Country',f_Tutor:'Tutor',f_Batch:'Batch',f_Status:'Status',f_JoinDate:'Join Date',f_Email:'Parent / Student Email',f_Contact:'Contact Number'};
 
 function nextStudentId(){
   // Find highest numeric suffix among existing EB### ids and increment
@@ -1880,19 +1932,96 @@ function nextStudentId(){
   return prefix+String(max+1).padStart(pad,'0');
 }
 
-function fillDatalist(id,values){
-  const el=document.getElementById(id);
-  if(el)el.innerHTML=[...new Set(values.filter(v=>v))].sort().map(v=>`<option value="${esc(v)}">`).join('');
+// ── Combo control (select existing value OR add a new one) ──
+const COMBO_ADD='__add_new__';
+
+// Populate a combo's <select> with unique existing values + an "Add new" item.
+function fillCombo(fid,values){
+  const input=document.getElementById(fid);
+  const combo=input.closest('.combo');
+  const sel=combo.querySelector('.combo-select');
+  const opts=[...new Set(values.filter(v=>v))].sort();
+  sel.innerHTML='<option value="">— Select —</option>'
+    +opts.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')
+    +`<option value="${COMBO_ADD}">+ Add new…</option>`;
+}
+
+// Set a combo's value: pick the matching option, or switch to "new" mode if the
+// value isn't in the list (e.g. an existing student with a one-off value).
+function setComboValue(fid,value){
+  const input=document.getElementById(fid);
+  const combo=input.closest('.combo');
+  const sel=combo.querySelector('.combo-select');
+  const back=combo.querySelector('.combo-back');
+  combo.classList.remove('invalid');
+  input.value=value||'';
+  const has=[...sel.options].some(o=>o.value===value && value!=='');
+  if(value && !has){
+    // Value exists in data but not as an option (rare) → show as typed text
+    sel.style.display='none';input.style.display='';back.style.display='';
+  }else{
+    sel.value=value||'';input.style.display='none';back.style.display='none';sel.style.display='';
+  }
+}
+
+// When the user changes the dropdown: copy selection into the input, or reveal
+// the text box if they chose "Add new".
+function onComboSelect(fid){
+  const input=document.getElementById(fid);
+  const combo=input.closest('.combo');
+  const sel=combo.querySelector('.combo-select');
+  const back=combo.querySelector('.combo-back');
+  combo.classList.remove('invalid');
+  if(sel.value===COMBO_ADD){
+    input.value='';sel.style.display='none';input.style.display='';back.style.display='';
+    input.focus();
+  }else{
+    input.value=sel.value;
+  }
+}
+
+// Back button: return from "add new" text box to the dropdown.
+function comboBack(fid){
+  const input=document.getElementById(fid);
+  const combo=input.closest('.combo');
+  const sel=combo.querySelector('.combo-select');
+  const back=combo.querySelector('.combo-back');
+  input.value='';input.style.display='none';back.style.display='none';
+  sel.value='';sel.style.display='';sel.focus();
+}
+
+// Keep the canonical input in sync as the user types a new value.
+document.addEventListener('input',function(e){
+  if(e.target.classList&&e.target.classList.contains('combo-new')){
+    const combo=e.target.closest('.combo');if(combo)combo.classList.remove('invalid');
+  }
+});
+
+
+// Convert a stored Join Date (various formats) to YYYY-MM-DD for the date picker.
+// Returns '' if it can't be parsed (picker stays empty, but value isn't lost on save).
+function toDateInputValue(raw){
+  const s=String(raw||'').trim();
+  if(!s)return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;           // already YYYY-MM-DD
+  const ym=s.match(/^(\d{4})-(\d{1,2})$/);              // YYYY-MM → first of month
+  if(ym)return ym[1]+'-'+String(ym[2]).padStart(2,'0')+'-01';
+  const d=new Date(s);
+  if(!isNaN(d))return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return '';
 }
 
 function openStudentForm(id){
   editingStudentId=id||null;
   const msg=document.getElementById('studentModalMsg');msg.textContent='';msg.className='modal-msg';
-  // Populate datalists from existing data for quick entry
-  fillDatalist('levelOptions',allStudents.map(s=>s['Current Level']));
-  fillDatalist('countryOptions',allStudents.map(s=>s.Country));
-  fillDatalist('tutorOptions',allStudents.map(s=>s.Tutor));
-  fillDatalist('batchOptions',allStudents.map(s=>s.Batch));
+  // Clear any prior invalid highlights (combo wrappers + plain inputs)
+  Object.keys(REQUIRED_FIELDS).forEach(f=>{const el=document.getElementById(f);el.classList.remove('invalid');const c=el.closest('.combo');if(c)c.classList.remove('invalid');});
+  // Populate combo dropdowns from existing data for quick entry
+  fillCombo('f_Level',allStudents.map(s=>s['Current Level']));
+  fillCombo('f_Country',allStudents.map(s=>s.Country));
+  fillCombo('f_Tutor',allStudents.map(s=>s.Tutor));
+  fillCombo('f_Batch',allStudents.map(s=>s.Batch));
+  fillCombo('f_School',allStudents.map(s=>s.School));
   const idInput=document.getElementById('f_ID');
   const note=document.getElementById('f_ID_note');
 
@@ -1901,57 +2030,29 @@ function openStudentForm(id){
     if(!s)return;
     document.getElementById('studentModalTitle').textContent='Edit Student';
     document.getElementById('f_Name').value=s.Name||'';
-    document.getElementById('f_Level').value=s['Current Level']||'';
-    document.getElementById('f_Country').value=s.Country||'';
-    document.getElementById('f_Tutor').value=s.Tutor||'';
-    document.getElementById('f_Batch').value=s.Batch||'';
+    setComboValue('f_Level',s['Current Level']||'');
+    setComboValue('f_Country',s.Country||'');
+    setComboValue('f_Tutor',s.Tutor||'');
+    setComboValue('f_Batch',s.Batch||'');
     document.getElementById('f_Status').value=s.Status||'Active';
-    document.getElementById('f_JoinDate').value=s['Join Date']||'';
+    document.getElementById('f_JoinDate').value=toDateInputValue(s['Join Date']);
     document.getElementById('f_Email').value=s.Email||'';
     document.getElementById('f_Contact').value=s.Contact||'';
+    setComboValue('f_School',s.School||'');
+    document.getElementById('f_Address').value=s.Address||'';
     document.getElementById('f_Fee').value=s['Monthly Fee']||'';
     document.getElementById('f_Photo').value=s.Photo||'';
     idInput.value=s.ID;idInput.disabled=true;note.textContent='ID cannot be changed';
   }else{ // ADD
     document.getElementById('studentModalTitle').textContent='Add Student';
-    ['f_Name','f_Level','f_Country','f_Tutor','f_Batch','f_JoinDate','f_Email','f_Contact','f_Fee','f_Photo'].forEach(f=>document.getElementById(f).value='');
+    ['f_Name','f_JoinDate','f_Email','f_Contact','f_Address','f_Fee','f_Photo'].forEach(f=>document.getElementById(f).value='');
+    ['f_Level','f_Country','f_Tutor','f_Batch','f_School'].forEach(f=>setComboValue(f,''));
     document.getElementById('f_Status').value='Active';
     idInput.value=nextStudentId();idInput.disabled=true;note.textContent='Auto-generated (edit if needed)';
     // allow manual override of generated ID on add
     idInput.disabled=false;
   }
   document.getElementById('studentModal').classList.add('open');
-  setupDatalistFocus();
-}
-
-// Browsers collapse a datalist to the single matching option when the input
-// already holds that value (the Edit case). On focus we clear the field so the
-// full suggestion list appears; if the user clicks away without choosing, the
-// previous value is restored. Add-mode (empty fields) is unaffected.
-function setupDatalistFocus(){
-  ['f_Level','f_Country','f_Tutor','f_Batch'].forEach(fid=>{
-    const el=document.getElementById(fid);
-    if(!el||el.dataset.dlBound)return;
-    el.dataset.dlBound='1';
-    el.addEventListener('focus',function(){
-      // Remember the value, temporarily clear so the full datalist shows,
-      // and reset the "touched" flag.
-      this.dataset.prev=this.value;
-      this.dataset.touched='';
-      this.value='';
-    });
-    el.addEventListener('input',function(){
-      // The user actively typed or cleared — honour whatever they leave.
-      this.dataset.touched='1';
-    });
-    el.addEventListener('blur',function(){
-      // Only restore the old value if the user never interacted (e.g. just
-      // tabbed through). If they edited it — including clearing it — keep theirs.
-      if(this.value==='' && this.dataset.touched!=='1' && this.dataset.prev!==undefined){
-        this.value=this.dataset.prev;
-      }
-    });
-  });
 }
 
 function closeStudentForm(){document.getElementById('studentModal').classList.remove('open');editingStudentId=null;}
@@ -1961,7 +2062,21 @@ async function saveStudent(){
   const btn=document.getElementById('studentSaveBtn');
   const rec={};Object.entries(STUDENT_FIELDS).forEach(([fid,col])=>{rec[col]=document.getElementById(fid).value.trim();});
 
-  if(!rec.Name){msg.textContent='Name is required.';msg.className='modal-msg err';return;}
+  // Clear previous highlights, then validate all required fields
+  Object.keys(REQUIRED_FIELDS).forEach(f=>{const el=document.getElementById(f);el.classList.remove('invalid');const c=el.closest('.combo');if(c)c.classList.remove('invalid');});
+  const missing=[];
+  Object.entries(REQUIRED_FIELDS).forEach(([fid,label])=>{
+    const el=document.getElementById(fid);
+    if(!el.value.trim()){missing.push(label);const c=el.closest('.combo');if(c)c.classList.add('invalid');else el.classList.add('invalid');}
+  });
+  if(missing.length){
+    msg.innerHTML='Please fill the required field'+(missing.length>1?'s':'')+': <strong>'+missing.map(esc).join(', ')+'</strong>';
+    msg.className='modal-msg err';
+    // Scroll the first missing field into view
+    const firstId=Object.keys(REQUIRED_FIELDS).find(f=>missing.includes(REQUIRED_FIELDS[f]));
+    if(firstId){const el=document.getElementById(firstId);(el.closest('.combo')||el).scrollIntoView({behavior:'smooth',block:'center'});}
+    return;
+  }
   if(!rec.ID){msg.textContent='ID is required.';msg.className='modal-msg err';return;}
   // Duplicate ID check only when adding (or changing to an existing id)
   if(!editingStudentId && allStudents.some(s=>String(s.ID).toUpperCase()===rec.ID.toUpperCase())){
@@ -2021,6 +2136,8 @@ function downloadExcel(){
     'Join Date':s['Join Date']||'',
     'Email':s.Email||'',
     'Contact':s.Contact||'',
+    'School':s.School||'',
+    'Address':s.Address||'',
     'Monthly Fee':s['Monthly Fee']||''
   }));
   const ws=XLSX.utils.json_to_sheet(rows);
