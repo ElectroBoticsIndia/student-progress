@@ -44,6 +44,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .btn-admin svg{width:14px;height:14px}
 .admin-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--accent);display:none}
 .admin-avatar.visible{display:block}
+.account-menu{position:relative}
+.account-trigger{background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;border-radius:50%}
+.account-avatar{width:34px;height:34px;border-radius:50%;border:2px solid var(--accent);object-fit:cover;display:block;background:var(--accent-light)}
+.account-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:14px;min-width:220px;z-index:100;display:none}
+.account-dropdown.open{display:block}
+.account-email{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text);word-break:break-all;margin-bottom:4px}
+.account-role{font-family:var(--font-mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px}
+.account-logout{width:100%;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--red);background:none;border:1px solid var(--red);border-radius:8px;padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:all .2s}
+.account-logout:hover{background:var(--red);color:#fff}
+.account-logout svg{width:15px;height:15px}
 
 .app{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
 
@@ -383,7 +393,18 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
     </div>
     <div class="header-right">
-      <img class="admin-avatar" id="adminAvatar" src="" alt="">
+      <div class="account-menu" id="accountMenu" style="display:none;">
+        <button class="account-trigger" id="accountTrigger" onclick="toggleAccountMenu(event)">
+          <img class="account-avatar" id="accountAvatar" src="" alt="">
+        </button>
+        <div class="account-dropdown" id="accountDropdown">
+          <div class="account-email" id="accountEmail"></div>
+          <div class="account-role" id="accountRole"></div>
+          <button class="account-logout" onclick="accountLogout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout</button>
+        </div>
+      </div>
       <button class="btn-admin" id="adminBtn" onclick="showAdminLogin()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4"/></svg>
         <span>Admin</span>
@@ -462,11 +483,6 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 
   <!-- Admin Dashboard -->
   <div class="admin-screen" id="adminDashboard">
-    <button class="btn-admin-logout" onclick="adminLogout()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Logout Admin
-    </button>
-
     <div class="stats-grid" id="statsGrid"></div>
     <div class="charts-grid" id="chartsGrid">
       <div class="chart-card"><div class="chart-title">Students per Level</div><div class="chart-container"><canvas id="chartLevel"></canvas></div></div>
@@ -858,6 +874,7 @@ function backToStudentGate(){
   else{document.getElementById('loginScreen').style.display='flex';}
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.search-group'))document.getElementById('searchResults').classList.remove('open')});
+document.addEventListener('click',e=>{if(!e.target.closest('.account-menu')){const d=document.getElementById('accountDropdown');if(d)d.classList.remove('open');}});
 
 // ─── Student Login Gate (Google Sign-In, parent-email allowlist) ─────────
 let studentUser=null;
@@ -883,6 +900,7 @@ function showStudentGate(){
   // Returning to the sign-in screen resets the session
   studentUser=null;userRole='';myStudents=[];
   applyAdminBtnVisibility();
+  const am=document.getElementById('accountMenu');if(am)am.style.display='none';
   // Hide search until signed in
   document.getElementById('loginScreen').style.display='none';
   const gate=document.getElementById('studentLoginScreen');
@@ -924,6 +942,7 @@ function handleStudentLogin(response){
 
   if(role==='admin'||role==='tutor'||isViewerDomain){
     myStudents=[];
+    showAccountMenu(role||'viewer');
     enterSearchScreen();
     return;
   }
@@ -932,14 +951,47 @@ function handleStudentLogin(response){
   const mine=studentsForEmail(email);
   myStudents=mine;
   if(mine.length===1){
+    showAccountMenu('parent');
     selectStudent(mine[0].ID);
   }else if(mine.length>1){
+    showAccountMenu('parent');
     showStudentPicker(mine);
   }else{
     // Not a known user and no student mapping → deny
     myStudents=[];
     document.getElementById('studentLoginError').classList.add('show');
   }
+}
+
+// Populate and show the top-right account menu (avatar → email + role + logout).
+function showAccountMenu(roleLabel){
+  if(!studentUser)return;
+  const menu=document.getElementById('accountMenu');
+  const av=document.getElementById('accountAvatar');
+  if(studentUser.picture){av.src=studentUser.picture;av.onerror=function(){this.src='';this.style.background='var(--accent-light)';};}
+  else{av.removeAttribute('src');}
+  document.getElementById('accountEmail').textContent=studentUser.email||'';
+  const labelMap={admin:'Admin',tutor:'Tutor',parent:'Parent',viewer:'Viewer'};
+  document.getElementById('accountRole').textContent=labelMap[roleLabel]||roleLabel||'';
+  menu.style.display='block';
+  document.getElementById('accountDropdown').classList.remove('open');
+}
+
+function toggleAccountMenu(e){
+  e.stopPropagation();
+  document.getElementById('accountDropdown').classList.toggle('open');
+}
+
+function accountLogout(){
+  // Clear session and return to the Gmail sign-in screen
+  adminUser=null;currentStudent=null;
+  document.getElementById('accountMenu').style.display='none';
+  document.getElementById('accountDropdown').classList.remove('open');
+  document.getElementById('adminBtn').classList.remove('active');
+  hideAll();
+  // Sign out of Google's auto-select so they can pick an account again
+  try{if(typeof google!=='undefined'&&google.accounts&&google.accounts.id)google.accounts.id.disableAutoSelect();}catch(_){}
+  showStudentGate();
 }
 
 // Show a chooser when one login maps to multiple students (e.g. siblings).
@@ -1036,6 +1088,20 @@ function normLevel(name){
     .replace(/\s+/g,' ');
 }
 
+// Latest non-empty Completion Date among a set of progress rows.
+// Returns '' if none found (caller falls back to today's date).
+function latestCompletionDate(rows){
+  let best=null, bestStr='';
+  (rows||[]).forEach(r=>{
+    const v=r['Completion Date'];
+    if(!v)return;
+    const d=new Date(v);
+    if(!isNaN(d)){ if(best===null||d>best){best=d;bestStr=String(v);} }
+    else if(!bestStr){ bestStr=String(v); } // keep an unparseable value as last resort
+  });
+  return bestStr;
+}
+
 // A student counts as "active" unless Status is explicitly set to something
 // other than Active. Used by all admin dashboard charts so they reflect only
 // the current active roster.
@@ -1073,7 +1139,8 @@ function buildRoadmap(){
     const cert=allCertificates.find(c=>c['Student ID']===sid&&normLevel(c['Level Name'])===normLevel(level.name));
     const certFromProgress=topics.find(t=>t['Certificate URL']);
     const certUrl=(cert&&cert['Certificate URL'])||(certFromProgress&&certFromProgress['Certificate URL'])||'';
-    const completionDate=(cert&&cert['Completion Date'])||(certFromProgress&&certFromProgress['Completion Date'])||'';
+    // Prefer the latest Completion Date from this student's Progress rows for the level
+    const completionDate=latestCompletionDate(allTopics)||(cert&&cert['Completion Date'])||'';
     const hasTemplate=level.certTemplate&&(status==='completed'||certUrl||completionDate);
     const color=levelColor(level.name,i);
     const canShare=status==='completed'&&(hasTemplate||certUrl);
@@ -1158,7 +1225,7 @@ function shareCertificate(levelIdx){
   const topics=allProgress.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(lvl.name));
   const certFromProgress=topics.find(t=>t['Certificate URL']);
   const certUrl=(cert&&cert['Certificate URL'])||(certFromProgress&&certFromProgress['Certificate URL'])||'';
-  const completionDate=(cert&&cert['Completion Date'])||(certFromProgress&&certFromProgress['Completion Date'])||'';
+  const completionDate=latestCompletionDate(topics)||(cert&&cert['Completion Date'])||'';
 
   shareMessage=`🎉 ${s.Name} has successfully completed "${lvl.name}" at ElectroBotics! Proud of this milestone in robotics & coding. 🤖✨`;
   shareFileName=`${s.Name.replace(/[^a-zA-Z0-9]/g,'_')}_${lvl.name.replace(/[^a-zA-Z0-9]/g,'_')}_Certificate.png`;
@@ -1394,20 +1461,14 @@ function showAdminDashboard(){
   hideAll();
   document.getElementById('adminDashboard').classList.add('active');
   document.getElementById('adminBtn').classList.add('active');
-  if(adminUser.picture){
-    const av=document.getElementById('adminAvatar');av.src=adminUser.picture;av.classList.add('visible');
-  }
+  // Ensure the account menu reflects the admin (covers the case where admin
+  // reached here via the Admin button after signing in elsewhere).
+  if(adminUser&&!studentUser)studentUser={email:adminUser.email,name:adminUser.name,picture:adminUser.picture};
+  showAccountMenu('admin');
   buildStats();buildCharts();buildTable();
 }
 
-function adminLogout(){
-  adminUser=null;
-  document.getElementById('adminAvatar').classList.remove('visible');
-  document.getElementById('adminBtn').classList.remove('active');
-  hideAll();
-  if(studentLoginEnabled()&&!studentUser){showStudentGate();}
-  else{document.getElementById('loginScreen').style.display='flex';}
-}
+function adminLogout(){accountLogout();}
 
 function hideAll(){
   document.getElementById('loginScreen').style.display='none';
