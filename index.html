@@ -103,6 +103,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 
 /* Level cards */
 .roadmap{display:flex;flex-direction:column;gap:16px;margin-bottom:32px}
+.roadmap-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 20px;font-family:var(--font-mono);font-size:13px;color:var(--text-dim)}
+.roadmap-loading .spinner{width:38px;height:38px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.roadmap-error{padding:40px 20px;text-align:center;font-family:var(--font-mono);font-size:13px;color:var(--red)}
 .level-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .3s;cursor:pointer}
 .level-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
 .level-card.current{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
@@ -734,15 +738,14 @@ async function loadData(){
   if(!SHEET_ID){document.getElementById('configNotice').style.display='block';document.getElementById('configNotice').innerHTML='<strong>Setup Required:</strong> Set SHEET_ID in the code.';loadDemoData();return}
   document.getElementById('configNotice').style.display='none';
   try{
-    let students,progress,projects,levels,certificates;
+    let students,levels;
     try{students=await fetchSheet('Students')}catch(e){throw new Error('Could not load Students: '+e.message)}
-    try{progress=await fetchSheet('Progress')}catch(e){progress=[]}
-    try{projects=await fetchSheet('Projects')}catch(e){projects=[]}
     try{levels=await fetchSheet('Levels')}catch(e){levels=[]}
-    try{certificates=await fetchSheet('Certificates')}catch(e){certificates=[]}
     try{const users=await fetchSheet('Users');allUsers=Array.isArray(users)?users:[];}catch(e){allUsers=[];}
     if(students.length===0)throw new Error('Students sheet is empty');
-    allStudents=students;allProgress=progress;allProjects=projects;allCertificates=certificates;
+    // Progress/Projects/Certificates are loaded on-demand per student (see loadStudentData),
+    // so they are NOT bulk-loaded here. This keeps startup fast at scale (500+ students).
+    allStudents=students;allProgress=[];allProjects=[];allCertificates=[];
     if(levels.length>0){
       const parsed=levels.map((l,i)=>({num:parseInt(l['Level Number']||l['num']||(i+1)),name:(l['Level Name']||l['name']||'').trim(),desc:(l['Description']||l['desc']||'').trim(),refDoc:(l['Reference Doc']||'').trim(),certTemplate:(l['Certificate Template']||'').trim()})).filter(l=>l.name);
       if(parsed.length>0)allLevels=parsed;
@@ -759,6 +762,7 @@ async function loadData(){
 }
 
 function loadDemoData(){
+  demoMode=true;
   allStudents=[
     {ID:'EB001',Name:'Arun Kumar','Current Level':'Micro:bit Automation',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Country:'India',Status:'Active',Batch:'Sun - 9:30 am'},
     {ID:'EB002',Name:'Priya Sharma','Current Level':'Robotics',Photo:'','Join Date':'2025-01',Tutor:'Ganesh',Country:'India',Status:'Active',Batch:'Sun - 9:30 am'},
@@ -792,7 +796,44 @@ function onNameSearch(){
   r.classList.add('open');
 }
 function goById(){const id=document.getElementById('idInput').value.trim().toUpperCase();if(!id)return;const s=allStudents.find(x=>(x.ID||'').toUpperCase()===id);if(s)selectStudent(s.ID);else document.getElementById('errorMsg').classList.add('show')}
-function selectStudent(id){currentStudent=allStudents.find(s=>s.ID===id);if(!currentStudent)return;document.getElementById('searchResults').classList.remove('open');document.getElementById('errorMsg').classList.remove('show');showDashboard()}
+
+// Per-student data cache so re-opening a student is instant (no refetch).
+const studentDataCache={};
+let demoMode=false;
+
+// Fetch one student's Progress/Projects/Certificates from the Apps Script
+// read endpoint, with a session cache. Falls back to empty arrays on error.
+async function loadStudentData(id){
+  // In demo mode (no live sheet), the sample arrays are already loaded — use them.
+  if(demoMode){return {progress:allProgress,projects:allProjects,certificates:allCertificates};}
+  if(studentDataCache[id])return studentDataCache[id];
+  if(!SHEET_WEBAPP_URL){return {progress:[],projects:[],certificates:[]};}
+  const url=SHEET_WEBAPP_URL+'?action=getStudentData&id='+encodeURIComponent(id);
+  const res=await fetch(url);
+  const data=await res.json();
+  if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Could not load student data');
+  const out={progress:data.progress||[],projects:data.projects||[],certificates:data.certificates||[]};
+  studentDataCache[id]=out;
+  return out;
+}
+
+async function selectStudent(id){
+  currentStudent=allStudents.find(s=>s.ID===id);
+  if(!currentStudent)return;
+  document.getElementById('searchResults').classList.remove('open');
+  document.getElementById('errorMsg').classList.remove('show');
+  // Show the dashboard shell (header renders instantly) with a loading state
+  showDashboard(true);
+  try{
+    const d=await loadStudentData(id);
+    allProgress=d.progress;allProjects=d.projects;allCertificates=d.certificates;
+    buildRoadmap();
+  }catch(e){
+    console.error('loadStudentData error:',e);
+    document.getElementById('roadmap').innerHTML='<div class="roadmap-error">Could not load progress right now. Please check your connection and try again.</div>';
+    document.getElementById('progressSummary').innerHTML='';
+  }
+}
 function logout(){
   currentStudent=null;
   document.getElementById('dashboard').classList.remove('active');
@@ -956,7 +997,7 @@ function initStudentView(){
 
 // ─── Student Dashboard ──────────────────────────
 
-function showDashboard(){
+function showDashboard(loading){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('studentLoginScreen').style.display='none';
   document.getElementById('studentPickerScreen').style.display='none';
@@ -973,7 +1014,13 @@ function showDashboard(){
     ${s.Tutor?`<span>👨‍🏫 ${esc(s.Tutor)}</span>`:''}
     ${s.Country?`<span>🌍 ${esc(s.Country)}</span>`:''}
   `;
-  buildRoadmap();
+  if(loading){
+    // Header is up instantly; show a spinner while progress data is fetched
+    document.getElementById('progressSummary').innerHTML='';
+    document.getElementById('roadmap').innerHTML='<div class="roadmap-loading"><div class="spinner"></div><div>Loading progress…</div></div>';
+  }else{
+    buildRoadmap();
+  }
 }
 
 // Normalize a level name for forgiving comparison across sheets:
