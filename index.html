@@ -276,6 +276,27 @@ table.avail td.occ{border:1px solid transparent}
 .avail-chip-click:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(6,31,34,.25)}
 #chartLevel,#chartBatch,#chartTutor{cursor:pointer}
 .enroll-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.risk-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.risk-window{font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--text-light);text-transform:none;letter-spacing:0}
+.risk-refresh{background:none;border:1px solid var(--border);border-radius:8px;width:34px;height:34px;font-size:16px;color:var(--text-dim);cursor:pointer;transition:all .2s}
+.risk-refresh:hover{border-color:var(--accent);color:var(--accent)}
+.risk-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.risk-stat{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;background:var(--bg);border:1px solid var(--border)}
+.risk-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.risk-dot.red{background:var(--red)} .risk-dot.yellow{background:var(--amber)} .risk-dot.green{background:var(--green)} .risk-dot.nodata{background:var(--text-light)}
+.risk-filter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.risk-chip{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .2s}
+.risk-chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+table.risk{border-collapse:collapse;width:100%;min-width:640px}
+table.risk th{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+table.risk td{font-family:var(--font-body);font-size:13px;color:var(--text);padding:10px 12px;border-bottom:1px solid var(--border)}
+table.risk tr{cursor:pointer;transition:background .15s}
+table.risk tbody tr:hover{background:var(--accent-light)}
+.risk-badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px}
+.risk-badge.red{background:var(--red-light);color:var(--red)} .risk-badge.yellow{background:var(--amber-bg,#fdf6e3);color:#9a7200} .risk-badge.green{background:var(--green-bg,#eef6d8);color:#5a7a00} .risk-badge.nodata{background:var(--surface-alt);color:var(--text-light)}
+.risk-rate{font-family:var(--font-mono);font-size:12px;font-weight:600}
+.risk-rate.low{color:var(--red)} .risk-rate.mid{color:#9a7200} .risk-rate.ok{color:var(--green)} .risk-rate.na{color:var(--text-light)}
+.risk-empty,.risk-loading{padding:32px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
 .enroll-scroll{overflow-x:auto;overflow-y:hidden;margin-top:14px;-webkit-overflow-scrolling:touch}
 .enroll-canvas-wrap{height:300px;position:relative;min-width:100%}
 .enroll-scroll::-webkit-scrollbar{height:8px}
@@ -522,6 +543,15 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         </div>
       </div>
       <div class="enroll-scroll"><div class="enroll-canvas-wrap" id="enrollCanvasWrap"><canvas id="chartEnrollment"></canvas></div></div>
+    </div>
+    <div class="chart-card" id="riskCard" style="margin-bottom:28px;">
+      <div class="risk-head">
+        <div class="chart-title" style="margin-bottom:0;">At-Risk Students <span id="riskWindowNote" class="risk-window"></span></div>
+        <button class="risk-refresh" onclick="loadRiskList(true)" title="Refresh">⟳</button>
+      </div>
+      <div class="risk-summary" id="riskSummary"></div>
+      <div class="risk-filter" id="riskFilter"></div>
+      <div class="avail-scroll"><div id="riskTable"></div></div>
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
       <div class="chart-title">Tutor Availability by Day &amp; Time Slot</div>
@@ -1526,7 +1556,7 @@ function showAdminDashboard(){
   // reached here via the Admin button after signing in elsewhere).
   if(adminUser&&!studentUser)studentUser={email:adminUser.email,name:adminUser.name,picture:adminUser.picture};
   showAccountMenu('admin');
-  buildStats();buildCharts();buildTable();
+  buildStats();buildCharts();buildTable();loadRiskList();
 }
 
 function adminLogout(){accountLogout();}
@@ -1936,6 +1966,75 @@ function buildTable(){
   populateFilters();
   document.getElementById('filterStatus').value='Active';
   applyFilters();
+}
+
+// ─── At-Risk Students ─────────────────────────────────────────────────
+let riskData=null;
+let riskFilter={red:true,yellow:true,green:false,nodata:false}; // default: red+yellow
+
+async function loadRiskList(force){
+  const table=document.getElementById('riskTable');
+  const summary=document.getElementById('riskSummary');
+  if(!table)return;
+  if(riskData&&!force){renderRisk();return;}
+  if(!SHEET_WEBAPP_URL){table.innerHTML='<div class="risk-empty">Risk endpoint not configured.</div>';return;}
+  table.innerHTML='<div class="risk-loading">Loading risk data…</div>';
+  summary.innerHTML='';document.getElementById('riskFilter').innerHTML='';
+  try{
+    const res=await fetch(SHEET_WEBAPP_URL+'?action=getRiskList');
+    const data=await res.json();
+    if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Failed to load risk data');
+    riskData=data;
+    document.getElementById('riskWindowNote').textContent='· last '+data.window_weeks+' weeks';
+    renderRisk();
+  }catch(e){
+    console.error('risk load error:',e);
+    table.innerHTML='<div class="risk-empty">Could not load risk data. '+esc(e.message)+'</div>';
+  }
+}
+
+function setRiskFilter(band){riskFilter[band]=!riskFilter[band];renderRisk();}
+
+function renderRisk(){
+  if(!riskData)return;
+  const c=riskData.counts||{red:0,yellow:0,green:0,nodata:0};
+  // Summary chips
+  document.getElementById('riskSummary').innerHTML=
+    `<span class="risk-stat"><span class="risk-dot red"></span>${c.red} at risk</span>`+
+    `<span class="risk-stat"><span class="risk-dot yellow"></span>${c.yellow} watch</span>`+
+    `<span class="risk-stat"><span class="risk-dot green"></span>${c.green} on track</span>`+
+    `<span class="risk-stat"><span class="risk-dot nodata"></span>${c.nodata} no data</span>`;
+  // Filter chips (toggle which bands show)
+  const labels={red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'};
+  document.getElementById('riskFilter').innerHTML=['red','yellow','green','nodata'].map(b=>
+    `<button class="risk-chip ${riskFilter[b]?'on':''}" onclick="setRiskFilter('${b}')">${labels[b]} (${c[b]})</button>`
+  ).join('');
+  // Table
+  const rows=(riskData.students||[]).filter(s=>riskFilter[s.risk]);
+  const t=document.getElementById('riskTable');
+  if(rows.length===0){
+    const anyData=(c.red+c.yellow+c.green)>0;
+    t.innerHTML='<div class="risk-empty">'+(anyData?'No students in the selected categories. Use the filters above to show more.':'No attendance or assignment data for the last '+riskData.window_weeks+' weeks yet. Once you upload it, at-risk students will appear here.')+'</div>';
+    return;
+  }
+  const pctCell=(rate,present,total,kind)=>{
+    if(rate===null||rate===undefined)return '<span class="risk-rate na">—</span>';
+    const p=Math.round(rate*100);
+    const cls=kind==='att'?(rate<0.60?'low':rate<0.75?'mid':'ok'):(rate<0.50?'low':rate<0.70?'mid':'ok');
+    return `<span class="risk-rate ${cls}">${p}%</span>`;
+  };
+  const badge={red:'🔴 At risk',yellow:'🟡 Watch',green:'🟢 On track',nodata:'⚪ No data'};
+  t.innerHTML=`<table class="risk"><thead><tr>
+    <th>Student</th><th>Tutor</th><th>Batch</th><th>Attendance</th><th>Submissions</th><th>Risk</th>
+    </tr></thead><tbody>${rows.map(s=>`
+    <tr onclick="selectStudent('${esc(s.id)}')">
+      <td><strong>${esc(s.name)}</strong><br><span style="font-family:var(--font-mono);font-size:10px;color:var(--text-light);">${esc(s.id)}</span></td>
+      <td>${esc(s.tutor||'—')}</td>
+      <td>${esc(s.batch||'—')}</td>
+      <td>${pctCell(s.att_rate,s.att_present,s.att_total,'att')}<br><span style="font-family:var(--font-mono);font-size:9px;color:var(--text-light);">${s.att_total>0?s.att_present+'/'+s.att_total:'no data'}</span></td>
+      <td>${pctCell(s.sub_rate,s.submitted,s.expected,'sub')}<br><span style="font-family:var(--font-mono);font-size:9px;color:var(--text-light);">${s.sub_rate!==null?s.submitted+'/'+s.expected:'no data'}</span></td>
+      <td><span class="risk-badge ${s.risk}">${badge[s.risk]}</span></td>
+    </tr>`).join('')}</tbody></table>`;
 }
 
 // ─── Student Add / Edit Form ──────────────────────────────────────────
