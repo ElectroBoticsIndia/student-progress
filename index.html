@@ -281,6 +281,10 @@ table.avail td.occ{border:1px solid transparent}
 .risk-refresh{background:none;border:1px solid var(--border);border-radius:8px;width:34px;height:34px;font-size:16px;color:var(--text-dim);cursor:pointer;transition:all .2s}
 .risk-refresh:hover{border-color:var(--accent);color:var(--accent)}
 .risk-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.risk-toggle{cursor:pointer;user-select:none}
+.risk-chevron{font-size:14px;color:var(--text-dim);transition:transform .2s;display:inline-block}
+.risk-chevron.open{transform:rotate(180deg)}
+.risk-detail{margin-top:4px}
 .risk-stat{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;background:var(--bg);border:1px solid var(--border)}
 .risk-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
 .risk-dot.red{background:var(--red)} .risk-dot.yellow{background:var(--amber)} .risk-dot.green{background:var(--green)} .risk-dot.nodata{background:var(--text-light)}
@@ -545,13 +549,18 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div class="enroll-scroll"><div class="enroll-canvas-wrap" id="enrollCanvasWrap"><canvas id="chartEnrollment"></canvas></div></div>
     </div>
     <div class="chart-card" id="riskCard" style="margin-bottom:28px;">
-      <div class="risk-head">
+      <div class="risk-head risk-toggle" onclick="toggleRisk()">
         <div class="chart-title" style="margin-bottom:0;">At-Risk Students <span id="riskWindowNote" class="risk-window"></span></div>
-        <button class="risk-refresh" onclick="loadRiskList(true)" title="Refresh">⟳</button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="risk-refresh" onclick="event.stopPropagation();loadRiskList(true)" title="Refresh">⟳</button>
+          <span class="risk-chevron" id="riskChevron">▾</span>
+        </div>
       </div>
       <div class="risk-summary" id="riskSummary"></div>
-      <div class="risk-filter" id="riskFilter"></div>
-      <div class="avail-scroll"><div id="riskTable"></div></div>
+      <div class="risk-detail" id="riskDetail" style="display:none;">
+        <div class="risk-filter" id="riskFilter"></div>
+        <div class="avail-scroll"><div id="riskTable"></div></div>
+      </div>
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
       <div class="chart-title">Tutor Availability by Day &amp; Time Slot</div>
@@ -1995,6 +2004,14 @@ async function loadRiskList(force){
 
 function setRiskFilter(band){riskFilter[band]=!riskFilter[band];renderRisk();}
 
+let riskExpanded=false;
+function toggleRisk(){
+  riskExpanded=!riskExpanded;
+  document.getElementById('riskDetail').style.display=riskExpanded?'block':'none';
+  document.getElementById('riskChevron').classList.toggle('open',riskExpanded);
+  if(riskExpanded)renderRisk(); // build the table only when opened
+}
+
 function renderRisk(){
   if(!riskData)return;
   const c=riskData.counts||{red:0,yellow:0,green:0,nodata:0};
@@ -2004,6 +2021,8 @@ function renderRisk(){
     `<span class="risk-stat"><span class="risk-dot yellow"></span>${c.yellow} watch</span>`+
     `<span class="risk-stat"><span class="risk-dot green"></span>${c.green} on track</span>`+
     `<span class="risk-stat"><span class="risk-dot nodata"></span>${c.nodata} no data</span>`;
+  // Only build the filter + table when the card is expanded (keeps it light by default)
+  if(!riskExpanded)return;
   // Filter chips (toggle which bands show)
   const labels={red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'};
   document.getElementById('riskFilter').innerHTML=['red','yellow','green','nodata'].map(b=>
