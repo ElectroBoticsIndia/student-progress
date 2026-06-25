@@ -285,6 +285,8 @@ table.avail td.occ{border:1px solid transparent}
 .risk-chevron{font-size:14px;color:var(--text-dim);transition:transform .2s;display:inline-block}
 .risk-chevron.open{transform:rotate(180deg)}
 .risk-detail{margin-top:4px}
+.risk-criteria{font-family:var(--font-mono);font-size:10px;line-height:1.7;color:var(--text-dim);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:4px}
+.risk-criteria strong{color:var(--text)}
 .risk-stat{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;background:var(--bg);border:1px solid var(--border)}
 .risk-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
 .risk-dot.red{background:var(--red)} .risk-dot.yellow{background:var(--amber)} .risk-dot.green{background:var(--green)} .risk-dot.nodata{background:var(--text-light)}
@@ -557,6 +559,13 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         </div>
       </div>
       <div class="risk-summary" id="riskSummary"></div>
+      <div class="risk-criteria">
+        <strong>Risk criteria</strong> (last 6 weeks):
+        🔴 At risk = attendance &lt; 60% or submissions &lt; 50% ·
+        🟡 Watch = attendance 60–75% or submissions 50–70% ·
+        🟢 On track = above both ·
+        ⚪ No data = no attendance/assignments recorded
+      </div>
       <div class="risk-detail" id="riskDetail" style="display:none;">
         <div class="risk-filter" id="riskFilter"></div>
         <div class="avail-scroll"><div id="riskTable"></div></div>
