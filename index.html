@@ -303,6 +303,8 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .risk-rate{font-family:var(--font-mono);font-size:12px;font-weight:600}
 .risk-rate.low{color:var(--red)} .risk-rate.mid{color:#9a7200} .risk-rate.ok{color:var(--green)} .risk-rate.na{color:var(--text-light)}
 .risk-empty,.risk-loading{padding:32px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
+.risk-loading-inline{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-mono);font-size:12px;color:var(--text-dim);padding:7px 0}
+.risk-spinner{width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 .enroll-scroll{overflow-x:auto;overflow-y:hidden;margin-top:14px;-webkit-overflow-scrolling:touch}
 .enroll-canvas-wrap{height:300px;position:relative;min-width:100%}
 .enroll-scroll::-webkit-scrollbar{height:8px}
@@ -379,6 +381,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 .data-table{width:100%;border-collapse:collapse;font-size:13px}
 .data-table th{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;padding:12px 16px;text-align:left;border-bottom:2px solid var(--border);background:var(--surface-alt)}
 .data-table td{padding:12px 16px;border-bottom:1px solid var(--border)}
+.data-table tbody tr.student-row{cursor:pointer;transition:background .15s}
+.data-table tbody tr.student-row:hover{background:var(--accent-light)}
 .data-table tr:hover{background:var(--accent-light)}
 .data-table .status-active{color:var(--green);font-weight:600}
 .data-table .status-inactive{color:var(--red);font-weight:600}
@@ -1966,7 +1970,7 @@ function applyFilters(){
 function renderTable(){
   document.getElementById('tableCount').textContent=`(${filteredStudents.length})`;
   document.getElementById('tableBody').innerHTML=filteredStudents.map(s=>`
-    <tr>
+    <tr class="student-row" onclick="selectStudent('${esc(s.ID)}')" title="View ${esc(s.Name)}'s progress">
       <td><strong>${esc(s.ID)}</strong></td>
       <td>${esc(s.Name)}</td>
       <td>${esc(s['Current Level']||'—')}</td>
@@ -1975,7 +1979,7 @@ function renderTable(){
       <td>${esc(s.Batch||'—')}</td>
       <td class="${(s.Status||'Active').toLowerCase()==='active'?'status-active':'status-inactive'}">${esc(s.Status||'Active')}</td>
       <td>${esc(s['Join Date']||'—')}</td>
-      <td><button class="btn-edit" onclick="openStudentForm('${esc(s.ID)}')" title="Edit ${esc(s.Name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></td>
+      <td><button class="btn-edit" onclick="event.stopPropagation();openStudentForm('${esc(s.ID)}')" title="Edit ${esc(s.Name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></td>
     </tr>
   `).join('');
 }
@@ -1995,9 +1999,10 @@ async function loadRiskList(force){
   const summary=document.getElementById('riskSummary');
   if(!table)return;
   if(riskData&&!force){renderRisk();return;}
-  if(!SHEET_WEBAPP_URL){table.innerHTML='<div class="risk-empty">Risk endpoint not configured.</div>';return;}
-  table.innerHTML='<div class="risk-loading">Loading risk data…</div>';
-  summary.innerHTML='';document.getElementById('riskFilter').innerHTML='';
+  if(!SHEET_WEBAPP_URL){summary.innerHTML='<div class="risk-loading-inline">Risk endpoint not configured.</div>';return;}
+  // Show the loading state in the SUMMARY (always visible, even when collapsed)
+  summary.innerHTML='<div class="risk-loading-inline"><span class="risk-spinner"></span>Loading risk data…</div>';
+  table.innerHTML='';document.getElementById('riskFilter').innerHTML='';
   try{
     const res=await fetch(SHEET_WEBAPP_URL+'?action=getRiskList');
     const data=await res.json();
@@ -2007,7 +2012,7 @@ async function loadRiskList(force){
     renderRisk();
   }catch(e){
     console.error('risk load error:',e);
-    table.innerHTML='<div class="risk-empty">Could not load risk data. '+esc(e.message)+'</div>';
+    summary.innerHTML='<div class="risk-loading-inline" style="color:var(--red);">Could not load risk data. '+esc(e.message)+'</div>';
   }
 }
 
