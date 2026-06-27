@@ -845,12 +845,29 @@ async function fetchSheet(sheetName){
   return rows;
 }
 
+// Load ALL students via the Apps Script endpoint (ignores any sheet UI filter),
+// falling back to gviz only if the endpoint is unavailable.
+async function fetchStudents(){
+  if(SHEET_WEBAPP_URL){
+    try{
+      const res=await fetch(SHEET_WEBAPP_URL+'?action=getStudents');
+      const data=await res.json();
+      if(data&&data.ok&&Array.isArray(data.students))return data.students;
+      throw new Error(data&&data.error?data.error:'getStudents failed');
+    }catch(e){
+      console.warn('getStudents endpoint failed, falling back to gviz:',e.message);
+      return fetchSheet('Students');
+    }
+  }
+  return fetchSheet('Students');
+}
+
 async function loadData(){
   if(!SHEET_ID){document.getElementById('configNotice').style.display='block';document.getElementById('configNotice').innerHTML='<strong>Setup Required:</strong> Set SHEET_ID in the code.';loadDemoData();return}
   document.getElementById('configNotice').style.display='none';
   try{
     let students,levels;
-    try{students=await fetchSheet('Students')}catch(e){throw new Error('Could not load Students: '+e.message)}
+    try{students=await fetchStudents()}catch(e){throw new Error('Could not load Students: '+e.message)}
     try{levels=await fetchSheet('Levels')}catch(e){levels=[]}
     try{const users=await fetchSheet('Users');allUsers=Array.isArray(users)?users:[];}catch(e){allUsers=[];}
     if(students.length===0)throw new Error('Students sheet is empty');
