@@ -1174,7 +1174,7 @@ function showDashboard(loading){
   document.getElementById('studentMeta').innerHTML=`
     <span>🆔 ${esc(s.ID)}</span>
     <span>📍 ${esc(s['Current Level']||'Not started')}</span>
-    ${s['Join Date']?`<span>📅 Joined ${esc(s['Join Date'])}</span>`:''}
+    ${s['Join Date']?`<span>📅 Joined ${esc(formatJoinDate(s['Join Date']))}</span>`:''}
     ${s.Tutor?`<span>👨‍🏫 ${esc(s.Tutor)}</span>`:''}
     ${s.Country?`<span>🌍 ${esc(s.Country)}</span>`:''}
   `;
@@ -1741,6 +1741,30 @@ function parseJoinYM(raw){
   return null;
 }
 
+// Display a Join Date consistently as "30 Apr 2022", regardless of how it's
+// stored (ISO timestamp, "May 2022", YYYY-MM-DD, etc.). Falls back to the raw
+// value if it can't be parsed, and to '' for blanks.
+function formatJoinDate(raw){
+  const s=String(raw||'').trim();
+  if(!s)return '';
+  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Full date with an explicit day (ISO date or timestamp) → "30 Apr 2022"
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return parseInt(m[3])+' '+mn[parseInt(m[2])-1]+' '+m[1];
+  // Month-year only, no day: "2022-04" or "May 2022" → "Apr 2022" (don't invent a day)
+  if(/^\d{4}[-/]\d{1,2}$/.test(s)||/^[a-z]{3,}\.?\s*[, ]?\s*\d{4}$/i.test(s)){
+    const ym=parseJoinYM(s);
+    if(ym)return mn[ym.m-1]+' '+ym.y;
+  }
+  // Other day-month-year formats (e.g. "4/30/2022", "30-Apr-2020")
+  const dt=new Date(s);
+  if(!isNaN(dt)&&/\d{1,2}[-/]/.test(s))return dt.getDate()+' '+mn[dt.getMonth()]+' '+dt.getFullYear();
+  // Last resort: month-year if parseable, else raw
+  const ym=parseJoinYM(s);
+  if(ym)return mn[ym.m-1]+' '+ym.y;
+  return s;
+}
+
 function buildEnrollmentChart(){
   const fontMono='JetBrains Mono';
   const periodSel=document.getElementById('enrollPeriod');
@@ -1995,7 +2019,7 @@ function renderTable(){
       <td>${esc(s.Tutor||'—')}</td>
       <td>${esc(s.Batch||'—')}</td>
       <td class="${(s.Status||'Active').toLowerCase()==='active'?'status-active':'status-inactive'}">${esc(s.Status||'Active')}</td>
-      <td>${esc(s['Join Date']||'—')}</td>
+      <td>${esc(formatJoinDate(s['Join Date'])||'—')}</td>
       <td><button class="btn-edit" onclick="event.stopPropagation();openStudentForm('${esc(s.ID)}')" title="Edit ${esc(s.Name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></td>
     </tr>
   `).join('');
