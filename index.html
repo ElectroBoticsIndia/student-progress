@@ -119,8 +119,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .roadmap-error{padding:40px 20px;text-align:center;font-family:var(--font-mono);font-size:13px;color:var(--red)}
 .level-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .3s;cursor:pointer}
 .level-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
-.level-card.current{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
-.level-card.completed{border-color:var(--green)}
+.level-card.current{border-color:#eab43a;box-shadow:0 0 0 3px #eab43a22}
+.level-card.completed{border-color:#8ab600}
+.level-card.upcoming{border-color:var(--border)}
 .level-card.locked{opacity:.55;cursor:default}
 .level-card.locked:hover{transform:none;box-shadow:none}
 .level-top{display:flex;align-items:center;gap:16px;padding:18px 22px}
@@ -141,9 +142,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-status{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .level-status-badge{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
 .badge-completed{background:var(--green-bg);color:#5a7a00}
-.badge-current{background:var(--accent-light);color:var(--accent-dark)}
+.badge-current{background:var(--amber-bg);color:#9a7200}
 .badge-locked{background:var(--surface-alt);color:var(--text-light)}
-.badge-upcoming{background:var(--amber-bg);color:#9a7200}
+.badge-upcoming{background:var(--surface-alt);color:var(--text-dim)}
 .level-progress-bar{width:120px;height:6px;background:var(--surface-alt);border-radius:3px;overflow:hidden}
 .level-progress-fill{height:100%;border-radius:3px;transition:width .5s ease-out}
 .level-card.completed .level-progress-fill{background:var(--green);width:100%}
@@ -1230,6 +1231,46 @@ function showDashboard(loading){
 // lowercases, collapses spaces, treats "&"="and", ignores punctuation.
 // This means minor spelling differences (case, spacing, &/and) between the
 // Levels, Progress, Projects and Certificates sheets won't break matching.
+// Resolve a project's video into an inline embed + a "watch" link.
+// Accepts the new "Video Link" column (YouTube or Google Drive URL) and falls
+// back to the legacy "YouTube Video ID" column. Returns {embed, watchUrl} or null.
+function videoEmbed(p){
+  const link=String(p['Video Link']||'').trim();
+  const ytId=String(p['YouTube Video ID']||'').trim();
+
+  // 1) Explicit Video Link column
+  if(link){
+    // Google Drive: pull the file ID from /d/FILE_ID/ or ?id=FILE_ID
+    let dm=link.match(/\/d\/([a-zA-Z0-9_-]+)/)||link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if(/drive\.google\.com/.test(link)&&dm){
+      const id=dm[1];
+      return {
+        embed:`<iframe src="https://drive.google.com/file/d/${id}/preview" allow="autoplay" allowfullscreen loading="lazy"></iframe>`,
+        watchUrl:`https://drive.google.com/file/d/${id}/view`
+      };
+    }
+    // YouTube: various URL forms
+    let ym=link.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+    if(ym){
+      return {
+        embed:`<iframe src="https://www.youtube.com/embed/${ym[1]}" allowfullscreen loading="lazy"></iframe>`,
+        watchUrl:`https://youtu.be/${ym[1]}`
+      };
+    }
+    // Unknown link type — offer it as a plain watch link, no inline player
+    return {embed:'', watchUrl:link};
+  }
+
+  // 2) Legacy YouTube Video ID column
+  if(ytId){
+    return {
+      embed:`<iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen loading="lazy"></iframe>`,
+      watchUrl:`https://youtu.be/${ytId}`
+    };
+  }
+  return null;
+}
+
 function normLevel(name){
   return String(name||'')
     .toLowerCase()
@@ -1297,7 +1338,9 @@ function buildRoadmap(){
     // Prefer the latest Completion Date from this student's Progress rows for the level
     const completionDate=latestCompletionDate(allTopics)||(cert&&cert['Completion Date'])||'';
     const hasTemplate=level.certTemplate&&(status==='completed'||certUrl||completionDate);
-    const color=levelColor(level.name,i);
+    // Status-based colour (replaces per-level brand colours for cleaner readability):
+    // completed = green, in-progress = amber, upcoming/locked = neutral grey.
+    const statusColor=status==='completed'?'#8ab600':status==='current'?'#eab43a':'#9aa7a3';
     // Certificate eligibility: all topics in this level must be completed.
     const allTopicsDone=total>0&&done===total;
     const canShare=status==='completed'&&(hasTemplate||certUrl);
@@ -1305,16 +1348,16 @@ function buildRoadmap(){
     return `
       <div class="level-card ${status}" data-level-idx="${i}">
         <div class="level-top">
-          <div class="level-num" style="background:${status==='locked'?'var(--text-light)':color}">L${level.num}</div>
+          <div class="level-num" style="background:${statusColor}">L${level.num}</div>
           <div class="level-info">
             <div class="level-name">${esc(level.name)}</div>
             <div class="level-desc">${esc(level.desc)}</div>
             <div class="level-statusline">
               <span class="level-status-badge ${badgeClass}">${badgeText}</span>
               ${total>0?`<span class="level-topic-count">${done}/${total} topics</span>`:''}
-              ${(total>0||status==='completed')?`<span class="level-pct" style="color:${status==='locked'?'var(--text-light)':color}">${pct}%</span>`:''}
+              ${(total>0||status==='completed')?`<span class="level-pct" style="color:${statusColor}">${pct}%</span>`:''}
             </div>
-            ${(total>0||status==='completed')?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${color}"></div></div>`:''}
+            ${(total>0||status==='completed')?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${statusColor}"></div></div>`:''}
           </div>
           <div class="level-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
         </div>
@@ -1337,8 +1380,10 @@ function buildRoadmap(){
           }).join('')}</div>`:''
           }
           ${projects.length>0?`<div class="projects-title">Projects</div><div class="projects-grid">${projects.map(p=>{
-            const yt=p['YouTube Video ID']||'';const cl=p['Code Link']||'';
-            return `<div class="project-card"><div class="project-thumb">${yt?`<iframe src="https://www.youtube.com/embed/${yt}" allowfullscreen loading="lazy"></iframe>`:'<div class="project-thumb-placeholder">No video</div>'}</div><div class="project-body"><div class="project-name">${esc(p['Project Name'])}</div><div class="project-desc">${esc(p.Description||'')}</div><div class="project-links">${yt?`<a href="https://youtu.be/${yt}" target="_blank" class="project-link link-video">▶ Video</a>`:''} ${cl?`<a href="${cl}" target="_blank" class="project-link link-code">⟨/⟩ Code</a>`:''}</div></div></div>`;
+            const v=videoEmbed(p);const cl=p['Code Link']||'';
+            const thumb=v&&v.embed?v.embed:'<div class="project-thumb-placeholder">No video</div>';
+            const videoLink=v&&v.watchUrl?`<a href="${esc(v.watchUrl)}" target="_blank" class="project-link link-video">▶ Video</a>`:'';
+            return `<div class="project-card"><div class="project-thumb">${thumb}</div><div class="project-body"><div class="project-name">${esc(p['Project Name'])}</div><div class="project-desc">${esc(p.Description||'')}</div><div class="project-links">${videoLink} ${cl?`<a href="${esc(cl)}" target="_blank" class="project-link link-code">⟨/⟩ Code</a>`:''}</div></div></div>`;
           }).join('')}</div>`:((status==='completed'||status==='current')?'<div class="no-projects">No projects uploaded yet.</div>':'')}
         </div>
       </div>`;
