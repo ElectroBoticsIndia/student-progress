@@ -88,7 +88,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .btn-go:hover{background:var(--accent-dark)}
 .search-results{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:4px;max-height:240px;overflow-y:auto;z-index:10;box-shadow:var(--shadow-lg);display:none}
 .search-results.open{display:block}
-.search-result{padding:12px 18px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background .15s;border-bottom:1px solid var(--border)}
+.search-result{padding:12px 18px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:background .15s;border-bottom:1px solid var(--border);text-align:left}
 .search-result:last-child{border-bottom:none}
 .search-result:hover{background:var(--accent-light)}
 .search-result-name{font-weight:600;font-size:14px}
@@ -476,9 +476,9 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
           Logout</button>
         </div>
       </div>
-      <button class="btn-admin" id="adminBtn" onclick="showAdminLogin()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4"/></svg>
-        <span>Admin</span>
+      <button class="btn-admin" id="adminBtn" onclick="toggleAdminView()">
+        <svg id="adminBtnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4"/></svg>
+        <span id="adminBtnLabel">Admin</span>
       </button>
     </div>
   </div>
@@ -1171,6 +1171,8 @@ function pickStudent(id){
 function enterSearchScreen(){
   document.getElementById('studentLoginScreen').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('adminBtn').classList.remove('active');
+  setAdminBtnLabel(false);
 }
 
 // Show the Admin button only for admins. Hidden for tutors and parents/students.
@@ -1205,6 +1207,9 @@ function showDashboard(loading){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('studentLoginScreen').style.display='none';
   document.getElementById('studentPickerScreen').style.display='none';
+  document.getElementById('adminDashboard').classList.remove('active');
+  document.getElementById('adminBtn').classList.remove('active');
+  setAdminBtnLabel(false);
   document.getElementById('dashboard').classList.add('active');
   const s=currentStudent;
   const avatar=document.getElementById('studentAvatar');
@@ -1675,11 +1680,33 @@ function showAdminDashboard(){
   hideAll();
   document.getElementById('adminDashboard').classList.add('active');
   document.getElementById('adminBtn').classList.add('active');
+  setAdminBtnLabel(true); // on dashboard → button offers "Students"
   // Ensure the account menu reflects the admin (covers the case where admin
   // reached here via the Admin button after signing in elsewhere).
   if(adminUser&&!studentUser)studentUser={email:adminUser.email,name:adminUser.name,picture:adminUser.picture};
   showAccountMenu('admin');
   buildStats();buildCharts();buildTable();loadRiskList();
+}
+
+// The Admin button toggles between the admin dashboard and the student search.
+function toggleAdminView(){
+  const onDashboard=document.getElementById('adminDashboard').classList.contains('active');
+  if(onDashboard){
+    // Currently on the dashboard → go back to the student search screen
+    document.getElementById('adminBtn').classList.remove('active');
+    setAdminBtnLabel(false);
+    hideAll();
+    enterSearchScreen();
+  }else{
+    // Not on the dashboard → open it (admin login/role check happens inside)
+    showAdminLogin();
+  }
+}
+
+// Update the Admin button's label: "Students" when on the dashboard, else "Admin".
+function setAdminBtnLabel(onDashboard){
+  const lbl=document.getElementById('adminBtnLabel');
+  if(lbl)lbl.textContent=onDashboard?'Students':'Admin';
 }
 
 function adminLogout(){accountLogout();}
