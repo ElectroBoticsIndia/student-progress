@@ -565,8 +565,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div class="risk-summary" id="riskSummary"></div>
       <div class="risk-criteria">
         <strong>Risk criteria</strong> (last 6 weeks):
-        🔴 At risk = attendance &lt; 60% or submissions &lt; 50% ·
-        🟡 Watch = attendance 60–75% or submissions 50–70% ·
+        🔴 At risk = attendance &lt; 50% or submissions &lt; 40% ·
+        🟡 Watch = attendance 50–60% or submissions 40–50% ·
         🟢 On track = above both ·
         ⚪ No data = no attendance/assignments recorded
       </div>
@@ -2094,7 +2094,7 @@ function renderRisk(){
   const pctCell=(rate,present,total,kind)=>{
     if(rate===null||rate===undefined)return '<span class="risk-rate na">—</span>';
     const p=Math.round(rate*100);
-    const cls=kind==='att'?(rate<0.60?'low':rate<0.75?'mid':'ok'):(rate<0.50?'low':rate<0.70?'mid':'ok');
+    const cls=kind==='att'?(rate<0.50?'low':rate<0.60?'mid':'ok'):(rate<0.40?'low':rate<0.50?'mid':'ok');
     return `<span class="risk-rate ${cls}">${p}%</span>`;
   };
   const badge={red:'🔴 At risk',yellow:'🟡 Watch',green:'🟢 On track',nodata:'⚪ No data'};
