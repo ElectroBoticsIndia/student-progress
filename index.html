@@ -906,10 +906,16 @@ async function loadData(){
   if(!SHEET_ID){document.getElementById('configNotice').style.display='block';document.getElementById('configNotice').innerHTML='<strong>Setup Required:</strong> Set SHEET_ID in the code.';loadDemoData();return}
   document.getElementById('configNotice').style.display='none';
   try{
-    let students,levels;
-    try{students=await fetchStudents()}catch(e){throw new Error('Could not load Students: '+e.message)}
-    try{levels=await fetchSheet('Levels')}catch(e){levels=[]}
-    try{const users=await fetchSheet('Users');allUsers=Array.isArray(users)?users:[];}catch(e){allUsers=[];}
+    // Fetch Students, Levels and Users in PARALLEL (was sequential → ~3× slower)
+    const [studentsR,levelsR,usersR]=await Promise.allSettled([
+      fetchStudents(),
+      fetchSheet('Levels'),
+      fetchSheet('Users')
+    ]);
+    if(studentsR.status!=='fulfilled')throw new Error('Could not load Students: '+(studentsR.reason&&studentsR.reason.message||studentsR.reason));
+    const students=studentsR.value;
+    const levels=levelsR.status==='fulfilled'?levelsR.value:[];
+    allUsers=(usersR.status==='fulfilled'&&Array.isArray(usersR.value))?usersR.value:[];
     if(students.length===0)throw new Error('Students sheet is empty');
     // Progress/Projects/Certificates are loaded on-demand per student (see loadStudentData),
     // so they are NOT bulk-loaded here. This keeps startup fast at scale (500+ students).
@@ -927,6 +933,7 @@ async function loadData(){
     loadDemoData();
   }
   initStudentView();
+  if(_dataReadyResolve)_dataReadyResolve();
 }
 
 function loadDemoData(){
@@ -1048,6 +1055,8 @@ document.addEventListener('click',e=>{if(!e.target.closest('.account-menu')){con
 let studentUser=null;
 let myStudents=[]; // students mapped to the logged-in parent (empty for admin/viewer)
 let userRole=''; // role of the signed-in user from Users sheet: 'admin', 'tutor', or ''
+let _dataReadyResolve;
+const dataReady=new Promise(res=>{_dataReadyResolve=res;}); // resolves when loadData() completes
 
 function studentLoginEnabled(){
   return STUDENT_LOGIN_REQUIRED===true;
@@ -1093,11 +1102,19 @@ function demoStudentLogin(){
   enterSearchScreen();
 }
 
-function handleStudentLogin(response){
+async function handleStudentLogin(response){
   const payload=JSON.parse(atob(response.credential.split('.')[1]));
   const email=(payload.email||'').toLowerCase();
   const domain=payload.hd||email.split('@')[1];
   studentUser={email:payload.email,name:payload.name,picture:payload.picture};
+
+  // The data may still be loading in the background — wait for it so role
+  // lookup and student mapping work correctly.
+  if(allStudents.length===0){
+    const btn=document.getElementById('studentSignInBtn');
+    if(btn)btn.innerHTML='<div style="font-family:var(--font-mono);font-size:12px;color:var(--text-light);">Signing in…</div>';
+    await dataReady;
+  }
 
   // 1) Admin or Tutor (from Users sheet) → student search workflow.
   //    Admins additionally get the Admin dashboard button; tutors are blocked
@@ -2591,6 +2608,10 @@ function downloadExcel(){
 function esc(t){if(!t)return '';const d=document.createElement('div');d.textContent=t;return d.innerHTML}
 
 // ─── Init ────────────────────────────────────────
+// Show the sign-in gate (or search) IMMEDIATELY so the Google button appears
+// without waiting for the sheet data. Data loads in the background; it's only
+// needed after the user signs in.
+try{ initStudentView(); }catch(e){ console.error('early init error:',e); }
 loadData();
 </script>
 </body>
