@@ -960,13 +960,16 @@ function onNameSearch(){
   if(q.length<1){r.classList.remove('open');return}
   const m=allStudents.filter(s=>(s.Name||'').toLowerCase().includes(q)||(s.ID||'').toLowerCase().includes(q)).slice(0,8);
   if(!m.length){r.classList.remove('open');return}
-  r.innerHTML=m.map(s=>`<div class="search-result" onclick="selectStudent('${s.ID}')"><div><div class="search-result-name">${esc(s.Name)}</div><div class="search-result-level">${esc(s['Current Level']||'Not started')}</div></div><div class="search-result-id">${esc(s.ID)}</div></div>`).join('');
+  r.innerHTML=m.map(s=>`<div class="search-result" onmouseenter="prefetchStudent('${s.ID}')" onclick="selectStudent('${s.ID}')"><div><div class="search-result-name">${esc(s.Name)}</div><div class="search-result-level">${esc(s['Current Level']||'Not started')}</div></div><div class="search-result-id">${esc(s.ID)}</div></div>`).join('');
   r.classList.add('open');
+  // If the search narrowed to a single student, warm their data immediately
+  if(m.length===1)prefetchStudent(m[0].ID);
 }
 function goById(){const id=document.getElementById('idInput').value.trim().toUpperCase();if(!id)return;const s=allStudents.find(x=>(x.ID||'').toUpperCase()===id);if(s)selectStudent(s.ID);else document.getElementById('errorMsg').classList.add('show')}
 
 // Per-student data cache so re-opening a student is instant (no refetch).
 const studentDataCache={};
+const studentDataInflight={}; // id -> Promise, prevents duplicate concurrent fetches
 let demoMode=false;
 
 // Fetch one student's Progress/Projects/Certificates from the Apps Script
@@ -975,14 +978,27 @@ async function loadStudentData(id){
   // In demo mode (no live sheet), the sample arrays are already loaded — use them.
   if(demoMode){return {progress:allProgress,projects:allProjects,certificates:allCertificates};}
   if(studentDataCache[id])return studentDataCache[id];
+  if(studentDataInflight[id])return studentDataInflight[id]; // reuse an in-flight request
   if(!SHEET_WEBAPP_URL){return {progress:[],projects:[],certificates:[]};}
   const url=SHEET_WEBAPP_URL+'?action=getStudentData&id='+encodeURIComponent(id);
-  const res=await fetch(url);
-  const data=await res.json();
-  if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Could not load student data');
-  const out={progress:data.progress||[],projects:data.projects||[],certificates:data.certificates||[]};
-  studentDataCache[id]=out;
-  return out;
+  const p=(async()=>{
+    const res=await fetch(url);
+    const data=await res.json();
+    if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Could not load student data');
+    const out={progress:data.progress||[],projects:data.projects||[],certificates:data.certificates||[]};
+    studentDataCache[id]=out;
+    return out;
+  })();
+  studentDataInflight[id]=p;
+  try{return await p;}
+  finally{delete studentDataInflight[id];}
+}
+
+// Warm the cache for a student in the background (on hover / search render),
+// so that clicking them opens instantly. Silently ignores errors.
+function prefetchStudent(id){
+  if(!id||demoMode||studentDataCache[id]||studentDataInflight[id])return;
+  loadStudentData(id).catch(()=>{});
 }
 
 async function selectStudent(id){
@@ -2055,22 +2071,39 @@ function buildAvailabilityGrid(){
 let filteredStudents = [];
 
 function populateFilters(){
-  const countries=[...new Set(allStudents.map(s=>s.Country||'').filter(c=>c))].sort();
-  const levels=allLevels.map(l=>l.name);
-  const tutors=[...new Set(allStudents.map(s=>s.Tutor||'').filter(t=>t))].sort();
-  const batches=[...new Set(allStudents.map(s=>s.Batch||'').filter(b=>b))].sort();
+  const country=val('filterCountry'),level=val('filterLevel'),tutor=val('filterTutor'),batch=val('filterBatch'),status=val('filterStatus');
+  // For each dropdown, compute options from students matching the OTHER active
+  // filters (excluding this dropdown's own selection), so selections cascade
+  // but you can still switch any single filter freely.
+  const match=(s,skip)=>{
+    if(skip!=='country'&&country&&(s.Country||'')!==country)return false;
+    if(skip!=='level'&&level&&(s['Current Level']||'')!==level)return false;
+    if(skip!=='tutor'&&tutor&&(s.Tutor||'')!==tutor)return false;
+    if(skip!=='batch'&&batch&&(s.Batch||'')!==batch)return false;
+    if(skip!=='status'&&status&&(s.Status||'Active')!==status)return false;
+    return true;
+  };
+  const uniq=(skip,key)=>[...new Set(allStudents.filter(s=>match(s,skip)).map(s=>s[key]||'').filter(v=>v))].sort();
 
   const fillSelect=(id,items)=>{
     const sel=document.getElementById(id);
     const current=sel.value;
     sel.innerHTML='<option value="">All</option>'+items.map(i=>`<option value="${esc(i)}">${esc(i)}</option>`).join('');
+    // Keep the current selection even if it's not in the narrowed list, so the
+    // user isn't silently switched off their choice.
+    if(current&&!items.includes(current))sel.innerHTML+=`<option value="${esc(current)}">${esc(current)}</option>`;
     sel.value=current;
   };
-  fillSelect('filterCountry',countries);
-  fillSelect('filterLevel',levels);
-  fillSelect('filterTutor',tutors);
-  fillSelect('filterBatch',batches);
+  // Levels come from the full level list, but narrowed by other filters
+  const levelsAll=allLevels.map(l=>l.name);
+  const levelsAvail=uniq('level','Current Level');
+  fillSelect('filterCountry',uniq('country','Country'));
+  fillSelect('filterLevel',levelsAll.filter(n=>levelsAvail.includes(n)||n===level));
+  fillSelect('filterTutor',uniq('tutor','Tutor'));
+  fillSelect('filterBatch',uniq('batch','Batch'));
 }
+
+function val(id){const el=document.getElementById(id);return el?el.value:'';}
 
 // ─── Chart click-through: filter the All Students table by the clicked item ──
 // Replaces existing filters with the single chosen criterion, then scrolls
@@ -2101,6 +2134,8 @@ function drillToTable(type,value){
 }
 
 function applyFilters(){
+  // Refresh the dropdown options so they cascade with the current selections
+  populateFilters();
   const country=document.getElementById('filterCountry').value;
   const level=document.getElementById('filterLevel').value;
   const tutor=document.getElementById('filterTutor').value;
@@ -2122,7 +2157,7 @@ function applyFilters(){
 function renderTable(){
   document.getElementById('tableCount').textContent=`(${filteredStudents.length})`;
   document.getElementById('tableBody').innerHTML=filteredStudents.map(s=>`
-    <tr class="student-row" onclick="selectStudent('${esc(s.ID)}')" title="View ${esc(s.Name)}'s progress">
+    <tr class="student-row" onmouseenter="prefetchStudent('${esc(s.ID)}')" onclick="selectStudent('${esc(s.ID)}')" title="View ${esc(s.Name)}'s progress">
       <td><strong>${esc(s.ID)}</strong></td>
       <td>${esc(s.Name)}</td>
       <td>${esc(s['Current Level']||'—')}</td>
@@ -2200,17 +2235,31 @@ function renderRisk(){
   riskVisibleRows=rows; // remember for the whole-list WhatsApp
   const t=document.getElementById('riskTable');
 
-  // Build header filter dropdowns from the full set
-  const base=(riskData.students||[]);
-  const uniq=(key)=>[...new Set(base.map(s=>s[key]).filter(v=>v))].sort();
-  const opt=(vals,sel)=>['<option value="">All</option>'].concat(vals.map(v=>`<option value="${esc(v)}"${sel===v?' selected':''}>${esc(v)}</option>`)).join('');
-  const riskOpts=`<option value="">All</option>`+['red','yellow','green','nodata'].map(b=>`<option value="${b}"${riskCol.risk===b?' selected':''}>${({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[b]}</option>`).join('');
+  // Build header filter dropdowns. Each dropdown's options reflect the rows
+  // matching the OTHER active filters (so they cascade), while still letting you
+  // switch any single filter.
+  const all=(riskData.students||[]);
+  const matchR=(s,skip)=>{
+    if(skip!=='country'&&riskCol.country&&(s.country||'')!==riskCol.country)return false;
+    if(skip!=='tutor'&&riskCol.tutor&&(s.tutor||'')!==riskCol.tutor)return false;
+    if(skip!=='batch'&&riskCol.batch&&(s.batch||'')!==riskCol.batch)return false;
+    if(skip!=='risk'&&riskCol.risk&&s.risk!==riskCol.risk)return false;
+    return true;
+  };
+  const uniqR=(skip,key)=>[...new Set(all.filter(s=>matchR(s,skip)).map(s=>s[key]).filter(v=>v))].sort();
+  const opt=(vals,sel)=>{
+    let html=['<option value="">All</option>'].concat(vals.map(v=>`<option value="${esc(v)}"${sel===v?' selected':''}>${esc(v)}</option>`)).join('');
+    if(sel&&!vals.includes(sel))html+=`<option value="${esc(sel)}" selected>${esc(sel)}</option>`;
+    return html;
+  };
+  const riskBandsAvail=[...new Set(all.filter(s=>matchR(s,'risk')).map(s=>s.risk))];
+  const riskOpts=`<option value="">All</option>`+['red','yellow','green','nodata'].filter(b=>riskBandsAvail.includes(b)||riskCol.risk===b).map(b=>`<option value="${b}"${riskCol.risk===b?' selected':''}>${({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[b]}</option>`).join('');
 
   const headerFilters=`<tr class="risk-colfilter">
     <th></th>
-    <th><select onchange="setRiskCol('tutor',this.value)">${opt(uniq('tutor'),riskCol.tutor)}</select></th>
-    <th><select onchange="setRiskCol('country',this.value)">${opt(uniq('country'),riskCol.country)}</select></th>
-    <th><select onchange="setRiskCol('batch',this.value)">${opt(uniq('batch'),riskCol.batch)}</select></th>
+    <th><select onchange="setRiskCol('tutor',this.value)">${opt(uniqR('tutor','tutor'),riskCol.tutor)}</select></th>
+    <th><select onchange="setRiskCol('country',this.value)">${opt(uniqR('country','country'),riskCol.country)}</select></th>
+    <th><select onchange="setRiskCol('batch',this.value)">${opt(uniqR('batch','batch'),riskCol.batch)}</select></th>
     <th></th><th></th>
     <th><select onchange="setRiskCol('risk',this.value)">${riskOpts}</select></th>
     <th></th>
@@ -2233,7 +2282,7 @@ function renderRisk(){
   const bodyRows = rows.length===0
     ? `<tr><td colspan="8"><div class="risk-empty">${emptyMsg}</div></td></tr>`
     : rows.map(s=>`
-    <tr>
+    <tr onmouseenter="prefetchStudent('${esc(s.id)}')">
       <td onclick="selectStudent('${esc(s.id)}')" style="cursor:pointer;"><strong>${esc(s.name)}</strong><br><span style="font-family:var(--font-mono);font-size:10px;color:var(--text-light);">${esc(s.id)}</span></td>
       <td>${esc(s.tutor||'—')}</td>
       <td>${esc(s.country||'—')}</td>
