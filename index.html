@@ -628,7 +628,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <button class="filter-clear" onclick="clearFilters()">Clear</button>
       </div>
       <div class="table-wrap"><table class="data-table" id="studentTable">
-        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Country</th><th>Tutor</th><th>Batch</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th><th>Joined</th><th></th></tr></thead>
         <tbody id="tableBody"></tbody>
       </table></div>
     </div>
@@ -661,19 +661,19 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         </div>
       </div>
       <div class="form-row">
-        <label>Country <span class="req">*</span></label>
-        <div class="combo" data-field="f_Country">
-          <select class="combo-select" onchange="onComboSelect('f_Country')"></select>
-          <input type="text" class="combo-new" id="f_Country" placeholder="Type a new country" style="display:none;">
-          <button type="button" class="combo-back" onclick="comboBack('f_Country')" style="display:none;" title="Back to list">↩</button>
-        </div>
-      </div>
-      <div class="form-row">
         <label>Tutor <span class="req">*</span></label>
         <div class="combo" data-field="f_Tutor">
           <select class="combo-select" onchange="onComboSelect('f_Tutor')"></select>
           <input type="text" class="combo-new" id="f_Tutor" placeholder="Type a new tutor" style="display:none;">
           <button type="button" class="combo-back" onclick="comboBack('f_Tutor')" style="display:none;" title="Back to list">↩</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Country <span class="req">*</span></label>
+        <div class="combo" data-field="f_Country">
+          <select class="combo-select" onchange="onComboSelect('f_Country')"></select>
+          <input type="text" class="combo-new" id="f_Country" placeholder="Type a new country" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('f_Country')" style="display:none;" title="Back to list">↩</button>
         </div>
       </div>
       <div class="form-row">
@@ -2044,8 +2044,8 @@ function renderTable(){
       <td><strong>${esc(s.ID)}</strong></td>
       <td>${esc(s.Name)}</td>
       <td>${esc(s['Current Level']||'—')}</td>
-      <td>${esc(s.Country||'—')}</td>
       <td>${esc(s.Tutor||'—')}</td>
+      <td>${esc(s.Country||'—')}</td>
       <td>${esc(s.Batch||'—')}</td>
       <td class="${(s.Status||'Active').toLowerCase()==='active'?'status-active':'status-inactive'}">${esc(s.Status||'Active')}</td>
       <td>${esc(formatJoinDate(s['Join Date'])||'—')}</td>
@@ -2062,8 +2062,7 @@ function buildTable(){
 
 // ─── At-Risk Students ─────────────────────────────────────────────────
 let riskData=null;
-let riskFilter={red:true,yellow:true,green:false,nodata:false}; // default: red+yellow
-let riskCol={country:'',tutor:'',batch:'',risk:''}; // per-column header filters
+let riskCol={country:'',tutor:'',batch:'',risk:'red'}; // header filters; default to At risk
 let riskVisibleRows=[]; // currently displayed rows (for whole-list WhatsApp)
 
 async function loadRiskList(force){
@@ -2088,7 +2087,7 @@ async function loadRiskList(force){
   }
 }
 
-function setRiskFilter(band){riskFilter[band]=!riskFilter[band];renderRisk();}
+function setRiskCol(key,val){riskCol[key]=val;renderRisk();}
 
 let riskExpanded=false;
 function toggleRisk(){
@@ -2107,16 +2106,11 @@ function renderRisk(){
     `<span class="risk-stat"><span class="risk-dot yellow"></span>${c.yellow} watch</span>`+
     `<span class="risk-stat"><span class="risk-dot green"></span>${c.green} on track</span>`+
     `<span class="risk-stat"><span class="risk-dot nodata"></span>${c.nodata} no data</span>`;
-  // Only build the filter + table when the card is expanded (keeps it light by default)
+  // Only build the table when the card is expanded (keeps it light by default)
   if(!riskExpanded)return;
-  // Filter chips (toggle which bands show)
-  const labels={red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'};
-  document.getElementById('riskFilter').innerHTML=['red','yellow','green','nodata'].map(b=>
-    `<button class="risk-chip ${riskFilter[b]?'on':''}" onclick="setRiskFilter('${b}')">${labels[b]} (${c[b]})</button>`
-  ).join('');
-  // Table
-  let rows=(riskData.students||[]).filter(s=>riskFilter[s.risk]);
-  // Apply per-column header filters
+  document.getElementById('riskFilter').innerHTML='';
+  // Table — all students; narrowing is done by the header dropdown filters
+  let rows=(riskData.students||[]).slice();
   if(riskCol.country)rows=rows.filter(s=>(s.country||'')===riskCol.country);
   if(riskCol.tutor)rows=rows.filter(s=>(s.tutor||'')===riskCol.tutor);
   if(riskCol.batch)rows=rows.filter(s=>(s.batch||'')===riskCol.batch);
@@ -2124,16 +2118,16 @@ function renderRisk(){
   riskVisibleRows=rows; // remember for the whole-list WhatsApp
   const t=document.getElementById('riskTable');
 
-  // Build header filter dropdowns from the full (band-filtered) set
-  const base=(riskData.students||[]).filter(s=>riskFilter[s.risk]);
+  // Build header filter dropdowns from the full set
+  const base=(riskData.students||[]);
   const uniq=(key)=>[...new Set(base.map(s=>s[key]).filter(v=>v))].sort();
   const opt=(vals,sel)=>['<option value="">All</option>'].concat(vals.map(v=>`<option value="${esc(v)}"${sel===v?' selected':''}>${esc(v)}</option>`)).join('');
   const riskOpts=`<option value="">All</option>`+['red','yellow','green','nodata'].map(b=>`<option value="${b}"${riskCol.risk===b?' selected':''}>${({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[b]}</option>`).join('');
 
   const headerFilters=`<tr class="risk-colfilter">
     <th></th>
-    <th><select onchange="setRiskCol('country',this.value)">${opt(uniq('country'),riskCol.country)}</select></th>
     <th><select onchange="setRiskCol('tutor',this.value)">${opt(uniq('tutor'),riskCol.tutor)}</select></th>
+    <th><select onchange="setRiskCol('country',this.value)">${opt(uniq('country'),riskCol.country)}</select></th>
     <th><select onchange="setRiskCol('batch',this.value)">${opt(uniq('batch'),riskCol.batch)}</select></th>
     <th></th><th></th>
     <th><select onchange="setRiskCol('risk',this.value)">${riskOpts}</select></th>
@@ -2142,7 +2136,7 @@ function renderRisk(){
 
   if(rows.length===0){
     const anyData=(c.red+c.yellow+c.green)>0;
-    t.innerHTML='<div class="risk-empty">'+(anyData?'No students match the current filters. Adjust the filters above to show more.':'No attendance or assignment data for the last '+riskData.window_weeks+' weeks yet. Once you upload it, at-risk students will appear here.')+'</div>';
+    t.innerHTML='<div class="risk-empty">'+(anyData?'No students match the current filters. Change the header filters to show more.':'No attendance or assignment data for the last '+riskData.window_weeks+' weeks yet. Once you upload it, at-risk students will appear here.')+'</div>';
     return;
   }
   const pctCell=(rate,present,total,kind)=>{
@@ -2154,12 +2148,12 @@ function renderRisk(){
   const badge={red:'🔴 At risk',yellow:'🟡 Watch',green:'🟢 On track',nodata:'⚪ No data'};
   t.innerHTML=`<div class="risk-listbar"><button class="risk-wa-all" onclick="waRiskList()"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg> WhatsApp list (${rows.length})</button></div>
     <table class="risk"><thead><tr>
-    <th>Student</th><th>Country</th><th>Tutor</th><th>Batch</th><th>Attendance</th><th>Submissions</th><th>Risk</th><th></th>
+    <th>Student</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Attendance</th><th>Submissions</th><th>Risk</th><th></th>
     </tr>${headerFilters}</thead><tbody>${rows.map(s=>`
     <tr>
       <td onclick="selectStudent('${esc(s.id)}')" style="cursor:pointer;"><strong>${esc(s.name)}</strong><br><span style="font-family:var(--font-mono);font-size:10px;color:var(--text-light);">${esc(s.id)}</span></td>
-      <td>${esc(s.country||'—')}</td>
       <td>${esc(s.tutor||'—')}</td>
+      <td>${esc(s.country||'—')}</td>
       <td>${esc(s.batch||'—')}</td>
       <td>${pctCell(s.att_rate,s.att_present,s.att_total,'att')}<br><span style="font-family:var(--font-mono);font-size:9px;color:var(--text-light);">${s.att_total>0?s.att_present+'/'+s.att_total:'no data'}</span></td>
       <td>${pctCell(s.sub_rate,s.submitted,s.expected,'sub')}<br><span style="font-family:var(--font-mono);font-size:9px;color:var(--text-light);">${s.sub_rate!==null?s.submitted+'/'+s.expected:'no data'}</span></td>
@@ -2167,8 +2161,6 @@ function renderRisk(){
       <td><button class="risk-wa-row" title="WhatsApp this student's summary" onclick="event.stopPropagation();waRiskStudent('${esc(s.id)}')"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg></button></td>
     </tr>`).join('')}</tbody></table>`;
 }
-
-function setRiskCol(key,val){riskCol[key]=val;renderRisk();}
 
 // Build a one-line summary for a student row
 function riskLine(s){
@@ -2425,8 +2417,8 @@ function downloadExcel(){
     'ID':s.ID||'',
     'Name':s.Name||'',
     'Current Level':s['Current Level']||'',
-    'Country':s.Country||'',
     'Tutor':s.Tutor||'',
+    'Country':s.Country||'',
     'Batch':s.Batch||'',
     'Status':s.Status||'Active',
     'Join Date':s['Join Date']||'',
