@@ -313,6 +313,17 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .risk-colfilter select:focus{border-color:var(--accent)}
 .wa-send-btn{background:#25d366 !important;color:#fff !important;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .wa-send-btn:hover{filter:brightness(.93)}
+.wa-subtitle{font-family:var(--font-body);font-size:13px;color:var(--text-dim);margin:0 0 12px}
+#waMsgInput{width:100%;font-family:var(--font-mono);font-size:13px;line-height:1.6;padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);outline:none;resize:vertical;box-sizing:border-box}
+#waMsgInput:focus{border-color:var(--accent)}
+.wa-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.wa-btn{font-family:var(--font-body);font-size:14px;font-weight:600;padding:10px 20px;border-radius:24px;cursor:pointer;border:1px solid var(--border);transition:all .2s}
+.wa-cancel{background:#fff;color:var(--text-dim)}
+.wa-cancel:hover{border-color:var(--text-light);color:var(--text)}
+.wa-copy{background:#fff;color:var(--text)}
+.wa-copy:hover{border-color:var(--accent);color:var(--accent)}
+.wa-send{background:#25d366;color:#fff;border-color:#25d366}
+.wa-send:hover{filter:brightness(.93)}
 .risk-loading-inline{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-mono);font-size:12px;color:var(--text-dim);padding:7px 0}
 .risk-spinner{width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
 .enroll-scroll{overflow-x:auto;overflow-y:hidden;margin-top:14px;-webkit-overflow-scrolling:touch}
@@ -757,18 +768,17 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 <div class="modal-overlay" id="waModal">
   <div class="modal-card" style="max-width:480px;">
     <div class="modal-head">
-      <h3 id="waModalTitle">WhatsApp</h3>
+      <h3 id="waModalTitle">Review message</h3>
       <button class="modal-close" onclick="closeWaModal()" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="share-msg-wrap">
-        <label class="share-msg-label">Message (edit before sending)</label>
-        <textarea id="waMsgInput" class="share-msg-input" rows="9" placeholder="Message…"></textarea>
+      <p class="wa-subtitle">Edit the message if needed, then send or copy.</p>
+      <textarea id="waMsgInput" class="share-msg-input" rows="11" placeholder="Message…"></textarea>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeWaModal()">Cancel</button>
+        <button class="wa-btn wa-copy" id="waCopyBtn" onclick="copyWaModal()">Copy</button>
+        <button class="wa-btn wa-send" onclick="sendWaModal()">Send via WhatsApp</button>
       </div>
-      <div class="share-grid">
-        <button class="share-btn wa-send-btn" onclick="sendWaModal()"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg> Open WhatsApp</button>
-      </div>
-      <p class="share-note">WhatsApp will open with this text — you choose the contact or group to send it to.</p>
     </div>
   </div>
 </div>
@@ -2197,6 +2207,18 @@ function closeWaModal(){document.getElementById('waModal').classList.remove('ope
 function sendWaModal(){
   const text=document.getElementById('waMsgInput').value;
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+}
+function copyWaModal(){
+  const text=document.getElementById('waMsgInput').value;
+  const btn=document.getElementById('waCopyBtn');
+  const done=()=>{const o=btn.textContent;btn.textContent='Copied!';setTimeout(()=>btn.textContent=o,1500);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));}
+  else fallbackCopy(text,done);
+}
+function fallbackCopy(text,cb){
+  const ta=document.getElementById('waMsgInput');ta.select();ta.setSelectionRange(0,99999);
+  try{document.execCommand('copy');if(cb)cb();}catch(e){}
+  window.getSelection().removeAllRanges();
 }
 
 // ─── Student Add / Edit Form ──────────────────────────────────────────
