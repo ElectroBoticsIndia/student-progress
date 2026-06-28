@@ -1953,14 +1953,9 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     const certId = 'EB-' + sid + '-L' + lvlNum + '-' + certYear;
 
     const rightX = canvas.width * 0.92 + 108;    // right margin anchor (+108px right)
-    const labelY = canvas.height * 0.085 - 36;    // small label line (−36px up)
-    const idY    = canvas.height * 0.115 - 36;    // the ID code line (−36px up)
-    const labelSize = Math.round(canvas.width * 0.011);
+    const idY    = canvas.height * 0.085 - 36;    // ID now sits where the label was
     const idSize    = Math.round(dateFontSize / 2); // half the date font size
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#6b7a72';
-    ctx.font = `600 ${labelSize}px 'DM Sans', sans-serif`;
-    ctx.fillText('CERTIFICATE ID', rightX, labelY);
     ctx.fillStyle = '#0a373a';
     ctx.font = `600 ${idSize}px 'DM Sans', sans-serif`;
     ctx.fillText(certId, rightX, idY);
