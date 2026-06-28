@@ -1952,9 +1952,9 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     const sid = (currentStudent && currentStudent.ID) ? currentStudent.ID : '';
     const certId = 'EB-' + sid + '-L' + lvlNum + '-' + certYear;
 
-    const rightX = canvas.width * 0.92;          // right margin anchor
-    const labelY = canvas.height * 0.085;         // small label line
-    const idY    = canvas.height * 0.115;         // the ID code line
+    const rightX = canvas.width * 0.92 + 12;     // right margin anchor (+12px right)
+    const labelY = canvas.height * 0.085 - 6;     // small label line (−6px up)
+    const idY    = canvas.height * 0.115 - 6;     // the ID code line (−6px up)
     const labelSize = Math.round(canvas.width * 0.011);
     const idSize    = dateFontSize;               // same size/weight as the date
     ctx.textAlign = 'right';
