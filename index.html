@@ -1398,6 +1398,9 @@ function topicsForLevel(sid,levelName){
 
   let list;
   if(master.length>0){
+    // Strict: show ONLY topics defined in the Topics sheet. Status/notes are
+    // pulled from the matching Progress row if one exists. Stray Progress rows
+    // whose topic isn't in the master list are ignored (no more "both").
     list=master.map(m=>{
       const p=progByTopic[normLevel(m.Topic)];
       return {
@@ -1408,10 +1411,8 @@ function topicsForLevel(sid,levelName){
         completionDate:(p&&p['Completion Date'])||''
       };
     });
-    // Include any extra progress rows whose topic isn't in the master list
-    const masterSet=new Set(master.map(m=>normLevel(m.Topic)));
-    prog.forEach(p=>{ if(!masterSet.has(normLevel(p.Topic))) list.push({topic:String(p.Topic||'').trim(),description:'',status:String(p.Status||'not-started').trim(),notes:(p.Notes!==undefined?String(p.Notes):''),completionDate:p['Completion Date']||''}); });
   }else{
+    // No master topics for this level → fall back to whatever Progress rows exist
     list=prog.map(p=>({topic:String(p.Topic||'').trim(),description:'',status:String(p.Status||'not-started').trim(),notes:(p.Notes!==undefined?String(p.Notes):''),completionDate:p['Completion Date']||''}));
   }
   return list;
