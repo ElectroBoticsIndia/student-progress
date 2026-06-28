@@ -220,7 +220,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .topic-status-sel{font-family:var(--font-mono);font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);cursor:pointer;min-width:120px}
 .topic-notes-input{flex:1;min-width:160px;font-family:var(--font-body);font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;outline:none}
 .topic-notes-input:focus,.topic-status-sel:focus{border-color:var(--accent)}
-.topics-edit-bar{margin-bottom:12px}
+.topics-edit-bar{margin-bottom:12px;display:flex;justify-content:flex-end}
+.lvl-btn-markall{background:var(--green-bg,#eef6d8);color:#5a7a00;flex:none;min-width:0}
+.lvl-btn-markna{background:var(--surface-alt);color:var(--text-dim);flex:none;min-width:0}
+.topics-save-spacer{flex:1}
+.projects-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.lvl-btn-addproj{background:var(--accent-light);color:var(--accent-dark);flex:none;min-width:0}
+.project-links-spacer{flex:1}
+.project-link.link-edit{cursor:pointer;color:var(--accent-dark);background:var(--accent-light)}
+.project-link.link-edit:hover{background:var(--accent);color:#fff}
 .lvl-btn-edit{background:var(--accent-light);color:var(--accent-dark);flex:none;min-width:0}
 .lvl-btn-savep{background:var(--accent);color:#fff;flex:none;min-width:0}
 .lvl-btn-cancelp{background:var(--surface-alt);color:var(--text-dim);flex:none;min-width:0}
@@ -779,6 +787,38 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <button class="share-btn share-img" onclick="shareTo('download')"><span class="share-ico">⬇</span>Download</button>
       </div>
       <p class="share-note">Edit the message above if you like. On a phone, “Share via apps” sends the certificate image with your message to WhatsApp, Instagram, LinkedIn, etc. On a computer, use “Download” then attach it to your post.</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="projectModal">
+  <div class="modal-card" style="max-width:480px;">
+    <div class="modal-head">
+      <h3 id="projectModalTitle">Add Project</h3>
+      <button class="modal-close" onclick="closeProjectForm()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Project Name <span class="req">*</span></label>
+        <input type="text" id="pf_Name" placeholder="e.g. Line Follower Bot">
+      </div>
+      <div class="form-row">
+        <label>Description</label>
+        <textarea id="pf_Desc" rows="2" placeholder="What the project does (optional)"></textarea>
+      </div>
+      <div class="form-row">
+        <label>Video Link</label>
+        <input type="text" id="pf_Video" placeholder="YouTube or Google Drive link (optional)">
+      </div>
+      <div class="form-row">
+        <label>Code Link</label>
+        <input type="text" id="pf_Code" placeholder="https://… (optional)">
+      </div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeProjectForm()">Cancel</button>
+        <button class="wa-btn wa-send" id="pf_SaveBtn" onclick="saveProjectForm()">Save Project</button>
+      </div>
+      <p class="topics-save-msg" id="pf_Msg" style="text-align:right;margin-top:8px;"></p>
     </div>
   </div>
 </div>
@@ -1532,13 +1572,22 @@ function buildRoadmap(){
               </div>
             </div>`;
           }).join('')}</div>
-          ${canEditProgress()?`<div class="topics-save-bar" id="saveBar-${i}" style="display:none;"><button class="lvl-btn lvl-btn-savep" onclick="event.stopPropagation();saveTopicProgress(${i},'${esc(level.name)}')">Save Progress</button><button class="lvl-btn lvl-btn-cancelp" onclick="event.stopPropagation();toggleTopicEdit(${i})">Cancel</button><span class="topics-save-msg" id="saveMsg-${i}"></span></div>`:''}`:`<div class="no-topics-msg">${canEditProgress()?'No topics defined for this level in the Topics tab.':'No topics to show yet.'}</div>`}
-          ${projects.length>0?`<div class="projects-title">Projects</div><div class="projects-grid">${projects.map(p=>{
+          ${canEditProgress()?`<div class="topics-save-bar" id="saveBar-${i}" style="display:none;">
+            <button class="lvl-btn lvl-btn-markall" onclick="event.stopPropagation();markLevel(${i},'completed')" title="Set every topic to Completed">✓ Mark level complete</button>
+            <button class="lvl-btn lvl-btn-markna" onclick="event.stopPropagation();markLevel(${i},'not-applicable')" title="Set every topic to Not applicable (hides the level for parents)">⊘ Mark level N/A</button>
+            <span class="topics-save-spacer"></span>
+            <span class="topics-save-msg" id="saveMsg-${i}"></span>
+            <button class="lvl-btn lvl-btn-cancelp" onclick="event.stopPropagation();toggleTopicEdit(${i})">Cancel</button>
+            <button class="lvl-btn lvl-btn-savep" onclick="event.stopPropagation();saveTopicProgress(${i},'${esc(level.name)}')">Save Progress</button>
+          </div>`:''}`:`<div class="no-topics-msg">${canEditProgress()?'No topics defined for this level in the Topics tab.':'No topics to show yet.'}</div>`}
+          ${(projects.length>0||canEditProgress())?`<div class="projects-head"><div class="projects-title" style="margin-bottom:0;">Projects</div>${canEditProgress()?`<button class="lvl-btn lvl-btn-addproj" onclick="event.stopPropagation();openProjectForm('${esc(level.name)}')">+ Add Project</button>`:''}</div>`:''}
+          ${projects.length>0?`<div class="projects-grid">${projects.map(p=>{
             const v=videoEmbed(p);const cl=p['Code Link']||'';
             const thumb=v&&v.embed?v.embed:'<div class="project-thumb-placeholder">No video</div>';
             const videoLink=v&&v.watchUrl?`<a href="${esc(v.watchUrl)}" target="_blank" class="project-link link-video">▶ Video</a>`:'';
-            return `<div class="project-card"><div class="project-thumb">${thumb}</div><div class="project-body"><div class="project-name">${esc(p['Project Name'])}</div><div class="project-desc">${esc(p.Description||'')}</div><div class="project-links">${videoLink} ${cl?`<a href="${esc(cl)}" target="_blank" class="project-link link-code">⟨/⟩ Code</a>`:''}</div></div></div>`;
-          }).join('')}</div>`:((status==='completed'||status==='current')?'<div class="no-projects">No projects uploaded yet.</div>':'')}
+            const editBit=canEditProgress()?`<a class="project-link link-edit" onclick="event.stopPropagation();openProjectForm('${esc(level.name)}','${esc(p['Project Name'])}')">✎ Edit</a>`:'';
+            return `<div class="project-card"><div class="project-thumb">${thumb}</div><div class="project-body"><div class="project-name">${esc(p['Project Name'])}</div><div class="project-desc">${esc(p.Description||'')}</div><div class="project-links">${videoLink} ${cl?`<a href="${esc(cl)}" target="_blank" class="project-link link-code">⟨/⟩ Code</a>`:''}<span class="project-links-spacer"></span>${editBit}</div></div></div>`;
+          }).join('')}</div>`:(canEditProgress()?'':((status==='completed'||status==='current')?'<div class="no-projects">No projects uploaded yet.</div>':''))}
         </div>
       </div>`;
   }).join('');
@@ -1572,6 +1621,16 @@ function buildRoadmap(){
 }
 
 function toggleLevel(card){if(card.classList.contains('locked'))return;const w=card.classList.contains('expanded');document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('expanded'));if(!w)card.classList.add('expanded')}
+
+// Set every topic dropdown in a level to a given status (then the user Saves).
+function markLevel(i,status){
+  const list=document.getElementById('topicList-'+i);
+  if(!list)return;
+  if(!list.classList.contains('editing'))toggleTopicEdit(i); // ensure edit mode is on
+  list.querySelectorAll('.topic-status-sel').forEach(sel=>{sel.value=status;});
+  const msg=document.getElementById('saveMsg-'+i);
+  if(msg){msg.textContent=(status==='completed'?'All topics set to Completed':'All topics set to Not applicable')+' — click Save Progress';msg.className='topics-save-msg';}
+}
 
 // Toggle the inline edit mode for a level card's topics (tutor/admin only).
 function toggleTopicEdit(i){
@@ -1624,6 +1683,61 @@ async function saveTopicProgress(i,levelName){
     console.error('saveTopicProgress error:',e);
     msg.textContent='Could not save. '+e.message;msg.className='topics-save-msg err';
   }
+}
+
+// ─── Add / Edit Project (tutor/admin) ───
+let projectEditCtx=null; // {level, origName} — origName set when editing
+
+function openProjectForm(level,projectName){
+  const sid=currentStudent.ID;
+  projectEditCtx={level:level,origName:projectName||''};
+  document.getElementById('projectModalTitle').textContent=projectName?'Edit Project':'Add Project';
+  document.getElementById('pf_Msg').textContent='';
+  let p={};
+  if(projectName){
+    p=allProjects.find(x=>x['Student ID']===sid&&normLevel(x['Level Name'])===normLevel(level)&&normLevel(x['Project Name'])===normLevel(projectName))||{};
+  }
+  document.getElementById('pf_Name').value=p['Project Name']||'';
+  document.getElementById('pf_Desc').value=p.Description||'';
+  document.getElementById('pf_Video').value=p['Video Link']||'';
+  document.getElementById('pf_Code').value=p['Code Link']||'';
+  document.getElementById('projectModal').classList.add('open');
+}
+function closeProjectForm(){document.getElementById('projectModal').classList.remove('open');projectEditCtx=null;}
+
+async function saveProjectForm(){
+  if(!projectEditCtx)return;
+  const sid=currentStudent.ID;
+  const name=document.getElementById('pf_Name').value.trim();
+  const msg=document.getElementById('pf_Msg');
+  if(!name){msg.textContent='Project name is required.';msg.className='topics-save-msg err';return;}
+  const project={
+    name:name,
+    description:document.getElementById('pf_Desc').value.trim(),
+    videoLink:document.getElementById('pf_Video').value.trim(),
+    codeLink:document.getElementById('pf_Code').value.trim()
+  };
+  const btn=document.getElementById('pf_SaveBtn');btn.disabled=true;
+  msg.textContent='Saving…';msg.className='topics-save-msg';
+  if(!SHEET_WEBAPP_URL){msg.textContent='Save endpoint not configured.';msg.className='topics-save-msg err';btn.disabled=false;return;}
+  try{
+    const res=await fetch(SHEET_WEBAPP_URL,{
+      method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'saveProject',studentId:sid,level:projectEditCtx.level,origName:projectEditCtx.origName,project:project})
+    });
+    const data=await res.json();
+    if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Save failed');
+    // Update in-memory projects so the view refreshes without a full reload
+    delete studentDataCache[sid];
+    let row=allProjects.find(x=>x['Student ID']===sid&&normLevel(x['Level Name'])===normLevel(projectEditCtx.level)&&normLevel(x['Project Name'])===normLevel(projectEditCtx.origName||name));
+    if(!row){row={'Student ID':sid,'Level Name':projectEditCtx.level};allProjects.push(row);}
+    row['Project Name']=name;row.Description=project.description;row['Video Link']=project.videoLink;row['Code Link']=project.codeLink;
+    closeProjectForm();
+    buildRoadmap();
+  }catch(e){
+    console.error('saveProject error:',e);
+    msg.textContent='Could not save. '+e.message;msg.className='topics-save-msg err';
+  }finally{btn.disabled=false;}
 }
 
 // Shown when the certificate is requested before all topics are completed.
