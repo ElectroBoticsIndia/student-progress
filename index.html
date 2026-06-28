@@ -205,14 +205,29 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-card.expanded .level-detail{display:block}
 .topics-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
 .topic-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-.topic-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.topic-item{display:flex;flex-direction:column;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.topic-row{display:flex;align-items:center;gap:10px}
 .topic-check{width:22px;height:22px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .topic-check.done{background:var(--green);color:#fff}
 .topic-check.progress{background:var(--amber);color:#fff}
 .topic-check.locked{background:var(--surface-alt);border:2px solid var(--border)}
+.topic-check.na{background:var(--surface-alt);border:2px dashed var(--border)}
 .topic-check svg{width:14px;height:14px}
 .topic-name{font-size:14px;font-weight:500;flex:1}
-.topic-name.done{color:var(--text)}.topic-name.progress{color:var(--amber)}.topic-name.locked{color:var(--text-light)}
+.topic-name.done{color:var(--text)}.topic-name.progress{color:var(--amber)}.topic-name.locked{color:var(--text-light)}.topic-name.na{color:var(--text-light);text-decoration:line-through}
+.topic-notes-view{font-family:var(--font-body);font-size:12px;color:var(--text-dim);background:var(--bg);border-radius:6px;padding:6px 10px;margin-left:32px}
+.topic-edit-row{display:flex;gap:8px;align-items:center;margin-left:32px;flex-wrap:wrap}
+.topic-status-sel{font-family:var(--font-mono);font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);cursor:pointer;min-width:120px}
+.topic-notes-input{flex:1;min-width:160px;font-family:var(--font-body);font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;outline:none}
+.topic-notes-input:focus,.topic-status-sel:focus{border-color:var(--accent)}
+.topics-edit-bar{margin-bottom:12px}
+.lvl-btn-edit{background:var(--accent-light);color:var(--accent-dark);flex:none;min-width:0}
+.lvl-btn-savep{background:var(--accent);color:#fff;flex:none;min-width:0}
+.lvl-btn-cancelp{background:var(--surface-alt);color:var(--text-dim);flex:none;min-width:0}
+.topics-save-bar{display:flex;align-items:center;gap:10px;margin-top:12px}
+.topics-save-msg{font-family:var(--font-mono);font-size:12px}
+.topics-save-msg.ok{color:var(--green)}.topics-save-msg.err{color:var(--red)}
+.no-topics-msg{font-family:var(--font-mono);font-size:12px;color:var(--text-light);padding:8px 0}
 
 .projects-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
 .projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
@@ -837,6 +852,7 @@ function levelColor(name,i){
 
 let allStudents=[],allProgress=[],allProjects=[],allLevels=DEFAULT_LEVELS;
 let allCertificates=[]; // Student ID + Level Name + Certificate URL
+let allTopicsMaster=[]; // master topic list from Topics tab: Level Name, Topic, Description
 let allUsers=[]; // Users sheet: Email + Role (admin / tutor)
 let currentStudent=null,adminUser=null;
 
@@ -902,20 +918,34 @@ async function fetchStudents(){
   return fetchSheet('Students');
 }
 
+// Master topic list (Topics tab). Endpoint preferred; gviz fallback.
+async function fetchTopics(){
+  if(SHEET_WEBAPP_URL){
+    try{
+      const res=await fetch(SHEET_WEBAPP_URL+'?action=getTopics');
+      const data=await res.json();
+      if(data&&data.ok&&Array.isArray(data.topics))return data.topics;
+    }catch(e){console.warn('getTopics failed, trying gviz:',e.message);}
+  }
+  try{return await fetchSheet('Topics');}catch(e){return [];}
+}
+
 async function loadData(){
   if(!SHEET_ID){document.getElementById('configNotice').style.display='block';document.getElementById('configNotice').innerHTML='<strong>Setup Required:</strong> Set SHEET_ID in the code.';loadDemoData();return}
   document.getElementById('configNotice').style.display='none';
   try{
     // Fetch Students, Levels and Users in PARALLEL (was sequential → ~3× slower)
-    const [studentsR,levelsR,usersR]=await Promise.allSettled([
+    const [studentsR,levelsR,usersR,topicsR]=await Promise.allSettled([
       fetchStudents(),
       fetchSheet('Levels'),
-      fetchSheet('Users')
+      fetchSheet('Users'),
+      fetchTopics()
     ]);
     if(studentsR.status!=='fulfilled')throw new Error('Could not load Students: '+(studentsR.reason&&studentsR.reason.message||studentsR.reason));
     const students=studentsR.value;
     const levels=levelsR.status==='fulfilled'?levelsR.value:[];
     allUsers=(usersR.status==='fulfilled'&&Array.isArray(usersR.value))?usersR.value:[];
+    allTopicsMaster=(topicsR.status==='fulfilled'&&Array.isArray(topicsR.value))?topicsR.value:[];
     if(students.length===0)throw new Error('Students sheet is empty');
     // Progress/Projects/Certificates are loaded on-demand per student (see loadStudentData),
     // so they are NOT bulk-loaded here. This keeps startup fast at scale (500+ students).
@@ -1338,6 +1368,41 @@ function latestCompletionDate(rows){
 function isActive(s){return (s.Status||'Active').toLowerCase()==='active';}
 function activeStudents(){return allStudents.filter(isActive);}
 
+// Tutors and admins can edit topic progress; parents/students cannot.
+function canEditProgress(){return userRole==='admin'||userRole==='tutor';}
+
+// Merge the master Topics list for a level with this student's Progress rows,
+// so every topic shows (even with no progress yet), carrying its status + notes.
+// Returns [{topic, description, status, notes, completionDate}] in master order.
+// If the Topics tab has no entries for the level, falls back to the student's
+// existing Progress rows (so nothing is lost where the master list is incomplete).
+function topicsForLevel(sid,levelName){
+  const nLvl=normLevel(levelName);
+  const prog=allProgress.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===nLvl);
+  const progByTopic={};prog.forEach(p=>{progByTopic[normLevel(p.Topic)]=p;});
+  const master=allTopicsMaster.filter(t=>normLevel(t['Level Name'])===nLvl);
+
+  let list;
+  if(master.length>0){
+    list=master.map(m=>{
+      const p=progByTopic[normLevel(m.Topic)];
+      return {
+        topic:String(m.Topic||'').trim(),
+        description:String(m.Description||'').trim(),
+        status:(p&&p.Status)?String(p.Status).trim():'not-started',
+        notes:(p&&p.Notes!==undefined)?String(p.Notes):'',
+        completionDate:(p&&p['Completion Date'])||''
+      };
+    });
+    // Include any extra progress rows whose topic isn't in the master list
+    const masterSet=new Set(master.map(m=>normLevel(m.Topic)));
+    prog.forEach(p=>{ if(!masterSet.has(normLevel(p.Topic))) list.push({topic:String(p.Topic||'').trim(),description:'',status:String(p.Status||'not-started').trim(),notes:(p.Notes!==undefined?String(p.Notes):''),completionDate:p['Completion Date']||''}); });
+  }else{
+    list=prog.map(p=>({topic:String(p.Topic||'').trim(),description:'',status:String(p.Status||'not-started').trim(),notes:(p.Notes!==undefined?String(p.Notes):''),completionDate:p['Completion Date']||''}));
+  }
+  return list;
+}
+
 function buildRoadmap(){
   const roadmap=document.getElementById('roadmap'),sid=currentStudent.ID;
   const curLvl=currentStudent['Current Level']||'';
@@ -1350,17 +1415,20 @@ function buildRoadmap(){
   let completedLevels=0, visibleLevels=0, totalPctSum=0;
 
   const cardsHtml=allLevels.map((level,i)=>{
-    const allTopics=allProgress.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(level.name));
-    const naTopics=allTopics.filter(t=>(t.Status||'').toLowerCase()==='not-applicable');
-    if(naTopics.length>0&&naTopics.length===allTopics.length) return ''; // Hide NA-only level
-    const topics=allTopics.filter(t=>(t.Status||'').toLowerCase()!=='not-applicable');
+    // Merged master + progress topics (so all topics show, even with no progress)
+    const mergedTopics=topicsForLevel(sid,level.name);
+    const naTopics=mergedTopics.filter(t=>(t.status||'').toLowerCase()==='not-applicable');
+    const visibleTopics=mergedTopics.filter(t=>(t.status||'').toLowerCase()!=='not-applicable');
+    // Hide a level only if it has master/progress topics AND they're all not-applicable
+    if(mergedTopics.length>0&&naTopics.length===mergedTopics.length) return '';
+    const topics=visibleTopics;
 
     let status,badgeClass,badgeText;
     if(i<curIdx){status='completed';badgeClass='badge-completed';badgeText='✓ Completed'}
     else if(i===curIdx){status='current';badgeClass='badge-current';badgeText='● In Progress'}
     else if(i===curIdx+1){status='upcoming';badgeClass='badge-upcoming';badgeText='Up Next'}
     else{status='locked';badgeClass='badge-locked';badgeText='🔒 Locked'}
-    const done=topics.filter(t=>t.Status==='completed').length;
+    const done=topics.filter(t=>(t.status||'').toLowerCase()==='completed').length;
     const total=topics.length;
     const pct=total>0?Math.round((done/total)*100):((status==='completed'&&hasAnyProgress)?100:0);
 
@@ -1371,10 +1439,9 @@ function buildRoadmap(){
 
     const projects=allProjects.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(level.name));
     const cert=allCertificates.find(c=>c['Student ID']===sid&&normLevel(c['Level Name'])===normLevel(level.name));
-    const certFromProgress=topics.find(t=>t['Certificate URL']);
-    const certUrl=(cert&&cert['Certificate URL'])||(certFromProgress&&certFromProgress['Certificate URL'])||'';
-    // Prefer the latest Completion Date from this student's Progress rows for the level
-    const completionDate=latestCompletionDate(allTopics)||(cert&&cert['Completion Date'])||'';
+    const certUrl=(cert&&cert['Certificate URL'])||'';
+    // Prefer the latest Completion Date from this level's topics
+    const completionDate=topics.map(t=>t.completionDate).filter(Boolean).sort().slice(-1)[0]||(cert&&cert['Completion Date'])||'';
     const hasTemplate=level.certTemplate&&(status==='completed'||certUrl||completionDate);
     // Status-based colour (replaces per-level brand colours for cleaner readability):
     // completed = green, in-progress = amber, upcoming/locked = neutral grey.
@@ -1411,12 +1478,27 @@ function buildRoadmap(){
           ${level.refDoc?`<a href="${level.refDoc}" target="_blank" class="lvl-btn lvl-btn-ref" onclick="event.stopPropagation()">📄 Reference Doc</a>`:''}
         </div>`:''}
         <div class="level-detail">
-          ${topics.length>0?`<div class="topics-title">Topics Progress</div><div class="topic-list">${topics.map(t=>{
-            const st=t.Status||'locked';const cc=st==='completed'?'done':st==='in-progress'?'progress':'locked';
+          ${canEditProgress()?`<div class="topics-edit-bar"><button class="lvl-btn lvl-btn-edit" onclick="event.stopPropagation();toggleTopicEdit(${i})" id="editBtn-${i}">✎ Edit Progress</button></div>`:''}
+          ${topics.length>0?`<div class="topics-title">Topics Progress</div><div class="topic-list" id="topicList-${i}">${topics.map((t,ti)=>{
+            const st=(t.status||'not-started').toLowerCase();
+            const cc=st==='completed'?'done':st==='in-progress'?'progress':st==='not-applicable'?'na':'locked';
             const ic=st==='completed'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':st==='in-progress'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="4"/></svg>':'';
-            return `<div class="topic-item"><div class="topic-check ${cc}">${ic}</div><span class="topic-name ${cc}">${esc(t.Topic)}</span></div>`;
-          }).join('')}</div>`:''
-          }
+            const notesHtml=t.notes?`<div class="topic-notes-view">📝 ${esc(t.notes)}</div>`:'';
+            return `<div class="topic-item" data-topic="${esc(t.topic)}">
+              <div class="topic-row">
+                <div class="topic-check ${cc}">${ic}</div>
+                <span class="topic-name ${cc}">${esc(t.topic)}</span>
+              </div>
+              ${notesHtml}
+              <div class="topic-edit-row" style="display:none;" onclick="event.stopPropagation()">
+                <select class="topic-status-sel">
+                  ${['not-started','in-progress','completed','not-applicable'].map(o=>`<option value="${o}"${st===o?' selected':''}>${({'not-started':'Not started','in-progress':'In progress','completed':'Completed','not-applicable':'Not applicable'})[o]}</option>`).join('')}
+                </select>
+                <input type="text" class="topic-notes-input" placeholder="Notes (optional)" value="${esc(t.notes)}">
+              </div>
+            </div>`;
+          }).join('')}</div>
+          ${canEditProgress()?`<div class="topics-save-bar" id="saveBar-${i}" style="display:none;"><button class="lvl-btn lvl-btn-savep" onclick="event.stopPropagation();saveTopicProgress(${i},'${esc(level.name)}')">Save Progress</button><button class="lvl-btn lvl-btn-cancelp" onclick="event.stopPropagation();toggleTopicEdit(${i})">Cancel</button><span class="topics-save-msg" id="saveMsg-${i}"></span></div>`:''}`:`<div class="no-topics-msg">${canEditProgress()?'No topics defined for this level in the Topics tab.':'No topics to show yet.'}</div>`}
           ${projects.length>0?`<div class="projects-title">Projects</div><div class="projects-grid">${projects.map(p=>{
             const v=videoEmbed(p);const cl=p['Code Link']||'';
             const thumb=v&&v.embed?v.embed:'<div class="project-thumb-placeholder">No video</div>';
@@ -1456,6 +1538,59 @@ function buildRoadmap(){
 }
 
 function toggleLevel(card){if(card.classList.contains('locked'))return;const w=card.classList.contains('expanded');document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('expanded'));if(!w)card.classList.add('expanded')}
+
+// Toggle the inline edit mode for a level card's topics (tutor/admin only).
+function toggleTopicEdit(i){
+  const list=document.getElementById('topicList-'+i);
+  const saveBar=document.getElementById('saveBar-'+i);
+  const editBtn=document.getElementById('editBtn-'+i);
+  if(!list)return;
+  const editing=list.classList.toggle('editing');
+  list.querySelectorAll('.topic-edit-row').forEach(el=>el.style.display=editing?'flex':'none');
+  list.querySelectorAll('.topic-notes-view').forEach(el=>el.style.display=editing?'none':'');
+  if(saveBar)saveBar.style.display=editing?'flex':'none';
+  if(editBtn)editBtn.style.display=editing?'none':'';
+  // Keep the card expanded while editing
+  const card=list.closest('.level-card');if(card&&editing)card.classList.add('expanded');
+}
+
+// Collect the edited topic statuses + notes and write them back via updateProgress.
+async function saveTopicProgress(i,levelName){
+  const list=document.getElementById('topicList-'+i);
+  const msg=document.getElementById('saveMsg-'+i);
+  if(!list)return;
+  const sid=currentStudent.ID;
+  const topics=[...list.querySelectorAll('.topic-item')].map(item=>({
+    topic:item.getAttribute('data-topic'),
+    status:item.querySelector('.topic-status-sel').value,
+    notes:item.querySelector('.topic-notes-input').value
+  }));
+  msg.textContent='Saving…';msg.className='topics-save-msg';
+  if(!SHEET_WEBAPP_URL){msg.textContent='Save endpoint not configured.';msg.className='topics-save-msg err';return;}
+  try{
+    const res=await fetch(SHEET_WEBAPP_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'updateProgress',studentId:sid,level:levelName,topics:topics})
+    });
+    const data=await res.json();
+    if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Save failed');
+    // Update the in-memory cache + allProgress so the view reflects changes without a full reload
+    delete studentDataCache[sid];
+    const today=new Date();const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    topics.forEach(t=>{
+      let row=allProgress.find(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(levelName)&&normLevel(p.Topic)===normLevel(t.topic));
+      if(!row){row={'Student ID':sid,'Level Name':levelName,'Topic':t.topic};allProgress.push(row);}
+      row.Status=t.status;row.Notes=t.notes;
+      row['Completion Date']=t.status.toLowerCase()==='completed'?todayStr:'';
+    });
+    msg.textContent='Saved ✓';msg.className='topics-save-msg ok';
+    setTimeout(()=>buildRoadmap(),700); // re-render with updated statuses
+  }catch(e){
+    console.error('saveTopicProgress error:',e);
+    msg.textContent='Could not save. '+e.message;msg.className='topics-save-msg err';
+  }
+}
 
 // Shown when the certificate is requested before all topics are completed.
 function certLockedMsg(done,total){
