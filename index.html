@@ -642,7 +642,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div class="table-header">
         <div class="table-title">All Students <span id="tableCount" style="color:var(--accent);"></span></div>
         <div class="table-actions" style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn-add" onclick="openStudentForm()">
+        <button class="btn-add" id="btnAddStudent" onclick="openStudentForm()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Student
         </button>
@@ -1333,8 +1333,8 @@ function enterSearchScreen(){
 function applyAdminBtnVisibility(){
   const btn=document.getElementById('adminBtn');
   if(!btn)return;
-  // Hide once someone is signed in and they are NOT an admin
-  if(studentUser && userRole!=='admin'){
+  // Hide once someone is signed in who is neither admin nor tutor
+  if(studentUser && userRole!=='admin' && userRole!=='tutor'){
     btn.style.display='none';
   }else{
     btn.style.display='';
@@ -1982,18 +1982,10 @@ function showAdminLogin(){
   // instead of asking them to sign in again.
   if(studentUser&&studentUser.email){
     const role=roleForEmail(studentUser.email);
-    if(role==='admin'){
+    if(role==='admin'||role==='tutor'){
       adminUser={email:studentUser.email,name:studentUser.name,picture:studentUser.picture};
+      userRole=role;
       showAdminDashboard();
-      return;
-    }
-    if(role==='tutor'){
-      // Tutors can view students but not the admin dashboard
-      document.getElementById('adminLoginScreen').classList.add('active');
-      document.getElementById('adminBtn').classList.add('active');
-      document.getElementById('googleSignInBtn').innerHTML='';
-      document.getElementById('adminError').textContent='Your account has tutor access. The admin dashboard is restricted to administrators. You can search and view students from the main screen.';
-      document.getElementById('adminError').classList.add('show');
       return;
     }
   }
@@ -2026,15 +2018,11 @@ function handleGoogleLogin(response){
   const role=roleForEmail(email);
   userRole=role; // keep the global role in sync so progress editing works
   if(!studentUser)studentUser={email:payload.email,name:payload.name,picture:payload.picture};
-  if(role==='admin'){
+  if(role==='admin'||role==='tutor'){
     adminUser={email:payload.email,name:payload.name,picture:payload.picture};
     showAdminDashboard();
-  }else if(role==='tutor'){
-    document.getElementById('googleSignInBtn').innerHTML='';
-    document.getElementById('adminError').textContent='Your account has tutor access. The admin dashboard is restricted to administrators. You can search and view students from the main screen.';
-    document.getElementById('adminError').classList.add('show');
   }else{
-    document.getElementById('adminError').textContent='Access denied. Your account is not authorized as an admin.';
+    document.getElementById('adminError').textContent='Access denied. Your account is not authorized.';
     document.getElementById('adminError').classList.add('show');
   }
 }
@@ -2047,8 +2035,10 @@ function showAdminDashboard(){
   // Ensure the account menu reflects the admin (covers the case where admin
   // reached here via the Admin button after signing in elsewhere).
   if(adminUser&&!studentUser)studentUser={email:adminUser.email,name:adminUser.name,picture:adminUser.picture};
-  if(adminUser&&!userRole)userRole='admin'; // reaching the dashboard implies admin rights
-  showAccountMenu('admin');
+  if(adminUser&&!userRole)userRole='admin'; // reaching the dashboard with no role implies admin
+  showAccountMenu(userRole==='tutor'?'tutor':'admin');
+  const addBtn=document.getElementById('btnAddStudent');
+  if(addBtn)addBtn.style.display=(userRole==='admin')?'':'none'; // Add Student is admin-only
   buildStats();buildCharts();buildTable();loadRiskList();
 }
 
@@ -2514,7 +2504,7 @@ function renderTable(){
       <td>${esc(s.Batch||'—')}</td>
       <td class="${(s.Status||'Active').toLowerCase()==='active'?'status-active':'status-inactive'}">${esc(s.Status||'Active')}</td>
       <td>${esc(formatJoinDate(s['Join Date'])||'—')}</td>
-      <td><button class="btn-edit" onclick="event.stopPropagation();openStudentForm('${esc(s.ID)}')" title="Edit ${esc(s.Name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></td>
+      <td>${userRole==='admin'?`<button class="btn-edit" onclick="event.stopPropagation();openStudentForm('${esc(s.ID)}')" title="Edit ${esc(s.Name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:''}</td>
     </tr>
   `).join('');
 }
