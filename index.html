@@ -1942,6 +1942,30 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     ctx.textAlign = 'left';
     ctx.fillText(displayDate, canvas.width * 0.10, dateY);
 
+    // Certificate ID (top-right): EB-{StudentID}-L{LevelNumber}-{Year}.
+    // Year comes from the completion date; falls back to the current year.
+    const lvlObj = (typeof allLevels!=='undefined') ? allLevels.find(l=>normLevel(l.name)===normLevel(levelName)) : null;
+    const lvlNum = lvlObj ? lvlObj.num : '';
+    let certYear = '';
+    if (completionDate) { const d=new Date(completionDate); if(!isNaN(d)) certYear=d.getFullYear(); }
+    if (!certYear) { const m=String(completionDate||'').match(/(20\d{2})/); certYear = m ? m[1] : new Date().getFullYear(); }
+    const sid = (currentStudent && currentStudent.ID) ? currentStudent.ID : '';
+    const certId = 'EB-' + sid + '-L' + lvlNum + '-' + certYear;
+
+    const rightX = canvas.width * 0.92;          // right margin anchor
+    const labelY = canvas.height * 0.085;         // small label line
+    const idY    = canvas.height * 0.115;         // the ID code line
+    const labelSize = Math.round(canvas.width * 0.011);
+    const idSize    = dateFontSize;               // same size/weight as the date
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#6b7a72';
+    ctx.font = `600 ${labelSize}px 'DM Sans', sans-serif`;
+    ctx.fillText('CERTIFICATE ID', rightX, labelY);
+    ctx.fillStyle = '#0a373a';
+    ctx.font = `600 ${idSize}px 'DM Sans', sans-serif`;
+    ctx.fillText(certId, rightX, idY);
+    ctx.textAlign = 'left'; // restore default
+
     document.getElementById('certLoading').remove();
 
     if (typeof onReady === 'function') {
