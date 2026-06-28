@@ -420,6 +420,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 .data-table td{padding:12px 16px;border-bottom:1px solid var(--border)}
 .data-table tbody tr.student-row{cursor:pointer;transition:background .15s}
 .data-table tbody tr.student-row:hover{background:var(--accent-light)}
+.row-flash{animation:rowFlash 1.6s ease-out}
+@keyframes rowFlash{0%{background:var(--amber-bg,#fdf6e3)}40%{background:var(--amber-bg,#fdf6e3)}100%{background:transparent}}
 .data-table tr:hover{background:var(--accent-light)}
 .data-table .status-active{color:var(--green);font-weight:600}
 .data-table .status-inactive{color:var(--red);font-weight:600}
@@ -1039,6 +1041,7 @@ function prefetchStudent(id){
 }
 
 let studentOrigin=null; // where to return when leaving a student profile: 'dashboard' | 'search' | null
+let originStudentId=null; // which student row to scroll back to on the dashboard
 
 async function selectStudent(id,origin){
   currentStudent=allStudents.find(s=>s.ID===id);
@@ -1047,6 +1050,7 @@ async function selectStudent(id,origin){
   // infer from whether the admin dashboard is currently active.
   if(origin)studentOrigin=origin;
   else studentOrigin=document.getElementById('adminDashboard').classList.contains('active')?'dashboard':'search';
+  originStudentId=id; // remember which row to return to
   document.getElementById('searchResults').classList.remove('open');
   document.getElementById('errorMsg').classList.remove('show');
   // Show the dashboard shell (header renders instantly) with a loading state
@@ -1080,11 +1084,26 @@ function logout(){
     document.getElementById('adminDashboard').classList.add('active');
     document.getElementById('adminBtn').classList.add('active');
     setAdminBtnLabel(true);
+    scrollToStudentRow(originStudentId);
   }else{
     // Came from search → search screen
     document.getElementById('loginScreen').style.display='flex';
   }
   studentOrigin=null;
+}
+
+// Scroll the dashboard back to the row we came from and briefly highlight it.
+// Checks the At-Risk table first (if expanded), then the All Students table.
+function scrollToStudentRow(id){
+  if(!id)return;
+  setTimeout(()=>{
+    const row=document.querySelector(`#riskTable tr[data-sid="${CSS.escape(id)}"]`)
+            ||document.querySelector(`#tableBody tr[data-sid="${CSS.escape(id)}"]`);
+    if(!row)return;
+    row.scrollIntoView({behavior:'smooth',block:'center'});
+    row.classList.add('row-flash');
+    setTimeout(()=>row.classList.remove('row-flash'),1600);
+  },60); // small delay so the dashboard is visible before scrolling
 }
 
 function backToStudentGate(){
@@ -2324,7 +2343,7 @@ function applyFilters(){
 function renderTable(){
   document.getElementById('tableCount').textContent=`(${filteredStudents.length})`;
   document.getElementById('tableBody').innerHTML=filteredStudents.map(s=>`
-    <tr class="student-row" onmouseenter="prefetchStudent('${esc(s.ID)}')" onclick="selectStudent('${esc(s.ID)}')" title="View ${esc(s.Name)}'s progress">
+    <tr class="student-row" data-sid="${esc(s.ID)}" onmouseenter="prefetchStudent('${esc(s.ID)}')" onclick="selectStudent('${esc(s.ID)}')" title="View ${esc(s.Name)}'s progress">
       <td><strong>${esc(s.ID)}</strong></td>
       <td>${esc(s.Name)}</td>
       <td>${esc(s['Current Level']||'—')}</td>
@@ -2449,7 +2468,7 @@ function renderRisk(){
   const bodyRows = rows.length===0
     ? `<tr><td colspan="8"><div class="risk-empty">${emptyMsg}</div></td></tr>`
     : rows.map(s=>`
-    <tr onmouseenter="prefetchStudent('${esc(s.id)}')">
+    <tr data-sid="${esc(s.id)}" onmouseenter="prefetchStudent('${esc(s.id)}')">
       <td onclick="selectStudent('${esc(s.id)}')" style="cursor:pointer;"><strong>${esc(s.name)}</strong><br><span style="font-family:var(--font-mono);font-size:10px;color:var(--text-light);">${esc(s.id)}</span></td>
       <td>${esc(s.tutor||'—')}</td>
       <td>${esc(s.country||'—')}</td>
