@@ -234,7 +234,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .lvl-btn-edit{background:var(--accent-light);color:var(--accent-dark);flex:none;min-width:0}
 .lvl-btn-savep{background:var(--accent);color:#fff;flex:none;min-width:0}
 .lvl-btn-cancelp{background:var(--surface-alt);color:var(--text-dim);flex:none;min-width:0}
-.topics-save-bar{display:flex;align-items:center;gap:10px;margin-top:12px}
+.topics-save-bar{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
 .topics-save-msg{font-family:var(--font-mono);font-size:12px}
 .topics-save-msg.ok{color:var(--green)}.topics-save-msg.err{color:var(--red)}
 .no-topics-msg{font-family:var(--font-mono);font-size:12px;color:var(--text-light);padding:8px 0}
@@ -457,6 +457,16 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .level-status{align-items:center;width:100%;flex-direction:row;justify-content:space-between;flex-wrap:wrap;gap:8px}
   .level-links{width:100%}
   .level-links a{flex:1;justify-content:center;padding:8px 10px}
+  .topics-save-bar{flex-direction:column;align-items:stretch}
+  .topics-save-bar .lvl-btn{width:100%;flex:none}
+  .topics-save-spacer{display:none}
+  .topics-save-msg{text-align:center;order:-1}
+  .topics-edit-bar{justify-content:stretch}
+  .topics-edit-bar .lvl-btn{width:100%}
+  .projects-head{flex-direction:column;align-items:stretch;gap:8px}
+  .projects-head .lvl-btn-addproj{width:100%}
+  .topic-edit-row{flex-direction:column;align-items:stretch;margin-left:0}
+  .topic-status-sel,.topic-notes-input{width:100%}
   .projects-grid{grid-template-columns:1fr}
   .id-group{flex-direction:column}
   .stats-grid{grid-template-columns:1fr 1fr}
@@ -1189,10 +1199,15 @@ function showStudentGate(){
   const gate=document.getElementById('studentLoginScreen');
   gate.style.display='flex';
   document.getElementById('studentLoginError').classList.remove('show');
+  const btn=document.getElementById('studentSignInBtn');
+  // Render the Google button only once — re-rendering on every call caused the
+  // sign-in button to flicker/refresh several times during load.
+  if(btn&&btn.getAttribute('data-rendered')==='1')return;
   if(GOOGLE_CLIENT_ID && typeof google!=='undefined' && google.accounts && google.accounts.id){
     try{
       google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleStudentLogin});
       google.accounts.id.renderButton(document.getElementById('studentSignInBtn'),{theme:'filled_blue',size:'large',text:'signin_with',shape:'pill'});
+      if(btn)btn.setAttribute('data-rendered','1');
     }catch(e){console.error('Student Sign-In error:',e);}
   }else if(GOOGLE_CLIENT_ID){
     // Google script not ready yet — retry shortly so the button still appears
@@ -1504,16 +1519,21 @@ function buildRoadmap(){
     // Merged master + progress topics (so all topics show, even with no progress)
     const mergedTopics=topicsForLevel(sid,level.name);
     const naTopics=mergedTopics.filter(t=>(t.status||'').toLowerCase()==='not-applicable');
-    const visibleTopics=mergedTopics.filter(t=>(t.status||'').toLowerCase()!=='not-applicable');
-    // Hide a level only if it has master/progress topics AND they're all not-applicable
-    if(mergedTopics.length>0&&naTopics.length===mergedTopics.length) return '';
-    const topics=visibleTopics;
+    const isNALevel=mergedTopics.length>0&&naTopics.length===mergedTopics.length;
+    // An all-N/A level is hidden from parents/students, but tutors/admins still
+    // see it (with all its topics) so they can review or un-mark it.
+    if(isNALevel&&!canEditProgress()) return '';
+    // Editors viewing an N/A level see every topic (including the N/A ones) so
+    // they can change them back; everyone else hides individual N/A topics.
+    const topics=(isNALevel&&canEditProgress())?mergedTopics:mergedTopics.filter(t=>(t.status||'').toLowerCase()!=='not-applicable');
 
     let status,badgeClass,badgeText;
     if(i<curIdx){status='completed';badgeClass='badge-completed';badgeText='✓ Completed'}
     else if(i===curIdx){status='current';badgeClass='badge-current';badgeText='● In Progress'}
     else if(i===curIdx+1){status='upcoming';badgeClass='badge-upcoming';badgeText='Up Next'}
     else{status='locked';badgeClass='badge-locked';badgeText='🔒 Locked'}
+    // Editors see an explicit N/A badge on a not-applicable level (hidden from parents)
+    if(isNALevel&&canEditProgress()){badgeClass='badge-locked';badgeText='⊘ Not applicable';}
     const done=topics.filter(t=>(t.status||'').toLowerCase()==='completed').length;
     const total=topics.length;
     const pct=total>0?Math.round((done/total)*100):((status==='completed'&&hasAnyProgress)?100:0);
@@ -2005,6 +2025,8 @@ function handleGoogleLogin(response){
   const payload=JSON.parse(atob(response.credential.split('.')[1]));
   const email=(payload.email||'').toLowerCase();
   const role=roleForEmail(email);
+  userRole=role; // keep the global role in sync so progress editing works
+  if(!studentUser)studentUser={email:payload.email,name:payload.name,picture:payload.picture};
   if(role==='admin'){
     adminUser={email:payload.email,name:payload.name,picture:payload.picture};
     showAdminDashboard();
@@ -2026,6 +2048,7 @@ function showAdminDashboard(){
   // Ensure the account menu reflects the admin (covers the case where admin
   // reached here via the Admin button after signing in elsewhere).
   if(adminUser&&!studentUser)studentUser={email:adminUser.email,name:adminUser.name,picture:adminUser.picture};
+  if(adminUser&&!userRole)userRole='admin'; // reaching the dashboard implies admin rights
   showAccountMenu('admin');
   buildStats();buildCharts();buildTable();loadRiskList();
 }
