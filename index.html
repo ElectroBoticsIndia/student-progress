@@ -1038,9 +1038,15 @@ function prefetchStudent(id){
   loadStudentData(id).catch(()=>{});
 }
 
-async function selectStudent(id){
+let studentOrigin=null; // where to return when leaving a student profile: 'dashboard' | 'search' | null
+
+async function selectStudent(id,origin){
   currentStudent=allStudents.find(s=>s.ID===id);
   if(!currentStudent)return;
+  // Remember where we came from so "Back" returns there. If not specified,
+  // infer from whether the admin dashboard is currently active.
+  if(origin)studentOrigin=origin;
+  else studentOrigin=document.getElementById('adminDashboard').classList.contains('active')?'dashboard':'search';
   document.getElementById('searchResults').classList.remove('open');
   document.getElementById('errorMsg').classList.remove('show');
   // Show the dashboard shell (header renders instantly) with a loading state
@@ -1067,10 +1073,18 @@ function logout(){
   }else if(myStudents&&myStudents.length===1){
     // Single-child parent → back to sign-in (nothing else to choose)
     backToStudentGate();
+  }else if(studentOrigin==='dashboard'){
+    // Admin/tutor came from a dashboard table → return to the dashboard,
+    // preserving its existing filters/scroll (we don't rebuild it).
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('adminDashboard').classList.add('active');
+    document.getElementById('adminBtn').classList.add('active');
+    setAdminBtnLabel(true);
   }else{
-    // Admin / viewer / open access → search screen
+    // Came from search → search screen
     document.getElementById('loginScreen').style.display='flex';
   }
+  studentOrigin=null;
 }
 
 function backToStudentGate(){
