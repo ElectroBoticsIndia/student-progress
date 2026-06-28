@@ -224,11 +224,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .lvl-btn-markall{background:var(--green-bg,#eef6d8);color:#5a7a00;flex:none;min-width:0}
 .lvl-btn-markna{background:var(--surface-alt);color:var(--text-dim);flex:none;min-width:0}
 .topics-save-spacer{flex:1}
-.projects-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.projects-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
 .lvl-btn-addproj{background:var(--accent-light);color:var(--accent-dark);flex:none;min-width:0}
 .project-links-spacer{flex:1}
 .project-link.link-edit{cursor:pointer;color:var(--accent-dark);background:var(--accent-light)}
 .project-link.link-edit:hover{background:var(--accent);color:#fff}
+.pf-save{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pf-save:hover{background:var(--accent-dark)}
 .lvl-btn-edit{background:var(--accent-light);color:var(--accent-dark);flex:none;min-width:0}
 .lvl-btn-savep{background:var(--accent);color:#fff;flex:none;min-width:0}
 .lvl-btn-cancelp{background:var(--surface-alt);color:var(--text-dim);flex:none;min-width:0}
@@ -816,7 +818,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
       <div class="wa-actions">
         <button class="wa-btn wa-cancel" onclick="closeProjectForm()">Cancel</button>
-        <button class="wa-btn wa-send" id="pf_SaveBtn" onclick="saveProjectForm()">Save Project</button>
+        <button class="wa-btn pf-save" id="pf_SaveBtn" onclick="saveProjectForm()">Save Project</button>
       </div>
       <p class="topics-save-msg" id="pf_Msg" style="text-align:right;margin-top:8px;"></p>
     </div>
@@ -1620,7 +1622,7 @@ function buildRoadmap(){
   roadmap.innerHTML=cardsHtml;
 }
 
-function toggleLevel(card){if(card.classList.contains('locked'))return;const w=card.classList.contains('expanded');document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('expanded'));if(!w)card.classList.add('expanded')}
+function toggleLevel(card){if(card.classList.contains('locked'))return;const w=card.classList.contains('expanded');document.querySelectorAll('.level-card').forEach(c=>{if(c.querySelector('.topic-list.editing'))return;c.classList.remove('expanded');});if(!w)card.classList.add('expanded')}
 
 // Set every topic dropdown in a level to a given status (then the user Saves).
 function markLevel(i,status){
@@ -1732,8 +1734,18 @@ async function saveProjectForm(){
     let row=allProjects.find(x=>x['Student ID']===sid&&normLevel(x['Level Name'])===normLevel(projectEditCtx.level)&&normLevel(x['Project Name'])===normLevel(projectEditCtx.origName||name));
     if(!row){row={'Student ID':sid,'Level Name':projectEditCtx.level};allProjects.push(row);}
     row['Project Name']=name;row.Description=project.description;row['Video Link']=project.videoLink;row['Code Link']=project.codeLink;
+    const savedLevel=projectEditCtx.level;
+    // Which cards are expanded right now, so we can restore them
+    const expandedIdx=[...document.querySelectorAll('.level-card.expanded')].map(c=>c.getAttribute('data-level-idx'));
     closeProjectForm();
     buildRoadmap();
+    // Restore expansion + scroll back to the level we were editing
+    requestAnimationFrame(()=>{
+      expandedIdx.forEach(idx=>{const c=document.querySelector(`.level-card[data-level-idx="${idx}"]`);if(c)c.classList.add('expanded');});
+      const lvlIdx=allLevels.findIndex(l=>normLevel(l.name)===normLevel(savedLevel));
+      const card=document.querySelector(`.level-card[data-level-idx="${lvlIdx}"]`);
+      if(card){card.classList.add('expanded');card.scrollIntoView({behavior:'smooth',block:'center'});}
+    });
   }catch(e){
     console.error('saveProject error:',e);
     msg.textContent='Could not save. '+e.message;msg.className='topics-save-msg err';
@@ -1851,9 +1863,13 @@ async function shareTo(platform){
 
 // Event delegation for level card clicks — more reliable than inline onclick on desktop
 document.addEventListener('click',function(e){
-  // Don't toggle if clicking a link or button inside the card
-  if(e.target.closest('a')||e.target.closest('button'))return;
+  // Don't toggle if clicking a link, button, or any form control
+  if(e.target.closest('a')||e.target.closest('button')||e.target.closest('select')||e.target.closest('input')||e.target.closest('textarea')||e.target.closest('label'))return;
+  // Don't toggle if the click is inside the editable area of a card
+  if(e.target.closest('.topic-edit-row')||e.target.closest('.topics-save-bar')||e.target.closest('.topics-edit-bar')||e.target.closest('.projects-head'))return;
   const card=e.target.closest('.level-card');
+  // If this card is currently in edit mode, never collapse it on a stray click
+  if(card&&card.querySelector('.topic-list.editing'))return;
   if(card&&document.getElementById('roadmap').contains(card)){
     toggleLevel(card);
   }
