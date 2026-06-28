@@ -1101,6 +1101,7 @@ async function selectStudent(id,origin){
     const d=await loadStudentData(id);
     allProgress=d.progress;allProjects=d.projects;allCertificates=d.certificates;
     buildRoadmap();
+    scrollToCurrentLevel();
   }catch(e){
     console.error('loadStudentData error:',e);
     document.getElementById('roadmap').innerHTML='<div class="roadmap-error">Could not load progress right now. Please check your connection and try again.</div>';
@@ -1477,6 +1478,15 @@ function topicsForLevel(sid,levelName){
     list=prog.map(p=>({topic:String(p.Topic||'').trim(),description:'',status:String(p.Status||'not-started').trim(),notes:(p.Notes!==undefined?String(p.Notes):''),completionDate:p['Completion Date']||''}));
   }
   return list;
+}
+
+// Scroll the roadmap to the student's current ("in progress") level card,
+// leaving it collapsed. Used on initial open of a student.
+function scrollToCurrentLevel(){
+  requestAnimationFrame(()=>{
+    const card=document.querySelector('.level-card.current');
+    if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
+  });
 }
 
 function buildRoadmap(){
