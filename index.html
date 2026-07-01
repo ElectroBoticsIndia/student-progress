@@ -124,6 +124,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-card.upcoming{border-color:var(--border)}
 .level-card.locked{opacity:.55;cursor:default}
 .level-card.locked:hover{transform:none;box-shadow:none}
+.roadmap.editor-mode .level-card.locked{opacity:.8;cursor:pointer}
+.roadmap.editor-mode .level-card.locked:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .level-top{display:flex;align-items:center;gap:16px;padding:18px 22px}
 .level-num{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:16px;font-weight:700;flex-shrink:0;color:#fff}
 .level-card.completed .level-num{background:var(--green)}
@@ -1649,9 +1651,17 @@ function buildRoadmap(){
     </div>`;
 
   roadmap.innerHTML=cardsHtml;
+  roadmap.classList.toggle('editor-mode',canEditProgress());
 }
 
-function toggleLevel(card){if(card.classList.contains('locked'))return;const w=card.classList.contains('expanded');document.querySelectorAll('.level-card').forEach(c=>{if(c.querySelector('.topic-list.editing'))return;c.classList.remove('expanded');});if(!w)card.classList.add('expanded')}
+function toggleLevel(card){
+  // Locked cards stay non-interactive for parents/students, but admins/tutors
+  // can open and edit any level (including Up Next / Locked).
+  if(card.classList.contains('locked')&&!canEditProgress())return;
+  const w=card.classList.contains('expanded');
+  document.querySelectorAll('.level-card').forEach(c=>{if(c.querySelector('.topic-list.editing'))return;c.classList.remove('expanded');});
+  if(!w)card.classList.add('expanded');
+}
 
 // Set every topic dropdown in a level to a given status (then the user Saves).
 function markLevel(i,status){
