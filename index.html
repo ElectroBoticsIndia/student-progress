@@ -605,11 +605,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <div class="enroll-controls">
           <label>Period</label>
           <select id="enrollPeriod" onchange="buildEnrollmentChart()">
+            <option value="month" selected>Month</option>
             <option value="quarter-in">Quarter — Indian Govt (AMJ / JAS / OND / JFM)</option>
             <option value="quarter-cal">Quarter — Calendar (Q1 JFM / Q2 AMJ / Q3 JAS / Q4 OND)</option>
             <option value="fy-in">Financial Year — Indian (Apr–Mar)</option>
             <option value="year">Calendar Year</option>
-            <option value="month">Month</option>
           </select>
         </div>
       </div>
@@ -2109,14 +2109,16 @@ function buildStats(){
   const total=allStudents.length;
   const active=allStudents.filter(s=>(s.Status||'Active').toLowerCase()==='active').length;
   const inactive=total-active;
-  const countries=new Set(allStudents.map(s=>s.Country||'Unknown').filter(c=>c));
+  // Treat any country whose name contains "India" as a single "India".
+  const canonCountry=(c)=>{const v=String(c||'').trim();return /india/i.test(v)?'India':(v||'Unknown');};
+  const countries=new Set(allStudents.map(s=>canonCountry(s.Country)).filter(c=>c&&c!=='Unknown'));
   const tutors=new Set(allStudents.map(s=>s.Tutor||'Unassigned').filter(t=>t));
-  // Top country
+  // Top country (raw names kept as-is, per request)
   const countryMap={};allStudents.forEach(s=>{const c=s.Country||'Unknown';countryMap[c]=(countryMap[c]||0)+1});
   const topCountry=Object.entries(countryMap).sort((a,b)=>b[1]-a[1])[0]||['—',0];
 
   document.getElementById('statsGrid').innerHTML=`
-    <div class="stat-card accent"><div class="stat-label">Total Students</div><div class="stat-value">${total}</div><div class="stat-sub">${active} active, ${inactive} inactive</div></div>
+    <div class="stat-card accent"><div class="stat-label">Total Students</div><div class="stat-value">${active}</div><div class="stat-sub">${total} total · ${inactive} inactive</div></div>
     <div class="stat-card green"><div class="stat-label">Countries</div><div class="stat-value">${countries.size}</div><div class="stat-sub">Top: ${esc(topCountry[0])} (${topCountry[1]})</div></div>
     <div class="stat-card purple"><div class="stat-label">Active Rate</div><div class="stat-value">${total?Math.round(active/total*100):0}%</div><div class="stat-sub">${active} of ${total} students</div></div>
     <div class="stat-card amber"><div class="stat-label">Tutors</div><div class="stat-value">${tutors.size}</div><div class="stat-sub">${total&&tutors.size?Math.round(total/tutors.size):0} students avg</div></div>
