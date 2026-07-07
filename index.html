@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ElectroBotics — Student Progress</title>
@@ -59,7 +58,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .app{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
 
 /* Login/Search */
-  
 .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px;animation:fadeUp .5s ease-out}
 @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 .login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:40px 36px;max-width:460px;width:100%;box-shadow:var(--shadow-lg);text-align:center}
@@ -2352,6 +2350,9 @@ function buildEnrollmentChart(){
       }
     }
   });
+  // Scroll to the right so the most recent period is visible on load
+  const scroller=document.querySelector('.enroll-scroll');
+  if(scroller){requestAnimationFrame(()=>{scroller.scrollLeft=scroller.scrollWidth;});}
 }
 
 // ─── Tutor Availability Grid (days × time slots) ──────────────────────
@@ -2550,7 +2551,7 @@ function buildTable(){
 
 // ─── At-Risk Students ─────────────────────────────────────────────────
 let riskData=null;
-let riskCol={country:'',tutor:'',batch:'',risk:'red'}; // header filters; default to At risk
+let riskCol={country:'',tutor:'',batch:'',risk:'red',att:'',sub:''}; // header filters; default to At risk
 let riskVisibleRows=[]; // currently displayed rows (for whole-list WhatsApp)
 
 async function loadRiskList(force){
@@ -2598,11 +2599,16 @@ function renderRisk(){
   if(!riskExpanded)return;
   document.getElementById('riskFilter').innerHTML='';
   // Table — all students; narrowing is done by the header dropdown filters
+  // Helper: format a rate as the same label shown in the dropdown/column.
+  const rateLabel=(rate)=>(rate===null||rate===undefined)?'No data':Math.round(rate*100)+'%';
+
   let rows=(riskData.students||[]).slice();
   if(riskCol.country)rows=rows.filter(s=>(s.country||'')===riskCol.country);
   if(riskCol.tutor)rows=rows.filter(s=>(s.tutor||'')===riskCol.tutor);
   if(riskCol.batch)rows=rows.filter(s=>(s.batch||'')===riskCol.batch);
   if(riskCol.risk)rows=rows.filter(s=>s.risk===riskCol.risk);
+  if(riskCol.att)rows=rows.filter(s=>rateLabel(s.att_rate)===riskCol.att);
+  if(riskCol.sub)rows=rows.filter(s=>rateLabel(s.sub_rate)===riskCol.sub);
   riskVisibleRows=rows; // remember for the whole-list WhatsApp
   const t=document.getElementById('riskTable');
 
@@ -2615,9 +2621,19 @@ function renderRisk(){
     if(skip!=='tutor'&&riskCol.tutor&&(s.tutor||'')!==riskCol.tutor)return false;
     if(skip!=='batch'&&riskCol.batch&&(s.batch||'')!==riskCol.batch)return false;
     if(skip!=='risk'&&riskCol.risk&&s.risk!==riskCol.risk)return false;
+    if(skip!=='att'&&riskCol.att&&rateLabel(s.att_rate)!==riskCol.att)return false;
+    if(skip!=='sub'&&riskCol.sub&&rateLabel(s.sub_rate)!==riskCol.sub)return false;
     return true;
   };
   const uniqR=(skip,key)=>[...new Set(all.filter(s=>matchR(s,skip)).map(s=>s[key]).filter(v=>v))].sort();
+  // Unique attendance/submission % labels, sorted numerically (No data last)
+  const uniqRate=(skip,rateKey)=>{
+    const labels=[...new Set(all.filter(s=>matchR(s,skip)).map(s=>rateLabel(s[rateKey])))];
+    return labels.sort((a,b)=>{
+      if(a==='No data')return 1; if(b==='No data')return -1;
+      return parseInt(a)-parseInt(b);
+    });
+  };
   const opt=(vals,sel)=>{
     let html=['<option value="">All</option>'].concat(vals.map(v=>`<option value="${esc(v)}"${sel===v?' selected':''}>${esc(v)}</option>`)).join('');
     if(sel&&!vals.includes(sel))html+=`<option value="${esc(sel)}" selected>${esc(sel)}</option>`;
@@ -2631,7 +2647,8 @@ function renderRisk(){
     <th><select onchange="setRiskCol('tutor',this.value)">${opt(uniqR('tutor','tutor'),riskCol.tutor)}</select></th>
     <th><select onchange="setRiskCol('country',this.value)">${opt(uniqR('country','country'),riskCol.country)}</select></th>
     <th><select onchange="setRiskCol('batch',this.value)">${opt(uniqR('batch','batch'),riskCol.batch)}</select></th>
-    <th></th><th></th>
+    <th><select onchange="setRiskCol('att',this.value)">${opt(uniqRate('att','att_rate'),riskCol.att)}</select></th>
+    <th><select onchange="setRiskCol('sub',this.value)">${opt(uniqRate('sub','sub_rate'),riskCol.sub)}</select></th>
     <th><select onchange="setRiskCol('risk',this.value)">${riskOpts}</select></th>
     <th></th>
   </tr>`;
