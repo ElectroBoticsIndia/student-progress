@@ -126,6 +126,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-card.locked:hover{transform:none;box-shadow:none}
 .roadmap.editor-mode .level-card.locked{opacity:.8;cursor:pointer}
 .roadmap.editor-mode .level-card.locked:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+/* Not-applicable level (visible only to admins/tutors): greyed but still usable */
+.level-card.na-level,
+.roadmap.editor-mode .level-card.na-level,
+.roadmap.editor-mode .level-card.locked.na-level{opacity:.68;border-color:var(--border) !important;box-shadow:none !important;background:var(--surface-alt);cursor:pointer}
+.level-card.na-level:hover,
+.roadmap.editor-mode .level-card.na-level:hover{opacity:.85}
+.level-card.na-level .level-name{color:var(--text-dim)}
+.level-card.na-level .level-desc{color:var(--text-light)}
 .level-top{display:flex;align-items:center;gap:16px;padding:18px 22px}
 .level-num{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:16px;font-weight:700;flex-shrink:0;color:#fff}
 .level-card.completed .level-num{background:var(--green)}
@@ -1112,7 +1120,6 @@ async function selectStudent(id,origin){
     const d=await loadStudentData(id);
     allProgress=d.progress;allProjects=d.projects;allCertificates=d.certificates;
     buildRoadmap();
-    scrollToCurrentLevel();
   }catch(e){
     console.error('loadStudentData error:',e);
     document.getElementById('roadmap').innerHTML='<div class="roadmap-error">Could not load progress right now. Please check your connection and try again.</div>';
@@ -1496,15 +1503,6 @@ function topicsForLevel(sid,levelName){
   return list;
 }
 
-// Scroll the roadmap to the student's current ("in progress") level card,
-// leaving it collapsed. Used on initial open of a student.
-function scrollToCurrentLevel(){
-  requestAnimationFrame(()=>{
-    const card=document.querySelector('.level-card.current');
-    if(card)card.scrollIntoView({behavior:'smooth',block:'center'});
-  });
-}
-
 function buildRoadmap(){
   const roadmap=document.getElementById('roadmap'),sid=currentStudent.ID;
   const curLvl=currentStudent['Current Level']||'';
@@ -1539,10 +1537,13 @@ function buildRoadmap(){
     const total=topics.length;
     const pct=total>0?Math.round((done/total)*100):((status==='completed'&&hasAnyProgress)?100:0);
 
-    // Tally for overall summary
-    visibleLevels++;
-    if(status==='completed'&&hasAnyProgress)completedLevels++;
-    totalPctSum+=(status==='completed'&&hasAnyProgress?100:pct);
+    // Tally for overall summary — a not-applicable level is excluded entirely,
+    // so it neither counts toward the level total nor drags the % complete down.
+    if(!isNALevel){
+      visibleLevels++;
+      if(status==='completed'&&hasAnyProgress)completedLevels++;
+      totalPctSum+=(status==='completed'&&hasAnyProgress?100:pct);
+    }
 
     const projects=allProjects.filter(p=>p['Student ID']===sid&&normLevel(p['Level Name'])===normLevel(level.name));
     const cert=allCertificates.find(c=>c['Student ID']===sid&&normLevel(c['Level Name'])===normLevel(level.name));
@@ -1552,13 +1553,14 @@ function buildRoadmap(){
     const hasTemplate=level.certTemplate&&(status==='completed'||certUrl||completionDate);
     // Status-based colour (replaces per-level brand colours for cleaner readability):
     // completed = green, in-progress = amber, upcoming/locked = neutral grey.
-    const statusColor=status==='completed'?'#8ab600':status==='current'?'#eab43a':'#9aa7a3';
+    // A not-applicable level is always neutral grey, whatever its position.
+    const statusColor=isNALevel?'#9aa7a3':(status==='completed'?'#8ab600':status==='current'?'#eab43a':'#9aa7a3');
     // Certificate eligibility: all topics in this level must be completed.
     const allTopicsDone=total>0&&done===total;
     const canShare=status==='completed'&&(hasTemplate||certUrl);
 
     return `
-      <div class="level-card ${status}" data-level-idx="${i}">
+      <div class="level-card ${status}${isNALevel?' na-level':''}" data-level-idx="${i}">
         <div class="level-top">
           <div class="level-num" style="background:${statusColor}">L${level.num}</div>
           <div class="level-info">
