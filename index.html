@@ -241,6 +241,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .project-link.link-edit:hover{background:var(--accent);color:#fff}
 .pf-save{background:var(--accent);color:#fff;border-color:var(--accent)}
 .photo-preview{margin-top:10px}
+.col-search-row th{padding:4px 8px 8px;background:var(--surface);position:sticky}
+.col-search{width:100%;min-width:70px;font-family:var(--font-mono);font-size:11px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);outline:none;box-sizing:border-box}
+.col-search:focus{border-color:var(--accent)}
+.col-search::placeholder{color:var(--text-light)}
 .photo-preview img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
 .photo-preview-err{font-family:var(--font-mono);font-size:11px;color:var(--bad,#d76241)}
 .pf-save:hover{background:var(--accent-dark)}
@@ -689,7 +693,18 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <button class="filter-clear" onclick="clearFilters()">Clear</button>
       </div>
       <div class="table-wrap"><table class="data-table" id="studentTable">
-        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th><th>Joined</th><th></th></tr>
+        <tr class="col-search-row">
+          <th><input type="text" class="col-search" data-col="ID" oninput="applyFilters()" placeholder="Search"></th>
+          <th><input type="text" class="col-search" data-col="Name" oninput="applyFilters()" placeholder="Search"></th>
+          <th><input type="text" class="col-search" data-col="Current Level" oninput="applyFilters()" placeholder="Search"></th>
+          <th><input type="text" class="col-search" data-col="Tutor" oninput="applyFilters()" placeholder="Search"></th>
+          <th><input type="text" class="col-search" data-col="Country" oninput="applyFilters()" placeholder="Search"></th>
+          <th><input type="text" class="col-search" data-col="Batch" oninput="applyFilters()" placeholder="Search"></th>
+          <th><input type="text" class="col-search" data-col="Status" oninput="applyFilters()" placeholder="Search"></th>
+          <th><input type="text" class="col-search" data-col="Join Date" oninput="applyFilters()" placeholder="Search"></th>
+          <th></th>
+        </tr></thead>
         <tbody id="tableBody"></tbody>
       </table></div>
     </div>
@@ -2552,6 +2567,14 @@ function applyFilters(){
     if(batch && (s.Batch||'')!==batch)return false;
     if(status && (s.Status||'Active').toLowerCase()!==status.toLowerCase())return false;
     return true;
+  });
+
+  // Per-column header searches (partial, case-insensitive) — combine with the dropdowns.
+  document.querySelectorAll('.col-search').forEach(inp=>{
+    const q=inp.value.trim().toLowerCase();
+    if(!q)return;
+    const col=inp.getAttribute('data-col');
+    filteredStudents=filteredStudents.filter(s=>String(s[col]||'').toLowerCase().includes(q));
   });
 
   renderTable();
