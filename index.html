@@ -26,7 +26,6 @@
   --shadow:0 2px 16px rgba(0,143,160,0.08);
   --shadow-lg:0 8px 32px rgba(0,143,160,0.12);
 }
-  
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh}
 
@@ -241,6 +240,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .project-link.link-edit{cursor:pointer;color:var(--accent-dark);background:var(--accent-light)}
 .project-link.link-edit:hover{background:var(--accent);color:#fff}
 .pf-save{background:var(--accent);color:#fff;border-color:var(--accent)}
+.photo-preview{margin-top:10px}
+.photo-preview img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+.photo-preview-err{font-family:var(--font-mono);font-size:11px;color:var(--bad,#d76241)}
 .pf-save:hover{background:var(--accent-dark)}
 .lvl-btn-edit{background:var(--accent-light);color:var(--accent-dark);flex:none;min-width:0}
 .lvl-btn-savep{background:var(--accent);color:#fff;flex:none;min-width:0}
@@ -779,7 +781,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
       <div class="form-row">
         <label>Photo URL</label>
-        <input type="text" id="f_Photo" placeholder="https://… (optional)">
+        <input type="text" id="f_Photo" placeholder="Paste a Google Drive share link or image URL (optional)" oninput="updatePhotoPreview()">
+        <div id="photoPreview" class="photo-preview" style="display:none;"></div>
       </div>
     </div>
     <div class="modal-msg" id="studentModalMsg"></div>
@@ -1374,6 +1377,9 @@ function showDashboard(loading){
   document.getElementById('adminBtn').classList.remove('active');
   setAdminBtnLabel(false);
   document.getElementById('dashboard').classList.add('active');
+  // Start at the top so the progress summary is shown first, regardless of
+  // where the page was scrolled (e.g. deep in the admin student table).
+  window.scrollTo(0,0);
   const s=currentStudent;
   const avatar=document.getElementById('studentAvatar');
   if(s.Photo)avatar.innerHTML=`<img src="${s.Photo}" alt="${s.Name}" onerror="this.parentElement.textContent='${s.Name.charAt(0)}'">`;
@@ -1402,6 +1408,28 @@ function showDashboard(loading){
 // Resolve a project's video into an inline embed + a "watch" link.
 // Accepts the new "Video Link" column (YouTube or Google Drive URL) and falls
 // back to the legacy "YouTube Video ID" column. Returns {embed, watchUrl} or null.
+// Convert a Google Drive link (any common share form) into the direct-image
+// URL the app can render: https://lh3.googleusercontent.com/d/FILE_ID
+// Non-Drive URLs and already-converted lh3 links are returned unchanged.
+function driveToImageUrl(url){
+  const v=String(url||'').trim();
+  if(!v)return '';
+  if(/lh3\.googleusercontent\.com/.test(v))return v; // already converted
+  if(!/drive\.google\.com|docs\.google\.com/.test(v))return v; // not a Drive link
+  const m=v.match(/\/d\/([a-zA-Z0-9_-]+)/)||v.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return m?('https://lh3.googleusercontent.com/d/'+m[1]):v;
+}
+
+// Live preview of the photo in the Add/Edit form (uses the converted URL).
+function updatePhotoPreview(){
+  const raw=document.getElementById('f_Photo').value;
+  const box=document.getElementById('photoPreview');
+  const url=driveToImageUrl(raw);
+  if(!url){box.style.display='none';box.innerHTML='';return;}
+  box.style.display='block';
+  box.innerHTML=`<img src="${esc(url)}" alt="preview" onerror="this.parentElement.innerHTML='<span class=&quot;photo-preview-err&quot;>Preview unavailable — check the link is shared \\'Anyone with the link\\'</span>';">`;
+}
+
 function videoEmbed(p){
   const link=String(p['Video Link']||'').trim();
   const ytId=String(p['YouTube Video ID']||'').trim();
@@ -1966,7 +1994,7 @@ function generateCertificate(templateUrl, studentName, completionDate, levelName
     const certId = 'EB-' + sid + '-L' + lvlNum + '-' + certYear;
 
     const rightX = canvas.width * 0.92 + 108;    // right margin anchor (+108px right)
-    const idY    = canvas.height * 0.085 - 56;    // ID now sits where the label was
+    const idY    = canvas.height * 0.085 - 60;    // ID now sits where the label was
     const idSize    = Math.round(dateFontSize / 2); // half the date font size
     ctx.textAlign = 'right';
     ctx.fillStyle = '#0a373a';
@@ -2885,6 +2913,7 @@ function openStudentForm(id){
     idInput.disabled=false;
   }
   document.getElementById('studentModal').classList.add('open');
+  updatePhotoPreview(); // show existing/empty photo preview
 }
 
 function closeStudentForm(){document.getElementById('studentModal').classList.remove('open');editingStudentId=null;}
@@ -2893,6 +2922,9 @@ async function saveStudent(){
   const msg=document.getElementById('studentModalMsg');
   const btn=document.getElementById('studentSaveBtn');
   const rec={};Object.entries(STUDENT_FIELDS).forEach(([fid,col])=>{rec[col]=document.getElementById(fid).value.trim();});
+  // Normalise a Google Drive share link into the direct-image lh3 URL the app
+  // renders. Already-converted links and non-Drive URLs pass through unchanged.
+  rec.Photo=driveToImageUrl(rec.Photo);
 
   // Clear previous highlights, then validate all required fields
   Object.keys(REQUIRED_FIELDS).forEach(f=>{const el=document.getElementById(f);el.classList.remove('invalid');const c=el.closest('.combo');if(c)c.classList.remove('invalid');});
