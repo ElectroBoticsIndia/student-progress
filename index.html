@@ -885,12 +885,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <button class="modal-close" onclick="closeWaModal()" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body">
-      <p class="wa-subtitle">Edit the message if needed, then send or copy.</p>
+      <p class="wa-subtitle">Edit the message if needed, then send.</p>
       <textarea id="waMsgInput" class="share-msg-input" rows="11" placeholder="Message…"></textarea>
       <div class="wa-actions">
         <button class="wa-btn wa-cancel" onclick="closeWaModal()">Cancel</button>
-        <button class="wa-btn wa-copy" id="waCopyBtn" onclick="copyWaModal()">Copy</button>
-        <button class="wa-btn wa-send" onclick="sendWaModal()">Send via WhatsApp</button>
+        <button class="wa-btn wa-send" onclick="sendWaModal()">Send</button>
       </div>
     </div>
   </div>
@@ -1507,11 +1506,9 @@ function shareProjectWhatsApp(url,studentName,projectName,description,levelName)
   lines.push('');
   lines.push(`${name} just built something amazing at *ElectroBotics*`);
   lines.push('');
-  lines.push(''); // extra gap before the project title
   if(projectName)lines.push(`*${projectName}*`);
   if(description)lines.push(description);
   lines.push('');
-  lines.push(''); // extra gap before the watch-demo line
   lines.push(`*Watch the demo:*`);
   lines.push(url);
   // Show the editable review popup instead of opening WhatsApp directly, so the
