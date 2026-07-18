@@ -244,6 +244,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .project-link.link-download{cursor:pointer;color:var(--text-dim);background:var(--surface-alt)}
 .project-link.link-download:hover{background:var(--text-dim);color:#fff}
 .pf-save{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pf-delete{background:#fff;color:var(--red,#d76241);border-color:var(--red,#d76241)}
+.pf-delete:hover{background:var(--red,#d76241);color:#fff}
+.pf-delete:disabled{opacity:.6;cursor:wait}
 .photo-preview{margin-top:10px}
 .col-search-row th{padding:4px 8px 8px;background:var(--surface);position:sticky}
 .col-search{width:100%;min-width:70px;font-family:var(--font-mono);font-size:11px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);outline:none;box-sizing:border-box}
@@ -860,6 +863,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <input type="text" id="pf_Code" placeholder="https://… (optional)">
       </div>
       <div class="wa-actions">
+        <button class="wa-btn pf-delete" id="pf_DeleteBtn" onclick="deleteProjectForm()" style="display:none;">Delete</button>
+        <span style="flex:1;"></span>
         <button class="wa-btn wa-cancel" onclick="closeProjectForm()">Cancel</button>
         <button class="wa-btn pf-save" id="pf_SaveBtn" onclick="saveProjectForm()">Save Project</button>
       </div>
@@ -1806,6 +1811,8 @@ function openProjectForm(level,projectName){
   document.getElementById('pf_Desc').value=p.Description||'';
   document.getElementById('pf_Video').value=p['Video Link']||'';
   document.getElementById('pf_Code').value=p['Code Link']||'';
+  // Delete is only available when editing an existing project
+  document.getElementById('pf_DeleteBtn').style.display=projectName?'':'none';
   document.getElementById('projectModal').classList.add('open');
 }
 function closeProjectForm(){document.getElementById('projectModal').classList.remove('open');projectEditCtx=null;}
@@ -1853,6 +1860,44 @@ async function saveProjectForm(){
     console.error('saveProject error:',e);
     msg.textContent='Could not save. '+e.message;msg.className='topics-save-msg err';
   }finally{btn.disabled=false;}
+}
+
+// Delete the project currently open in the Edit form (with confirmation).
+async function deleteProjectForm(){
+  if(!projectEditCtx||!projectEditCtx.origName)return;
+  const sid=currentStudent.ID;
+  const name=projectEditCtx.origName;
+  if(!confirm('Delete the project "'+name+'"?\n\nThis removes it permanently and cannot be undone.'))return;
+  const msg=document.getElementById('pf_Msg');
+  const delBtn=document.getElementById('pf_DeleteBtn');
+  msg.innerHTML='<span class="risk-spinner"></span>Deleting…';msg.className='topics-save-msg saving';
+  delBtn.disabled=true;
+  if(!SHEET_WEBAPP_URL){msg.textContent='Delete endpoint not configured.';msg.className='topics-save-msg err';delBtn.disabled=false;return;}
+  try{
+    const res=await fetch(SHEET_WEBAPP_URL,{
+      method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'deleteProject',studentId:sid,level:projectEditCtx.level,name:name})
+    });
+    const data=await res.json();
+    if(!data||!data.ok)throw new Error(data&&data.error?data.error:'Delete failed');
+    // Remove from in-memory list so the view refreshes without a full reload
+    delete studentDataCache[sid];
+    allProjects=allProjects.filter(x=>!(x['Student ID']===sid&&normLevel(x['Level Name'])===normLevel(projectEditCtx.level)&&normLevel(x['Project Name'])===normLevel(name)));
+    const savedLevel=projectEditCtx.level;
+    const expandedIdx=[...document.querySelectorAll('.level-card.expanded')].map(c=>c.getAttribute('data-level-idx'));
+    closeProjectForm();
+    buildRoadmap();
+    requestAnimationFrame(()=>{
+      expandedIdx.forEach(idx=>{const c=document.querySelector(`.level-card[data-level-idx="${idx}"]`);if(c)c.classList.add('expanded');});
+      const lvlIdx=allLevels.findIndex(l=>normLevel(l.name)===normLevel(savedLevel));
+      const card=document.querySelector(`.level-card[data-level-idx="${lvlIdx}"]`);
+      if(card){card.classList.add('expanded');card.scrollIntoView({behavior:'smooth',block:'center'});}
+    });
+  }catch(e){
+    console.error('deleteProject error:',e);
+    msg.textContent='Could not delete. '+e.message;msg.className='topics-save-msg err';
+    delBtn.disabled=false;
+  }
 }
 
 // Shown when the certificate is requested before all topics are completed.
