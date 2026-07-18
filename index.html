@@ -1812,7 +1812,10 @@ function openProjectForm(level,projectName){
   document.getElementById('pf_Video').value=p['Video Link']||'';
   document.getElementById('pf_Code').value=p['Code Link']||'';
   // Delete is only available when editing an existing project
-  document.getElementById('pf_DeleteBtn').style.display=projectName?'':'none';
+  const delBtn=document.getElementById('pf_DeleteBtn');
+  delBtn.style.display=projectName?'':'none';
+  delBtn.disabled=false; // always reset — it may have been left disabled by a prior delete
+  document.getElementById('pf_SaveBtn').disabled=false;
   document.getElementById('projectModal').classList.add('open');
 }
 function closeProjectForm(){document.getElementById('projectModal').classList.remove('open');projectEditCtx=null;}
