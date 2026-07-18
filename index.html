@@ -1503,18 +1503,17 @@ function videoEmbed(p){
 function shareProjectWhatsApp(url,studentName,projectName,description,levelName){
   const name=studentName?studentName:'our student';
   const lines=[];
-  lines.push(`🌟 *Look what's been built!* 🌟`);
+  lines.push(`*Look what's been built!*`);
   lines.push('');
-  lines.push(`${name} just built something amazing at *ElectroBotics* 🤖`);
+  lines.push(`${name} just built something amazing at *ElectroBotics*`);
   lines.push('');
-  if(projectName)lines.push(`*Project:* ${projectName}`);
-  if(levelName)lines.push(`*Level:* ${levelName}`);
+  lines.push(''); // extra gap before the project title
+  if(projectName)lines.push(`*${projectName}*`);
   if(description)lines.push(description);
   lines.push('');
-  lines.push(`🎬 *Watch the demo:*`);
+  lines.push(''); // extra gap before the watch-demo line
+  lines.push(`*Watch the demo:*`);
   lines.push(url);
-  lines.push('');
-  lines.push(`✨ Learning robotics & coding, one project at a time!`);
   const text=lines.join('\n');
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
