@@ -1492,8 +1492,8 @@ function videoEmbed(p){
 // recipient in WhatsApp. Works for any video link (Drive or YouTube).
 function shareProjectWhatsApp(url,studentName,projectName){
   const name=studentName?studentName:'our student';
-  const proj=projectName?('"'+projectName+'"'):'a project';
-  const text=`🎓 Check out ${name}'s project ${proj} at ElectroBotics!\n${url}`;
+  const proj=projectName?('*"'+projectName+'"*'):'a project'; // *...* = bold in WhatsApp
+  const text=`🎓 Check out ${name}'s project ${proj} at ElectroBotics!\n\n${url}`;
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
 
