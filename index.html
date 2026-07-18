@@ -239,6 +239,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .project-links-spacer{flex:1}
 .project-link.link-edit{cursor:pointer;color:var(--accent-dark);background:var(--accent-light)}
 .project-link.link-edit:hover{background:var(--accent);color:#fff}
+.project-link.link-wa{cursor:pointer;color:#128c4b;background:#dcf5e6}
+.project-link.link-wa:hover{background:#25d366;color:#fff}
+.project-link.link-download{cursor:pointer;color:var(--text-dim);background:var(--surface-alt)}
+.project-link.link-download:hover{background:var(--text-dim);color:#fff}
 .pf-save{background:var(--accent);color:#fff;border-color:var(--accent)}
 .photo-preview{margin-top:10px}
 .col-search-row th{padding:4px 8px 8px;background:var(--surface);position:sticky}
@@ -1458,7 +1462,8 @@ function videoEmbed(p){
       const id=dm[1];
       return {
         embed:`<iframe src="https://drive.google.com/file/d/${id}/preview" allow="autoplay" allowfullscreen loading="lazy"></iframe>`,
-        watchUrl:`https://drive.google.com/file/d/${id}/view`
+        watchUrl:`https://drive.google.com/file/d/${id}/view`,
+        driveId:id
       };
     }
     // YouTube: various URL forms
@@ -1481,6 +1486,15 @@ function videoEmbed(p){
     };
   }
   return null;
+}
+
+// Share a project video on WhatsApp with a friendly caption. The user picks the
+// recipient in WhatsApp. Works for any video link (Drive or YouTube).
+function shareProjectWhatsApp(url,studentName,projectName){
+  const name=studentName?studentName:'our student';
+  const proj=projectName?('"'+projectName+'"'):'a project';
+  const text=`🎓 Check out ${name}'s project ${proj} at ElectroBotics!\n${url}`;
+  window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
 
 function normLevel(name){
@@ -1666,7 +1680,10 @@ function buildRoadmap(){
             const thumb=v&&v.embed?v.embed:'<div class="project-thumb-placeholder">No video</div>';
             const videoLink=v&&v.watchUrl?`<a href="${esc(v.watchUrl)}" target="_blank" class="project-link link-video">▶ Video</a>`:'';
             const editBit=canEditProgress()?`<a class="project-link link-edit" onclick="event.stopPropagation();openProjectForm('${esc(level.name)}','${esc(p['Project Name'])}')">✎ Edit</a>`:'';
-            return `<div class="project-card"><div class="project-thumb">${thumb}</div><div class="project-body"><div class="project-name">${esc(p['Project Name'])}</div><div class="project-desc">${esc(p.Description||'')}</div><div class="project-links">${videoLink} ${cl?`<a href="${esc(cl)}" target="_blank" class="project-link link-code">⟨/⟩ Code</a>`:''}<span class="project-links-spacer"></span>${editBit}</div></div></div>`;
+            // Share on WhatsApp (any video link) + Download (Drive videos only, for Instagram etc.)
+            const waShare=v&&v.watchUrl?`<a class="project-link link-wa" onclick="event.stopPropagation();shareProjectWhatsApp('${esc(v.watchUrl)}','${esc(currentStudent.Name||'')}','${esc(p['Project Name']||'')}')">Share</a>`:'';
+            const dlBit=(v&&v.driveId)?`<a href="https://drive.google.com/uc?export=download&id=${esc(v.driveId)}" class="project-link link-download" onclick="event.stopPropagation()" title="Download the video file (e.g. to post on Instagram)">⬇ Download</a>`:'';
+            return `<div class="project-card"><div class="project-thumb">${thumb}</div><div class="project-body"><div class="project-name">${esc(p['Project Name'])}</div><div class="project-desc">${esc(p.Description||'')}</div><div class="project-links">${videoLink} ${cl?`<a href="${esc(cl)}" target="_blank" class="project-link link-code">⟨/⟩ Code</a>`:''} ${waShare} ${dlBit}<span class="project-links-spacer"></span>${editBit}</div></div></div>`;
           }).join('')}</div>`:(canEditProgress()?'':((status==='completed'||status==='current')?'<div class="no-projects">No projects uploaded yet.</div>':''))}
         </div>
       </div>`;
