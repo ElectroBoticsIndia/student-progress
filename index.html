@@ -1514,8 +1514,9 @@ function shareProjectWhatsApp(url,studentName,projectName,description,levelName)
   lines.push(''); // extra gap before the watch-demo line
   lines.push(`*Watch the demo:*`);
   lines.push(url);
-  const text=lines.join('\n');
-  window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  // Show the editable review popup instead of opening WhatsApp directly, so the
+  // parent can tweak the message before sending.
+  openWaModal(projectName||'Project',lines.join('\n'));
 }
 
 function normLevel(name){
