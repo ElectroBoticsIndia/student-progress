@@ -390,6 +390,12 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-table th{text-align:left;font-family:var(--font-mono);font-size:11px;color:var(--text-light);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
 .pay-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
 .pay-sid{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.pay-ref-input{width:100%;min-width:110px;font-family:var(--font-mono);font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);outline:none;box-sizing:border-box;transition:border-color .2s,background .2s}
+.pay-ref-input:focus{border-color:var(--accent)}
+.pay-ref-input::placeholder{color:var(--text-light)}
+.pay-ref-input.saving{opacity:.6}
+.pay-ref-input.saved{border-color:var(--good,#8ab600);background:var(--green-bg,#eef6d8)}
+.pay-ref-input.error{border-color:var(--bad,#d76241);background:#fdeae5}
 .pay-detail{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:3px}
 .pay-act{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 11px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;transition:all .2s;white-space:nowrap}
 .pay-act-paid{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -2593,6 +2599,25 @@ let payStatusFilter='pending'; // clickable status chip: '' (all) | pending | pa
 
 function setPayStatus(key){payStatusFilter=key;buildPayments();}
 
+// Save a student's Payment Ref (per-student, persistent) to the Students sheet on blur.
+async function savePaymentRef(sid,inp){
+  const s=allStudents.find(x=>x.ID===sid);if(!s)return;
+  const val=inp.value.trim();
+  const prev=String(s['Payment Ref']||'');
+  if(val===prev)return; // nothing changed
+  inp.classList.remove('saved','error');inp.classList.add('saving');inp.disabled=true;
+  const ok=await postPayment({action:'updateStudentField',id:sid,field:'Payment Ref',value:val});
+  inp.disabled=false;inp.classList.remove('saving');
+  if(ok){
+    s['Payment Ref']=val; // update in-memory so it persists across re-renders
+    inp.classList.add('saved');setTimeout(()=>inp.classList.remove('saved'),1200);
+  }else{
+    inp.classList.add('error');
+    inp.value=prev; // revert on failure
+    setTimeout(()=>inp.classList.remove('error'),2000);
+  }
+}
+
 function initPayments(){
   const now=new Date();
   const mSel=document.getElementById('payMonth'), ySel=document.getElementById('payYear');
@@ -2680,7 +2705,7 @@ function buildPayments(){
   if(rows.length===0){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
 
   list.innerHTML=`<table class="pay-table"><thead><tr>
-    <th>Student</th><th>Tutor</th><th>Batch</th><th>Fee</th><th>Status</th><th>Action</th>
+    <th>Student</th><th>Tutor</th><th>Batch</th><th>Fee</th><th>Payment Ref</th><th>Status</th><th>Action</th>
     </tr></thead><tbody>${rows.map(({s,rec,st})=>{
       const fee=s['Monthly Fee']||'';
       const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
@@ -2697,6 +2722,7 @@ function buildPayments(){
         <td>${esc(s.Tutor||'—')}</td>
         <td>${esc(s.Batch||'—')}</td>
         <td>${fee?('₹'+esc(String(fee))):'—'}</td>
+        <td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" data-sid="${esc(s.ID)}" onblur="savePaymentRef('${esc(s.ID)}',this)"></td>
         <td>${badge}${detail}</td>
         <td>${action}</td>
       </tr>`;
