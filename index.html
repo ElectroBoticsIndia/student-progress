@@ -406,6 +406,8 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-filters select:focus{border-color:var(--accent)}
 .pay-act-wa{color:#128c4b;border-color:#cde8d8;display:inline-flex;align-items:center;justify-content:center;padding:6px 9px}
 .pay-act-wa:hover{background:#25d366;color:#fff;border-color:#25d366}
+.pay-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pay-actions-sub{display:inline-flex;align-items:center;gap:6px}
 #waMsgInput{width:100%;font-family:var(--font-mono);font-size:13px;line-height:1.6;padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);outline:none;resize:vertical;box-sizing:border-box}
 #waMsgInput:focus{border-color:var(--accent)}
 .wa-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
@@ -512,6 +514,12 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .app{padding:16px 12px 40px}
   .wa-actions{gap:10px}
   .wa-actions .wa-btn{flex:1 1 0;min-width:0}
+  /* Payments action cell: Add payment on top, Ignore + WhatsApp in a right-aligned
+     row below, with a gap between them and the same right edge. */
+  .pay-actions{flex-direction:column;align-items:stretch;gap:10px}
+  .pay-actions .pay-act-paid{width:100%}
+  .pay-actions-sub{justify-content:flex-end;align-items:stretch}
+  .pay-actions-sub .pay-act-ignore{flex:1}
   .login-card{padding:28px 20px}
   .student-header{flex-direction:column;text-align:center;gap:12px;position:relative;padding-top:56px}
   .student-header .btn-logout{position:absolute;top:14px;right:14px;padding:7px 14px;font-size:12px}
@@ -2680,7 +2688,7 @@ function buildPayments(){
       let action='';
       if(st==='pending'){
         const wa=(s.Contact)?`<button class="pay-act pay-act-wa" title="Send WhatsApp reminder" onclick="payWhatsApp('${esc(s.ID)}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg></button>`:'';
-        action=`<button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button> <button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}')">Ignore</button> ${wa}`;
+        action=`<div class="pay-actions"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}')">Ignore</button> ${wa}</div></div>`;
       }else{
         action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${esc(s.ID)}')">Undo</button>`;
       }
