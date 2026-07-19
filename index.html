@@ -370,6 +370,31 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .wa-send-btn{background:#25d366 !important;color:#fff !important;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .wa-send-btn:hover{filter:brightness(.93)}
 .wa-subtitle{font-family:var(--font-body);font-size:13px;color:var(--text-dim);margin:0 0 12px}
+.pay-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.pay-controls{display:flex;gap:8px}
+.pay-controls select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
+.pay-controls select:focus{border-color:var(--accent)}
+.pay-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.pay-total{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
+.pay-badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
+.pay-badge.paid{background:var(--green-bg,#eef6d8);color:#5a7a00}
+.pay-badge.pending{background:var(--amber-bg,#fdf1d6);color:#9a7200}
+.pay-badge.ignore{background:var(--surface-alt);color:var(--text-dim)}
+.pay-table{width:100%;border-collapse:collapse;font-size:13px}
+.pay-table th{text-align:left;font-family:var(--font-mono);font-size:11px;color:var(--text-light);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.pay-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.pay-sid{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.pay-detail{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:3px}
+.pay-act{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 11px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;transition:all .2s;white-space:nowrap}
+.pay-act-paid{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pay-act-paid:hover{background:var(--accent-dark)}
+.pay-act-ignore{color:var(--text-dim)}
+.pay-act-ignore:hover{border-color:var(--text-light);color:var(--text)}
+.pay-act-undo{color:var(--bad,#d76241)}
+.pay-act-undo:hover{background:var(--bad,#d76241);color:#fff;border-color:var(--bad,#d76241)}
+.pay-loading,.pay-empty{padding:28px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
+.pay-loading .risk-spinner{margin-right:8px}
+.pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
 #waMsgInput{width:100%;font-family:var(--font-mono);font-size:13px;line-height:1.6;padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);outline:none;resize:vertical;box-sizing:border-box}
 #waMsgInput:focus{border-color:var(--accent)}
 .wa-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
@@ -670,6 +695,17 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div id="availabilityLegend" class="avail-legend"></div>
       <div class="avail-scroll"><div id="availabilityGrid"></div></div>
     </div>
+    <div class="chart-card" id="paymentsCard" style="margin-bottom:28px;">
+      <div class="pay-head">
+        <div class="chart-title" style="margin-bottom:0;">Fee Payments</div>
+        <div class="pay-controls">
+          <select id="payMonth" onchange="buildPayments()"></select>
+          <select id="payYear" onchange="loadPayments()"></select>
+        </div>
+      </div>
+      <div class="pay-summary" id="paySummary"></div>
+      <div class="avail-scroll"><div id="paymentsList"></div></div>
+    </div>
     <div class="table-card">
       <div class="table-header">
         <div class="table-title">All Students <span id="tableCount" style="color:var(--accent);"></span></div>
@@ -842,6 +878,39 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <button class="share-btn share-img" onclick="shareTo('download')"><span class="share-ico">⬇</span>Download</button>
       </div>
       <p class="share-note">Edit the message above if you like. On a phone, “Share via apps” sends the certificate image with your message to WhatsApp, Instagram, LinkedIn, etc. On a computer, use “Download” then attach it to your post.</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="paymentModal">
+  <div class="modal-card" style="max-width:420px;">
+    <div class="modal-head">
+      <h3 id="paymentModalTitle">Add Payment</h3>
+      <button class="modal-close" onclick="closePaymentForm()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="pay-modal-sub" id="paymentModalSub"></div>
+      <div class="form-row">
+        <label>Amount</label>
+        <input type="text" id="pay_Amount" placeholder="e.g. 2000">
+      </div>
+      <div class="form-row">
+        <label>Paid Date</label>
+        <input type="date" id="pay_Date">
+      </div>
+      <div class="form-row">
+        <label>Method</label>
+        <input type="text" id="pay_Method" placeholder="UPI / Cash / Bank (optional)">
+      </div>
+      <div class="form-row">
+        <label>Note</label>
+        <input type="text" id="pay_Note" placeholder="Optional">
+      </div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closePaymentForm()">Cancel</button>
+        <button class="wa-btn pf-save" id="pay_SaveBtn" onclick="savePaymentForm()">Mark Paid</button>
+      </div>
+      <p class="topics-save-msg" id="pay_Msg" style="text-align:right;margin-top:8px;"></p>
     </div>
   </div>
 </div>
@@ -2344,6 +2413,7 @@ function buildCharts(){
 
   buildEnrollmentChart();
   buildAvailabilityGrid();
+  initPayments();
 }
 
 // ─── Enrollment Trend (quarterly / yearly / monthly) ──────────────────
@@ -2481,6 +2551,140 @@ function buildEnrollmentChart(){
   // Scroll to the right so the most recent period is visible on load
   const scroller=document.querySelector('.enroll-scroll');
   if(scroller){requestAnimationFrame(()=>{scroller.scrollLeft=scroller.scrollWidth;});}
+}
+
+// ─── Fee Payments (Stage 1: single-month view) ───────────────────────
+const PAY_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+let paymentsData=[];      // payment records for the selected year
+let payCurrentCtx=null;   // {studentId, year, month} for the modal
+
+function initPayments(){
+  const now=new Date();
+  const mSel=document.getElementById('payMonth'), ySel=document.getElementById('payYear');
+  if(!mSel||!ySel)return;
+  mSel.innerHTML=PAY_MONTHS.map((m,i)=>`<option value="${i+1}"${i===now.getMonth()?' selected':''}>${m}</option>`).join('');
+  // Year options: a few years around now
+  const yNow=now.getFullYear();const years=[];for(let y=yNow-3;y<=yNow+1;y++)years.push(y);
+  ySel.innerHTML=years.map(y=>`<option value="${y}"${y===yNow?' selected':''}>${y}</option>`).join('');
+  loadPayments();
+}
+
+async function loadPayments(){
+  const year=document.getElementById('payYear').value;
+  const list=document.getElementById('paymentsList');
+  list.innerHTML='<div class="pay-loading"><span class="risk-spinner"></span>Loading payments…</div>';
+  try{
+    if(SHEET_WEBAPP_URL){
+      const res=await fetch(SHEET_WEBAPP_URL+'?action=getPayments&year='+encodeURIComponent(year));
+      const data=await res.json();
+      paymentsData=(data&&data.ok&&Array.isArray(data.payments))?data.payments:[];
+    }else{paymentsData=[];}
+  }catch(e){console.warn('getPayments failed:',e);paymentsData=[];}
+  buildPayments();
+}
+
+// Find a payment record for a student+year+month (or null → Pending)
+function payRecord(sid,year,month){
+  return paymentsData.find(p=>String(p['Student ID']).trim()===String(sid).trim()
+    && String(p.Year).trim()===String(year).trim()
+    && String(p.Month).trim()===String(month).trim())||null;
+}
+
+function buildPayments(){
+  const list=document.getElementById('paymentsList');
+  const summary=document.getElementById('paySummary');
+  const year=document.getElementById('payYear').value;
+  const month=document.getElementById('payMonth').value;
+  // Active students only, in a stable order
+  const students=allStudents.filter(s=>(s.Status||'Active').toLowerCase()==='active');
+  let paid=0,ignore=0,pending=0;
+  const rows=students.map(s=>{
+    const rec=payRecord(s.ID,year,month);
+    const st=rec?String(rec.Status||'').toLowerCase():'pending';
+    if(st==='paid')paid++;else if(st==='ignore')ignore++;else pending++;
+    return {s,rec,st};
+  });
+
+  summary.innerHTML=`<span class="pay-badge paid">Paid ${paid}</span> <span class="pay-badge pending">Pending ${pending}</span> <span class="pay-badge ignore">Ignore ${ignore}</span> <span class="pay-total">${students.length} active students</span>`;
+
+  if(students.length===0){list.innerHTML='<div class="pay-empty">No active students.</div>';return;}
+
+  list.innerHTML=`<table class="pay-table"><thead><tr>
+    <th>Student</th><th>Tutor</th><th>Batch</th><th>Fee</th><th>Status</th><th>Action</th>
+    </tr></thead><tbody>${rows.map(({s,rec,st})=>{
+      const fee=s['Monthly Fee']||'';
+      const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
+      const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?('₹'+esc(String(rec.Amount))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
+      let action='';
+      if(st==='pending'){
+        action=`<button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button> <button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}')">Ignore</button>`;
+      }else{
+        action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${esc(s.ID)}')">Undo</button>`;
+      }
+      return `<tr>
+        <td><strong>${esc(s.Name)}</strong><br><span class="pay-sid">${esc(s.ID)}</span></td>
+        <td>${esc(s.Tutor||'—')}</td>
+        <td>${esc(s.Batch||'—')}</td>
+        <td>${fee?('₹'+esc(String(fee))):'—'}</td>
+        <td>${badge}${detail}</td>
+        <td>${action}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function openPaymentForm(sid,name,fee){
+  const year=document.getElementById('payYear').value;
+  const month=document.getElementById('payMonth').value;
+  payCurrentCtx={studentId:sid,year:year,month:month};
+  document.getElementById('paymentModalTitle').textContent='Add Payment';
+  document.getElementById('paymentModalSub').textContent=`${name} · ${PAY_MONTHS[month-1]} ${year}`;
+  document.getElementById('pay_Amount').value=fee||'';
+  const today=new Date();
+  document.getElementById('pay_Date').value=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  document.getElementById('pay_Method').value='';
+  document.getElementById('pay_Note').value='';
+  document.getElementById('pay_Msg').textContent='';
+  document.getElementById('pay_SaveBtn').disabled=false;
+  document.getElementById('paymentModal').classList.add('open');
+}
+function closePaymentForm(){document.getElementById('paymentModal').classList.remove('open');payCurrentCtx=null;}
+
+async function savePaymentForm(){
+  if(!payCurrentCtx)return;
+  const msg=document.getElementById('pay_Msg');
+  const btn=document.getElementById('pay_SaveBtn');
+  btn.disabled=true;msg.innerHTML='<span class="risk-spinner"></span>Saving…';msg.className='topics-save-msg saving';
+  const body={
+    action:'savePayment',studentId:payCurrentCtx.studentId,year:payCurrentCtx.year,month:payCurrentCtx.month,
+    status:'Paid',amount:document.getElementById('pay_Amount').value.trim(),
+    paidDate:document.getElementById('pay_Date').value,method:document.getElementById('pay_Method').value.trim(),
+    note:document.getElementById('pay_Note').value.trim(),markedBy:(studentUser&&studentUser.email)||''
+  };
+  const ok=await postPayment(body);
+  if(ok){closePaymentForm();await loadPayments();}
+  else{msg.textContent='Could not save. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;}
+}
+
+async function markPaymentIgnore(sid){
+  const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
+  const ok=await postPayment({action:'savePayment',studentId:sid,year:year,month:month,status:'Ignore',markedBy:(studentUser&&studentUser.email)||''});
+  if(ok)await loadPayments();else alert('Could not update. Please try again.');
+}
+
+async function revertPayment(sid){
+  const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
+  if(!confirm('Revert this to Pending? This removes the Paid/Ignore record for this month.'))return;
+  const ok=await postPayment({action:'deletePayment',studentId:sid,year:year,month:month});
+  if(ok)await loadPayments();else alert('Could not update. Please try again.');
+}
+
+async function postPayment(body){
+  if(!SHEET_WEBAPP_URL)return false;
+  try{
+    const res=await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+    const data=await res.json();
+    return !!(data&&data.ok);
+  }catch(e){console.error('postPayment error:',e);return false;}
 }
 
 // ─── Tutor Availability Grid (days × time slots) ──────────────────────
