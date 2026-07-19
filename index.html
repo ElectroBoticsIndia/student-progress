@@ -395,6 +395,11 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-loading,.pay-empty{padding:28px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
 .pay-loading .risk-spinner{margin-right:8px}
 .pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
+.pay-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.pay-filters select{font-family:var(--font-mono);font-size:11px;padding:6px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;outline:none}
+.pay-filters select:focus{border-color:var(--accent)}
+.pay-act-wa{color:#128c4b;border-color:#cde8d8;display:inline-flex;align-items:center;justify-content:center;padding:6px 9px}
+.pay-act-wa:hover{background:#25d366;color:#fff;border-color:#25d366}
 #waMsgInput{width:100%;font-family:var(--font-mono);font-size:13px;line-height:1.6;padding:13px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);outline:none;resize:vertical;box-sizing:border-box}
 #waMsgInput:focus{border-color:var(--accent)}
 .wa-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
@@ -702,6 +707,18 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
           <select id="payMonth" onchange="buildPayments()"></select>
           <select id="payYear" onchange="loadPayments()"></select>
         </div>
+      </div>
+      <div class="pay-filters">
+        <select id="payFilterCountry" onchange="buildPayments()"></select>
+        <select id="payFilterLevel" onchange="buildPayments()"></select>
+        <select id="payFilterTutor" onchange="buildPayments()"></select>
+        <select id="payFilterBatch" onchange="buildPayments()"></select>
+        <select id="payFilterStatus" onchange="buildPayments()">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="paid">Paid</option>
+          <option value="ignore">Ignore</option>
+        </select>
       </div>
       <div class="pay-summary" id="paySummary"></div>
       <div class="avail-scroll"><div id="paymentsList"></div></div>
@@ -2413,7 +2430,14 @@ function buildCharts(){
 
   buildEnrollmentChart();
   buildAvailabilityGrid();
-  initPayments();
+  // Fee Payments is admin-only
+  const payCard=document.getElementById('paymentsCard');
+  if(userRole==='admin'){
+    if(payCard)payCard.style.display='';
+    initPayments();
+  }else{
+    if(payCard)payCard.style.display='none';
+  }
 }
 
 // ─── Enrollment Trend (quarterly / yearly / monthly) ──────────────────
@@ -2595,19 +2619,53 @@ function buildPayments(){
   const summary=document.getElementById('paySummary');
   const year=document.getElementById('payYear').value;
   const month=document.getElementById('payMonth').value;
-  // Active students only, in a stable order
-  const students=allStudents.filter(s=>(s.Status||'Active').toLowerCase()==='active');
+
+  // Active students form the base set
+  const base=allStudents.filter(s=>(s.Status||'Active').toLowerCase()==='active');
+
+  // Read current filter selections
+  const fCountry=payFilterVal('payFilterCountry'),fLevel=payFilterVal('payFilterLevel'),
+        fTutor=payFilterVal('payFilterTutor'),fBatch=payFilterVal('payFilterBatch'),
+        fStatus=payFilterVal('payFilterStatus');
+
+  // Cascading dropdown options: each reflects the OTHER active category filters
+  const catMatch=(s,skip)=>{
+    if(skip!=='country'&&fCountry&&(s.Country||'')!==fCountry)return false;
+    if(skip!=='level'&&fLevel&&(s['Current Level']||'')!==fLevel)return false;
+    if(skip!=='tutor'&&fTutor&&(s.Tutor||'')!==fTutor)return false;
+    if(skip!=='batch'&&fBatch&&(s.Batch||'')!==fBatch)return false;
+    return true;
+  };
+  const uniq=(skip,key)=>[...new Set(base.filter(s=>catMatch(s,skip)).map(s=>s[key]||'').filter(v=>v))].sort();
+  fillPaySelect('payFilterCountry','All countries',uniq('country','Country'),fCountry);
+  fillPaySelect('payFilterLevel','All levels',uniq('level','Current Level'),fLevel);
+  fillPaySelect('payFilterTutor','All tutors',uniq('tutor','Tutor'),fTutor);
+  fillPaySelect('payFilterBatch','All batches',uniq('batch','Batch'),fBatch);
+
+  // Apply the category filters to the student set
+  let students=base.filter(s=>
+    (!fCountry||(s.Country||'')===fCountry)&&
+    (!fLevel||(s['Current Level']||'')===fLevel)&&
+    (!fTutor||(s.Tutor||'')===fTutor)&&
+    (!fBatch||(s.Batch||'')===fBatch)
+  );
+
+  // Compute status per student, tally BEFORE the status filter (so counts reflect the group)
   let paid=0,ignore=0,pending=0;
-  const rows=students.map(s=>{
+  let rows=students.map(s=>{
     const rec=payRecord(s.ID,year,month);
     const st=rec?String(rec.Status||'').toLowerCase():'pending';
     if(st==='paid')paid++;else if(st==='ignore')ignore++;else pending++;
     return {s,rec,st};
   });
+  const groupTotal=rows.length;
 
-  summary.innerHTML=`<span class="pay-badge paid">Paid ${paid}</span> <span class="pay-badge pending">Pending ${pending}</span> <span class="pay-badge ignore">Ignore ${ignore}</span> <span class="pay-total">${students.length} active students</span>`;
+  // Status filter narrows which rows show
+  if(fStatus)rows=rows.filter(r=>r.st===fStatus);
 
-  if(students.length===0){list.innerHTML='<div class="pay-empty">No active students.</div>';return;}
+  summary.innerHTML=`<span class="pay-badge paid">Paid ${paid}</span> <span class="pay-badge pending">Pending ${pending}</span> <span class="pay-badge ignore">Ignore ${ignore}</span> <span class="pay-total">${groupTotal} student${groupTotal===1?'':'s'}</span>`;
+
+  if(rows.length===0){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
 
   list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Student</th><th>Tutor</th><th>Batch</th><th>Fee</th><th>Status</th><th>Action</th>
@@ -2617,7 +2675,8 @@ function buildPayments(){
       const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?('₹'+esc(String(rec.Amount))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
       let action='';
       if(st==='pending'){
-        action=`<button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button> <button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}')">Ignore</button>`;
+        const wa=(s.Contact)?`<button class="pay-act pay-act-wa" title="Send WhatsApp reminder" onclick="payWhatsApp('${esc(s.ID)}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg></button>`:'';
+        action=`<button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button> <button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}')">Ignore</button> ${wa}`;
       }else{
         action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${esc(s.ID)}')">Undo</button>`;
       }
@@ -2630,6 +2689,33 @@ function buildPayments(){
         <td>${action}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
+}
+
+function payFilterVal(id){const el=document.getElementById(id);return el?el.value:'';}
+function fillPaySelect(id,allLabel,items,current){
+  const sel=document.getElementById(id);if(!sel)return;
+  const cur=current||'';
+  sel.innerHTML=`<option value="">${allLabel}</option>`+items.map(i=>`<option value="${esc(i)}"${cur===i?' selected':''}>${esc(i)}</option>`).join('');
+  if(cur&&!items.includes(cur))sel.innerHTML+=`<option value="${esc(cur)}" selected>${esc(cur)}</option>`;
+  sel.value=cur;
+}
+
+// WhatsApp a fee reminder to a pending student's Contact number (editable popup).
+function payWhatsApp(sid){
+  const s=allStudents.find(x=>x.ID===sid);if(!s)return;
+  const month=document.getElementById('payMonth').value, year=document.getElementById('payYear').value;
+  const fee=s['Monthly Fee']?('₹'+s['Monthly Fee']):'the monthly fee';
+  const lines=[];
+  lines.push(`Dear Parent,`);
+  lines.push('');
+  lines.push(`This is a gentle reminder that the fee for *${s.Name}* for *${PAY_MONTHS[month-1]} ${year}* (${fee}) is pending.`);
+  lines.push('');
+  lines.push(`Kindly arrange the payment at your convenience. Please ignore if already paid.`);
+  lines.push('');
+  lines.push(`Thank you,`);
+  lines.push(`*ElectroBotics*`);
+  const phone=String(s.Contact||'').replace(/[^0-9]/g,'');
+  openWaModal(s.Name+' · Fee reminder',lines.join('\n'),phone);
 }
 
 function openPaymentForm(sid,name,fee){
@@ -3057,15 +3143,18 @@ function waRiskStudent(id){
 }
 
 // Editable WhatsApp message popup
-function openWaModal(title,text){
+let waTargetPhone=''; // when set, Send opens WhatsApp to this number; else user picks
+function openWaModal(title,text,phone){
   document.getElementById('waModalTitle').textContent='WhatsApp · '+title;
   document.getElementById('waMsgInput').value=text;
+  waTargetPhone=phone?String(phone).replace(/[^0-9]/g,''):'';
   document.getElementById('waModal').classList.add('open');
 }
-function closeWaModal(){document.getElementById('waModal').classList.remove('open');}
+function closeWaModal(){document.getElementById('waModal').classList.remove('open');waTargetPhone='';}
 function sendWaModal(){
   const text=document.getElementById('waMsgInput').value;
-  window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+  const base=waTargetPhone?('https://wa.me/'+waTargetPhone+'?text='):'https://wa.me/?text=';
+  window.open(base+encodeURIComponent(text),'_blank');
 }
 function copyWaModal(){
   const text=document.getElementById('waMsgInput').value;
