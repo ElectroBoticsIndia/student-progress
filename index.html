@@ -408,8 +408,9 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-act-kit{color:var(--accent-dark);border-color:var(--accent-light);background:var(--accent-light)}
 .pay-act-kit:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .pay-kit-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
-.pay-loading,.pay-empty{padding:28px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
-.pay-loading .risk-spinner{margin-right:8px}
+.pay-empty{padding:28px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
+.pay-loading{padding:28px 16px;font-family:var(--font-mono);font-size:12px;color:var(--text-light);display:flex;align-items:center;justify-content:center;gap:10px}
+.pay-loading .risk-spinner{display:inline-block;width:18px;height:18px;margin-right:0}
 .pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
 .pay-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .pay-filters select{font-family:var(--font-mono);font-size:11px;padding:6px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;outline:none}
@@ -430,7 +431,7 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .wa-send{background:#25d366;color:#fff;border-color:#25d366}
 .wa-send:hover{filter:brightness(.93)}
 .risk-loading-inline{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-mono);font-size:12px;color:var(--text-dim);padding:7px 0}
-.risk-spinner{width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+.risk-spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;box-sizing:border-box;vertical-align:middle}
 .enroll-scroll{overflow-x:auto;overflow-y:hidden;margin-top:14px;-webkit-overflow-scrolling:touch}
 .enroll-canvas-wrap{height:300px;position:relative;min-width:100%}
 .enroll-scroll::-webkit-scrollbar{height:8px}
