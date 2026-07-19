@@ -375,6 +375,12 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-controls select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
 .pay-controls select:focus{border-color:var(--accent)}
 .pay-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.pay-chip{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 13px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s}
+.pay-chip:hover{border-color:var(--text-light)}
+.pay-chip.active.pay-chip-pending{background:var(--amber-bg,#fdf1d6);color:#9a7200;border-color:#eab43a}
+.pay-chip.active.pay-chip-paid{background:var(--green-bg,#eef6d8);color:#5a7a00;border-color:#8ab600}
+.pay-chip.active.pay-chip-ignore{background:var(--surface-alt);color:var(--text);border-color:var(--text-light)}
+.pay-chip.active.pay-chip-all{background:var(--accent-light);color:var(--accent-dark);border-color:var(--accent)}
 .pay-total{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
 .pay-badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
 .pay-badge.paid{background:var(--green-bg,#eef6d8);color:#5a7a00}
@@ -713,12 +719,6 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <select id="payFilterLevel" onchange="buildPayments()"></select>
         <select id="payFilterTutor" onchange="buildPayments()"></select>
         <select id="payFilterBatch" onchange="buildPayments()"></select>
-        <select id="payFilterStatus" onchange="buildPayments()">
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="paid">Paid</option>
-          <option value="ignore">Ignore</option>
-        </select>
       </div>
       <div class="pay-summary" id="paySummary"></div>
       <div class="avail-scroll"><div id="paymentsList"></div></div>
@@ -2581,6 +2581,9 @@ function buildEnrollmentChart(){
 const PAY_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 let paymentsData=[];      // payment records for the selected year
 let payCurrentCtx=null;   // {studentId, year, month} for the modal
+let payStatusFilter='pending'; // clickable status chip: '' (all) | pending | paid | ignore
+
+function setPayStatus(key){payStatusFilter=key;buildPayments();}
 
 function initPayments(){
   const now=new Date();
@@ -2626,7 +2629,7 @@ function buildPayments(){
   // Read current filter selections
   const fCountry=payFilterVal('payFilterCountry'),fLevel=payFilterVal('payFilterLevel'),
         fTutor=payFilterVal('payFilterTutor'),fBatch=payFilterVal('payFilterBatch'),
-        fStatus=payFilterVal('payFilterStatus');
+        fStatus=payStatusFilter;
 
   // Cascading dropdown options: each reflects the OTHER active category filters
   const catMatch=(s,skip)=>{
@@ -2663,7 +2666,8 @@ function buildPayments(){
   // Status filter narrows which rows show
   if(fStatus)rows=rows.filter(r=>r.st===fStatus);
 
-  summary.innerHTML=`<span class="pay-badge paid">Paid ${paid}</span> <span class="pay-badge pending">Pending ${pending}</span> <span class="pay-badge ignore">Ignore ${ignore}</span> <span class="pay-total">${groupTotal} student${groupTotal===1?'':'s'}</span>`;
+  const chip=(key,label,n)=>`<button class="pay-chip pay-chip-${key} ${payStatusFilter===key?'active':''}" onclick="setPayStatus('${key}')">${label} ${n}</button>`;
+  summary.innerHTML=chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`;
 
   if(rows.length===0){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
 
