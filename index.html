@@ -412,6 +412,12 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-loading{padding:28px 16px;font-family:var(--font-mono);font-size:12px;color:var(--text-light);display:flex;align-items:center;justify-content:center;gap:10px}
 .pay-loading .risk-spinner{display:inline-block;width:18px;height:18px;margin-right:0}
 .pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
+.trend-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.trend-tab{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:7px 12px;border:none;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s;border-right:1px solid var(--border)}
+.trend-tab:last-child{border-right:none}
+.trend-tab.active{background:var(--accent);color:#fff}
+.trend-note{font-family:var(--font-body);font-size:12px;color:var(--text-light);margin-bottom:12px}
+.trend-canvas-wrap{height:320px;position:relative;min-width:520px;transition:opacity .2s}
 .pay-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .pay-filters select{font-family:var(--font-mono);font-size:11px;padding:6px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;outline:none}
 .pay-filters select:focus{border-color:var(--accent)}
@@ -742,6 +748,21 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
       <div class="pay-summary" id="paySummary"></div>
       <div class="avail-scroll"><div id="paymentsList"></div></div>
+    </div>
+    <div class="chart-card" id="trendCard" style="margin-bottom:28px;display:none;">
+      <div class="pay-head">
+        <div class="chart-title" style="margin-bottom:0;">Attendance &amp; Payment Trend</div>
+        <div class="pay-controls">
+          <div class="trend-toggle" id="trendToggle">
+            <button class="trend-tab active" data-region="india" onclick="setTrendRegion('india')">India</button>
+            <button class="trend-tab" data-region="intl" onclick="setTrendRegion('intl')">International</button>
+            <button class="trend-tab" data-region="both" onclick="setTrendRegion('both')">Both</button>
+          </div>
+          <select id="trendYear" onchange="loadTrend()"></select>
+        </div>
+      </div>
+      <div class="trend-note">Active students vs Fee payments received vs attendance-equivalent (present ÷ <span id="trendDivisor">4</span>) per month.</div>
+      <div class="enroll-scroll"><div class="trend-canvas-wrap"><canvas id="chartTrend"></canvas></div></div>
     </div>
     <div class="table-card">
       <div class="table-header">
@@ -2450,13 +2471,17 @@ function buildCharts(){
 
   buildEnrollmentChart();
   buildAvailabilityGrid();
-  // Fee Payments is admin-only
+  // Fee Payments + Attendance/Payment Trend are admin-only
   const payCard=document.getElementById('paymentsCard');
+  const trendCard=document.getElementById('trendCard');
   if(userRole==='admin'){
     if(payCard)payCard.style.display='';
     initPayments();
+    if(trendCard)trendCard.style.display='';
+    initTrend();
   }else{
     if(payCard)payCard.style.display='none';
+    if(trendCard)trendCard.style.display='none';
   }
 }
 
@@ -2832,6 +2857,91 @@ async function postPayment(body){
     const data=await res.json();
     return !!(data&&data.ok);
   }catch(e){console.error('postPayment error:',e);return false;}
+}
+
+// ─── Attendance & Payment Trend (admin only) ──────────────────────────
+let trendData=null;        // response from getMonthlyTrend
+let trendRegion='india';   // 'india' | 'intl' | 'both'
+let trendChart=null;
+
+function initTrend(){
+  const ySel=document.getElementById('trendYear');if(!ySel)return;
+  const yNow=new Date().getFullYear();const years=[];for(let y=yNow-3;y<=yNow;y++)years.push(y);
+  ySel.innerHTML=years.map(y=>`<option value="${y}"${y===yNow?' selected':''}>${y}</option>`).join('');
+  loadTrend();
+}
+
+function setTrendRegion(r){
+  trendRegion=r;
+  document.querySelectorAll('#trendToggle .trend-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-region')===r));
+  renderTrendChart();
+}
+
+async function loadTrend(){
+  const year=document.getElementById('trendYear').value;
+  const wrap=document.querySelector('.trend-canvas-wrap');
+  if(wrap)wrap.style.opacity='.5';
+  try{
+    if(SHEET_WEBAPP_URL){
+      const res=await fetch(SHEET_WEBAPP_URL+'?action=getMonthlyTrend&year='+encodeURIComponent(year));
+      const data=await res.json();
+      trendData=(data&&data.ok)?data:null;
+      if(trendData&&trendData.divisor){const dv=document.getElementById('trendDivisor');if(dv)dv.textContent=trendData.divisor;}
+    }else{trendData=null;}
+  }catch(e){console.warn('getMonthlyTrend failed:',e);trendData=null;}
+  if(wrap)wrap.style.opacity='1';
+  renderTrendChart();
+}
+
+const TREND_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function renderTrendChart(){
+  if(!trendData||!Array.isArray(trendData.months))return;
+  const ctx=document.getElementById('chartTrend');if(!ctx)return;
+  const labels=trendData.months.map(m=>TREND_MONTHS[m.month-1]);
+  const fontMono="'JetBrains Mono', monospace";
+
+  // Build datasets depending on region selection
+  const datasets=[];
+  const pick=(m,reg,key)=>m[reg][key];
+  const addSet=(label,reg,key,color)=>{
+    datasets.push({label,data:trendData.months.map(m=>pick(m,reg,key)),backgroundColor:color,borderRadius:5,categoryPercentage:0.7,barPercentage:0.9});
+  };
+  const C={activeIn:'#008fa0',payIn:'#8ab600',attIn:'#eab43a',activeI:'#0a6b78',payI:'#5a7a00',attI:'#c98f1e'};
+  if(trendRegion==='india'){
+    addSet('Active','india','active',C.activeIn);
+    addSet('Payments','india','payments',C.payIn);
+    addSet('Attendance-eq','india','attendance',C.attIn);
+  }else if(trendRegion==='intl'){
+    addSet('Active','intl','active',C.activeIn);
+    addSet('Payments','intl','payments',C.payIn);
+    addSet('Attendance-eq','intl','attendance',C.attIn);
+  }else{ // both — show payments & attendance per region + a combined active line feel via bars
+    addSet('India · Active','india','active',C.activeIn);
+    addSet('India · Pay','india','payments',C.payIn);
+    addSet('India · Att','india','attendance',C.attIn);
+    addSet('Intl · Active','intl','active',C.activeI);
+    addSet('Intl · Pay','intl','payments',C.payI);
+    addSet('Intl · Att','intl','attendance',C.attI);
+  }
+
+  if(trendChart)trendChart.destroy();
+  trendChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{family:fontMono,size:11},boxWidth:12,padding:10}},
+        datalabels:{display:false},
+        tooltip:{titleFont:{family:fontMono},bodyFont:{family:fontMono}}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{family:fontMono,size:11}}},
+        y:{beginAtZero:true,ticks:{font:{family:fontMono,size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}}
+      }
+    }
+  });
 }
 
 // ─── Kit payment (Type='Kit', coexists with the monthly Fee) ─────────
