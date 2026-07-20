@@ -340,8 +340,9 @@ table.avail td.occ{border:1px solid transparent}
 .risk-toggle{cursor:pointer;user-select:none}
 .card-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap!important}
 .card-toggle>.risk-chevron{flex:0 0 auto}
-.card-toggle-title{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.card-summary{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-light);margin-left:6px;display:inline-block;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.card-toggle-title{flex:1 1 auto;min-width:0;overflow:hidden}
+.card-toggle-title>.card-summary{overflow:visible}
+.card-summary{display:block;font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-light);margin:4px 0 0;white-space:normal;overflow:visible}
 .risk-chevron{font-size:14px;color:var(--text-dim);transition:transform .2s;display:inline-block}
 .risk-chevron.open{transform:rotate(180deg)}
 .risk-detail{margin-top:4px}
@@ -3001,7 +3002,7 @@ function renderTrendChart(){
       responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{
-        legend:{display:true,position:'top',labels:{font:{family:fontMono,size:11},boxWidth:12,padding:10}},
+        legend:{display:true,position:'top',labels:{font:{family:fontMono,size:11},boxWidth:12,boxHeight:12,padding:10,usePointStyle:false}},
         datalabels:{anchor:'end',align:'end',offset:-2,color:'#0a373a',font:{family:fontMono,size:9,weight:700},formatter:v=>v>0?v:''},
         tooltip:{titleFont:{family:fontMono},bodyFont:{family:fontMono}}
       },
