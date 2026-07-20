@@ -338,7 +338,9 @@ table.avail td.occ{border:1px solid transparent}
 .risk-refresh:hover{border-color:var(--accent);color:var(--accent)}
 .risk-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 .risk-toggle{cursor:pointer;user-select:none}
-.card-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
+.card-toggle>.risk-chevron{flex:0 0 auto}
+.card-toggle-title{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .card-summary{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-light);margin-left:6px;display:inline-block;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .risk-chevron{font-size:14px;color:var(--text-dim);transition:transform .2s;display:inline-block}
 .risk-chevron.open{transform:rotate(180deg)}
@@ -736,7 +738,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
       <div class="pay-head card-toggle" onclick="toggleCard('availBody','availChevron',buildAvailabilityGrid)">
-        <div class="chart-title" style="margin-bottom:0;">Tutor Availability by Day &amp; Time Slot <span class="card-summary" id="availSummary"></span></div>
+        <div class="chart-title card-toggle-title" style="margin-bottom:0;">Tutor Availability by Day &amp; Time Slot <span class="card-summary" id="availSummary"></span></div>
         <span class="risk-chevron" id="availChevron">▾</span>
       </div>
       <div id="availBody" style="display:none;">
