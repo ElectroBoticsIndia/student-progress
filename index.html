@@ -339,6 +339,7 @@ table.avail td.occ{border:1px solid transparent}
 .risk-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 .risk-toggle{cursor:pointer;user-select:none}
 .card-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-summary{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-light);margin-left:6px;display:inline-block;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .risk-chevron{font-size:14px;color:var(--text-dim);transition:transform .2s;display:inline-block}
 .risk-chevron.open{transform:rotate(180deg)}
 .risk-detail{margin-top:4px}
@@ -694,7 +695,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     </div>
     <div class="chart-card" id="enrollmentCard" style="margin-bottom:28px;">
       <div class="enroll-head card-toggle" onclick="toggleCard('enrollBody','enrollChevron',buildEnrollmentChart)">
-        <div class="chart-title" style="margin-bottom:0;">Enrollment Trend</div>
+        <div class="chart-title" style="margin-bottom:0;">Enrollment Trend <span class="card-summary" id="enrollSummary"></span></div>
         <div style="display:flex;align-items:center;gap:12px;">
           <div class="enroll-controls" onclick="event.stopPropagation()">
             <label>Period</label>
@@ -735,7 +736,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
       <div class="pay-head card-toggle" onclick="toggleCard('availBody','availChevron',buildAvailabilityGrid)">
-        <div class="chart-title" style="margin-bottom:0;">Tutor Availability by Day &amp; Time Slot</div>
+        <div class="chart-title" style="margin-bottom:0;">Tutor Availability by Day &amp; Time Slot <span class="card-summary" id="availSummary"></span></div>
         <span class="risk-chevron" id="availChevron">▾</span>
       </div>
       <div id="availBody" style="display:none;">
@@ -744,7 +745,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
     </div>
     <div class="chart-card" id="paymentsCard" style="margin-bottom:28px;">
-      <div class="pay-head card-toggle" onclick="toggleCard('payBody','payChevron',buildPayments)">
+      <div class="pay-head card-toggle" onclick="toggleCard('payBody','payChevron')">
         <div class="chart-title" style="margin-bottom:0;">Fee Payments</div>
         <div style="display:flex;align-items:center;gap:12px;">
           <div class="pay-controls" onclick="event.stopPropagation()">
@@ -754,20 +755,20 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
           <span class="risk-chevron" id="payChevron">▾</span>
         </div>
       </div>
+      <div class="pay-filters" onclick="event.stopPropagation()">
+        <select id="payFilterCountry" onchange="buildPayments()"></select>
+        <select id="payFilterLevel" onchange="buildPayments()"></select>
+        <select id="payFilterTutor" onchange="buildPayments()"></select>
+        <select id="payFilterBatch" onchange="buildPayments()"></select>
+      </div>
+      <div class="pay-summary" id="paySummary"></div>
       <div id="payBody" style="display:none;">
-        <div class="pay-filters">
-          <select id="payFilterCountry" onchange="buildPayments()"></select>
-          <select id="payFilterLevel" onchange="buildPayments()"></select>
-          <select id="payFilterTutor" onchange="buildPayments()"></select>
-          <select id="payFilterBatch" onchange="buildPayments()"></select>
-        </div>
-        <div class="pay-summary" id="paySummary"></div>
         <div class="avail-scroll"><div id="paymentsList"></div></div>
       </div>
     </div>
     <div class="chart-card" id="trendCard" style="margin-bottom:28px;display:none;">
       <div class="pay-head card-toggle" onclick="toggleCard('trendBody','trendChevron',renderTrendChart)">
-        <div class="chart-title" style="margin-bottom:0;">Attendance &amp; Payment Trend</div>
+        <div class="chart-title" style="margin-bottom:0;">Attendance &amp; Payment Trend <span class="card-summary" id="trendSummary"></span></div>
         <div style="display:flex;align-items:center;gap:12px;">
           <div class="pay-controls" onclick="event.stopPropagation()">
             <div class="trend-toggle" id="trendToggle">
@@ -2492,6 +2493,7 @@ function buildCharts(){
 
   buildEnrollmentChart();
   buildAvailabilityGrid();
+  updateCardSummaries();
   // Fee Payments + Attendance/Payment Trend are admin-only
   const payCard=document.getElementById('paymentsCard');
   const trendCard=document.getElementById('trendCard');
@@ -2880,6 +2882,44 @@ async function postPayment(body){
   }catch(e){console.error('postPayment error:',e);return false;}
 }
 
+// ─── Collapsed-card summaries (glanceable info shown even when collapsed) ──
+function updateCardSummaries(){
+  updateEnrollSummary();
+  updateAvailSummary();
+  // trend summary is set when trendData loads (updateTrendSummary)
+}
+
+// Enrollment: new India / International enrolments in the current calendar month.
+function updateEnrollSummary(){
+  const el=document.getElementById('enrollSummary');if(!el)return;
+  const now=new Date();const y=now.getFullYear(),m=now.getMonth();
+  let india=0,intl=0;
+  allStudents.forEach(s=>{
+    const d=new Date(s['Join Date']);if(isNaN(d))return;
+    if(d.getFullYear()===y&&d.getMonth()===m){
+      if(/india/i.test(String(s.Country||'')))india++;else intl++;
+    }
+  });
+  const mon=now.toLocaleString('en-US',{month:'short'});
+  el.textContent=`· ${mon} ${y}: ${india} India, ${intl} Intl new`;
+}
+
+// Tutor Availability: the first line — list of tutors (from active students' Tutor field).
+function updateAvailSummary(){
+  const el=document.getElementById('availSummary');if(!el)return;
+  const tutors=[...new Set(allStudents.filter(s=>(s.Status||'Active').toLowerCase()==='active').map(s=>s.Tutor).filter(t=>t))].sort();
+  el.textContent=tutors.length?`· ${tutors.join(', ')}`:'';
+}
+
+// Trend: current-month paid vs active, per region.
+function updateTrendSummary(){
+  const el=document.getElementById('trendSummary');if(!el)return;
+  if(!trendData||!Array.isArray(trendData.months)||!trendData.months.length){el.textContent='';return;}
+  const last=trendData.months[trendData.months.length-1]; // current/latest month
+  const mon=TREND_MONTHS[last.month-1];
+  el.textContent=`· ${mon}: India ${last.india.payments}/${last.india.active} paid · Intl ${last.intl.payments}/${last.intl.active} paid`;
+}
+
 // ─── Attendance & Payment Trend (admin only) ──────────────────────────
 let trendData=null;        // response from getMonthlyTrend
 let trendRegion='india';   // 'india' | 'intl' | 'both'
@@ -2911,6 +2951,7 @@ async function loadTrend(){
     }else{trendData=null;}
   }catch(e){console.warn('getMonthlyTrend failed:',e);trendData=null;}
   if(wrap)wrap.style.opacity='1';
+  updateTrendSummary();
   renderTrendChart();
 }
 
