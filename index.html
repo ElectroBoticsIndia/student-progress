@@ -417,6 +417,8 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-loading .risk-spinner{display:inline-block;width:18px;height:18px;margin-right:0}
 .pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
 .trend-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.trend-controls-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.trend-controls-row #trendYear{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
 .trend-tab{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:7px 12px;border:none;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s;border-right:1px solid var(--border)}
 .trend-tab:last-child{border-right:none}
 .trend-tab.active{background:var(--accent);color:#fff}
@@ -536,11 +538,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .app{padding:16px 12px 40px}
   .wa-actions{gap:10px}
   .wa-actions .wa-btn{flex:1 1 0;min-width:0}
-  /* Trend/payment header controls: wrap and shrink so they stay inside the card */
-  .pay-controls{flex-wrap:wrap;gap:8px}
-  .trend-toggle{flex:1 1 100%}
-  .trend-toggle .trend-tab{flex:1 1 0;padding:7px 6px;text-align:center}
-  #trendYear{flex:1 1 100%}
+  /* Trend controls now sit on their own row below the summary; wrap on mobile */
+  .trend-controls-row{gap:8px}
+  .trend-controls-row .trend-toggle{flex:1 1 100%}
+  .trend-controls-row .trend-tab{flex:1 1 0;padding:7px 6px;text-align:center}
+  .trend-controls-row #trendYear{flex:1 1 100%}
   /* Payments action cell (mobile): Add payment + WhatsApp on top row, Ignore below. */
   .pay-actions{flex-direction:column;align-items:stretch;gap:10px}
   .pay-actions-main{display:flex}
@@ -775,20 +777,18 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     </div>
     <div class="chart-card" id="trendCard" style="margin-bottom:28px;display:none;">
       <div class="pay-head card-toggle" onclick="toggleCard('trendBody','trendChevron',renderTrendChart)">
-        <div class="chart-title" style="margin-bottom:0;">Attendance &amp; Payment Trend <span class="card-summary" id="trendSummary"></span></div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div class="pay-controls" onclick="event.stopPropagation()">
-            <div class="trend-toggle" id="trendToggle">
-              <button class="trend-tab active" data-region="india" onclick="setTrendRegion('india')">India</button>
-              <button class="trend-tab" data-region="intl" onclick="setTrendRegion('intl')">International</button>
-              <button class="trend-tab" data-region="both" onclick="setTrendRegion('both')">Both</button>
-            </div>
-            <select id="trendYear" onchange="loadTrend()"></select>
-          </div>
-          <span class="risk-chevron" id="trendChevron">▾</span>
-        </div>
+        <div class="chart-title card-toggle-title" style="margin-bottom:0;">Attendance &amp; Payment Trend <span class="card-summary" id="trendSummary"></span></div>
+        <span class="risk-chevron" id="trendChevron">▾</span>
       </div>
       <div id="trendBody" style="display:none;">
+        <div class="trend-controls-row">
+          <div class="trend-toggle" id="trendToggle">
+            <button class="trend-tab active" data-region="india" onclick="setTrendRegion('india')">India</button>
+            <button class="trend-tab" data-region="intl" onclick="setTrendRegion('intl')">International</button>
+            <button class="trend-tab" data-region="both" onclick="setTrendRegion('both')">Both</button>
+          </div>
+          <select id="trendYear" onchange="loadTrend()"></select>
+        </div>
         <div class="trend-note">Active students vs Fee payments received vs attendance-equivalent (present ÷ <span id="trendDivisor">4</span>) per month.</div>
         <div class="enroll-scroll"><div class="trend-canvas-wrap"><canvas id="chartTrend"></canvas></div></div>
       </div>
