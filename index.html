@@ -338,6 +338,7 @@ table.avail td.occ{border:1px solid transparent}
 .risk-refresh:hover{border-color:var(--accent);color:var(--accent)}
 .risk-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 .risk-toggle{cursor:pointer;user-select:none}
+.card-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .risk-chevron{font-size:14px;color:var(--text-dim);transition:transform .2s;display:inline-block}
 .risk-chevron.open{transform:rotate(180deg)}
 .risk-detail{margin-top:4px}
@@ -692,20 +693,25 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div class="chart-card"><div class="chart-title">Students per Tutor</div><div class="chart-container"><canvas id="chartTutor"></canvas></div></div>
     </div>
     <div class="chart-card" id="enrollmentCard" style="margin-bottom:28px;">
-      <div class="enroll-head">
+      <div class="enroll-head card-toggle" onclick="toggleCard('enrollBody','enrollChevron',buildEnrollmentChart)">
         <div class="chart-title" style="margin-bottom:0;">Enrollment Trend</div>
-        <div class="enroll-controls">
-          <label>Period</label>
-          <select id="enrollPeriod" onchange="buildEnrollmentChart()">
-            <option value="month" selected>Month</option>
-            <option value="quarter-in">Quarter — Indian Govt (AMJ / JAS / OND / JFM)</option>
-            <option value="quarter-cal">Quarter — Calendar (Q1 JFM / Q2 AMJ / Q3 JAS / Q4 OND)</option>
-            <option value="fy-in">Financial Year — Indian (Apr–Mar)</option>
-            <option value="year">Calendar Year</option>
-          </select>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="enroll-controls" onclick="event.stopPropagation()">
+            <label>Period</label>
+            <select id="enrollPeriod" onchange="buildEnrollmentChart()">
+              <option value="month" selected>Month</option>
+              <option value="quarter-in">Quarter — Indian Govt (AMJ / JAS / OND / JFM)</option>
+              <option value="quarter-cal">Quarter — Calendar (Q1 JFM / Q2 AMJ / Q3 JAS / Q4 OND)</option>
+              <option value="fy-in">Financial Year — Indian (Apr–Mar)</option>
+              <option value="year">Calendar Year</option>
+            </select>
+          </div>
+          <span class="risk-chevron" id="enrollChevron">▾</span>
         </div>
       </div>
-      <div class="enroll-scroll"><div class="enroll-canvas-wrap" id="enrollCanvasWrap"><canvas id="chartEnrollment"></canvas></div></div>
+      <div id="enrollBody" style="display:none;">
+        <div class="enroll-scroll"><div class="enroll-canvas-wrap" id="enrollCanvasWrap"><canvas id="chartEnrollment"></canvas></div></div>
+      </div>
     </div>
     <div class="chart-card" id="riskCard" style="margin-bottom:28px;">
       <div class="risk-head risk-toggle" onclick="toggleRisk()">
@@ -728,41 +734,56 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
-      <div class="chart-title">Tutor Availability by Day &amp; Time Slot</div>
-      <div id="availabilityLegend" class="avail-legend"></div>
-      <div class="avail-scroll"><div id="availabilityGrid"></div></div>
+      <div class="pay-head card-toggle" onclick="toggleCard('availBody','availChevron',buildAvailabilityGrid)">
+        <div class="chart-title" style="margin-bottom:0;">Tutor Availability by Day &amp; Time Slot</div>
+        <span class="risk-chevron" id="availChevron">▾</span>
+      </div>
+      <div id="availBody" style="display:none;">
+        <div id="availabilityLegend" class="avail-legend"></div>
+        <div class="avail-scroll"><div id="availabilityGrid"></div></div>
+      </div>
     </div>
     <div class="chart-card" id="paymentsCard" style="margin-bottom:28px;">
-      <div class="pay-head">
+      <div class="pay-head card-toggle" onclick="toggleCard('payBody','payChevron',buildPayments)">
         <div class="chart-title" style="margin-bottom:0;">Fee Payments</div>
-        <div class="pay-controls">
-          <select id="payMonth" onchange="buildPayments()"></select>
-          <select id="payYear" onchange="loadPayments()"></select>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="pay-controls" onclick="event.stopPropagation()">
+            <select id="payMonth" onchange="buildPayments()"></select>
+            <select id="payYear" onchange="loadPayments()"></select>
+          </div>
+          <span class="risk-chevron" id="payChevron">▾</span>
         </div>
       </div>
-      <div class="pay-filters">
-        <select id="payFilterCountry" onchange="buildPayments()"></select>
-        <select id="payFilterLevel" onchange="buildPayments()"></select>
-        <select id="payFilterTutor" onchange="buildPayments()"></select>
-        <select id="payFilterBatch" onchange="buildPayments()"></select>
+      <div id="payBody" style="display:none;">
+        <div class="pay-filters">
+          <select id="payFilterCountry" onchange="buildPayments()"></select>
+          <select id="payFilterLevel" onchange="buildPayments()"></select>
+          <select id="payFilterTutor" onchange="buildPayments()"></select>
+          <select id="payFilterBatch" onchange="buildPayments()"></select>
+        </div>
+        <div class="pay-summary" id="paySummary"></div>
+        <div class="avail-scroll"><div id="paymentsList"></div></div>
       </div>
-      <div class="pay-summary" id="paySummary"></div>
-      <div class="avail-scroll"><div id="paymentsList"></div></div>
     </div>
     <div class="chart-card" id="trendCard" style="margin-bottom:28px;display:none;">
-      <div class="pay-head">
+      <div class="pay-head card-toggle" onclick="toggleCard('trendBody','trendChevron',renderTrendChart)">
         <div class="chart-title" style="margin-bottom:0;">Attendance &amp; Payment Trend</div>
-        <div class="pay-controls">
-          <div class="trend-toggle" id="trendToggle">
-            <button class="trend-tab active" data-region="india" onclick="setTrendRegion('india')">India</button>
-            <button class="trend-tab" data-region="intl" onclick="setTrendRegion('intl')">International</button>
-            <button class="trend-tab" data-region="both" onclick="setTrendRegion('both')">Both</button>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="pay-controls" onclick="event.stopPropagation()">
+            <div class="trend-toggle" id="trendToggle">
+              <button class="trend-tab active" data-region="india" onclick="setTrendRegion('india')">India</button>
+              <button class="trend-tab" data-region="intl" onclick="setTrendRegion('intl')">International</button>
+              <button class="trend-tab" data-region="both" onclick="setTrendRegion('both')">Both</button>
+            </div>
+            <select id="trendYear" onchange="loadTrend()"></select>
           </div>
-          <select id="trendYear" onchange="loadTrend()"></select>
+          <span class="risk-chevron" id="trendChevron">▾</span>
         </div>
       </div>
-      <div class="trend-note">Active students vs Fee payments received vs attendance-equivalent (present ÷ <span id="trendDivisor">4</span>) per month.</div>
-      <div class="enroll-scroll"><div class="trend-canvas-wrap"><canvas id="chartTrend"></canvas></div></div>
+      <div id="trendBody" style="display:none;">
+        <div class="trend-note">Active students vs Fee payments received vs attendance-equivalent (present ÷ <span id="trendDivisor">4</span>) per month.</div>
+        <div class="enroll-scroll"><div class="trend-canvas-wrap"><canvas id="chartTrend"></canvas></div></div>
+      </div>
     </div>
     <div class="table-card">
       <div class="table-header">
@@ -2933,7 +2954,7 @@ function renderTrendChart(){
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:true,position:'top',labels:{font:{family:fontMono,size:11},boxWidth:12,padding:10}},
-        datalabels:{display:false},
+        datalabels:{anchor:'end',align:'end',offset:-2,color:'#0a373a',font:{family:fontMono,size:9,weight:700},formatter:v=>v>0?v:''},
         tooltip:{titleFont:{family:fontMono},bodyFont:{family:fontMono}}
       },
       scales:{
@@ -3215,6 +3236,16 @@ function toggleRisk(){
   document.getElementById('riskDetail').style.display=riskExpanded?'block':'none';
   document.getElementById('riskChevron').classList.toggle('open',riskExpanded);
   if(riskExpanded)renderRisk(); // build the table only when opened
+}
+
+// Generic collapse/expand for dashboard cards. Runs the optional render callback
+// when a card is expanded (charts must (re)render only once their canvas is visible).
+function toggleCard(bodyId,chevronId,onExpand){
+  const body=document.getElementById(bodyId);if(!body)return;
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  const chev=document.getElementById(chevronId);if(chev)chev.classList.toggle('open',open);
+  if(open&&typeof onExpand==='function'){requestAnimationFrame(()=>{try{onExpand();}catch(e){console.warn('card render error',e);}});}
 }
 
 function renderRisk(){
