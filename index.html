@@ -417,6 +417,18 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-loading{padding:28px 16px;font-family:var(--font-mono);font-size:12px;color:var(--text-light);display:flex;align-items:center;justify-content:center;gap:10px}
 .pay-loading .risk-spinner{display:inline-block;width:18px;height:18px;margin-right:0}
 .pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
+.ts-table th,.ts-table td{white-space:nowrap;text-align:center}
+.ts-table td:first-child,.ts-table th:first-child{text-align:left}
+.ts-pct{font-family:var(--font-mono);font-weight:700;font-size:12px;padding:3px 9px;border-radius:20px;display:inline-block}
+.ts-pct.ts-good{background:var(--green-bg,#eef6d8);color:#5a7a00}
+.ts-pct.ts-watch{background:var(--amber-bg,#fdf1d6);color:#9a7200}
+.ts-pct.ts-bad{background:#fdeae5;color:#c0472a}
+.ts-pct.ts-na{background:var(--surface-alt);color:var(--text-light)}
+.ts-count{font-family:var(--font-mono);font-weight:700;font-size:12px;display:inline-block;min-width:22px}
+.ts-count.ts-green{color:#5a7a00}
+.ts-count.ts-yellow{color:#9a7200}
+.ts-count.ts-red{color:#c0472a}
+.ts-count.ts-nodata{color:var(--text-light)}
 .trend-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .trend-controls-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .trend-controls-row #trendYear{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
@@ -742,6 +754,15 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div class="risk-detail" id="riskDetail" style="display:none;">
         <div class="risk-filter" id="riskFilter"></div>
         <div class="avail-scroll"><div id="riskTable"></div></div>
+      </div>
+    </div>
+    <div class="chart-card" id="tutorStatsCard" style="margin-bottom:28px;">
+      <div class="pay-head card-toggle" onclick="toggleCard('tutorStatsBody','tutorStatsChevron',renderTutorStats)">
+        <div class="chart-title card-toggle-title" style="margin-bottom:0;">Tutor Performance <span class="risk-window" id="tutorStatsNote"></span></div>
+        <span class="risk-chevron" id="tutorStatsChevron">▾</span>
+      </div>
+      <div id="tutorStatsBody" style="display:none;">
+        <div class="avail-scroll"><div id="tutorStatsTable"></div></div>
       </div>
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
@@ -3289,6 +3310,7 @@ async function loadRiskList(force){
     riskData=data;
     document.getElementById('riskWindowNote').textContent='· last '+data.window_weeks+' weeks';
     renderRisk();
+    renderTutorStats(); // tutor performance derives from the same risk data
   }catch(e){
     console.error('risk load error:',e);
     summary.innerHTML='<div class="risk-loading-inline" style="color:var(--red);">Could not load risk data. '+esc(e.message)+'</div>';
@@ -3418,6 +3440,53 @@ function renderRisk(){
     <table class="risk"><thead><tr>
     <th>Student</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Attendance</th><th>Submissions</th><th>Risk</th><th></th>
     </tr>${headerFilters}</thead><tbody>${bodyRows}</tbody></table>`;
+}
+
+// ─── Tutor Performance (aggregates the same rolling-window risk data by tutor) ──
+function renderTutorStats(){
+  const el=document.getElementById('tutorStatsTable');if(!el)return;
+  const note=document.getElementById('tutorStatsNote');
+  if(!riskData||!Array.isArray(riskData.students)){el.innerHTML='<div class="pay-empty">Risk data not loaded yet.</div>';return;}
+  if(note)note.textContent='· last '+(riskData.window_weeks||4)+' weeks';
+
+  // Group students by tutor
+  const map={};
+  riskData.students.forEach(s=>{
+    const t=s.tutor||'Unassigned';
+    if(!map[t])map[t]={total:0,attSum:0,attN:0,subSum:0,subN:0,green:0,yellow:0,red:0,nodata:0};
+    const g=map[t];
+    g.total++;
+    if(s.att_rate!==null&&s.att_rate!==undefined){g.attSum+=s.att_rate;g.attN++;}
+    if(s.sub_rate!==null&&s.sub_rate!==undefined){g.subSum+=s.sub_rate;g.subN++;}
+    if(s.risk==='green')g.green++;else if(s.risk==='yellow')g.yellow++;else if(s.risk==='red')g.red++;else g.nodata++;
+  });
+
+  const tutors=Object.keys(map).sort();
+  if(!tutors.length){el.innerHTML='<div class="pay-empty">No tutor data.</div>';return;}
+
+  const pctBadge=(v,n)=>{
+    if(!n)return '<span class="ts-pct ts-na">—</span>';
+    const p=Math.round((v/n)*100);
+    const cls=p>=60?'ts-good':p>=50?'ts-watch':'ts-bad';
+    return `<span class="ts-pct ${cls}">${p}%</span>`;
+  };
+
+  el.innerHTML=`<table class="pay-table ts-table"><thead><tr>
+    <th>Tutor</th><th>Students</th><th>Attendance</th><th>Submissions</th>
+    <th>On track</th><th>Watch</th><th>At risk</th><th>No data</th>
+    </tr></thead><tbody>${tutors.map(t=>{
+      const g=map[t];
+      return `<tr>
+        <td><strong>${esc(t)}</strong></td>
+        <td>${g.total}</td>
+        <td>${pctBadge(g.attSum,g.attN)}</td>
+        <td>${pctBadge(g.subSum,g.subN)}</td>
+        <td><span class="ts-count ts-green">${g.green}</span></td>
+        <td><span class="ts-count ts-yellow">${g.yellow}</span></td>
+        <td><span class="ts-count ts-red">${g.red}</span></td>
+        <td><span class="ts-count ts-nodata">${g.nodata}</span></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
 }
 
 // Build a one-line summary for a student row
