@@ -2670,8 +2670,9 @@ const PAY_MONTHS=['January','February','March','April','May','June','July','Augu
 let paymentsData=[];      // payment records for the selected year
 let payCurrentCtx=null;   // {studentId, year, month} for the modal
 let payStatusFilter='pending'; // clickable status chip: '' (all) | pending | paid | ignore
+let payLoading=false;     // guards against overlapping loads clobbering clicks
 
-function setPayStatus(key){payStatusFilter=key;buildPayments();}
+function setPayStatus(key){if(payLoading)return;payStatusFilter=key;buildPayments();}
 
 // Save a student's Payment Ref (per-student, persistent) to the Students sheet on blur.
 async function savePaymentRef(sid,inp){
@@ -2706,6 +2707,7 @@ function initPayments(){
 async function loadPayments(){
   const year=document.getElementById('payYear').value;
   const list=document.getElementById('paymentsList');
+  payLoading=true;
   list.innerHTML='<div class="pay-loading"><span class="risk-spinner"></span>Loading payments…</div>';
   try{
     if(SHEET_WEBAPP_URL){
@@ -2714,6 +2716,7 @@ async function loadPayments(){
       paymentsData=(data&&data.ok&&Array.isArray(data.payments))?data.payments:[];
     }else{paymentsData=[];}
   }catch(e){console.warn('getPayments failed:',e);paymentsData=[];}
+  payLoading=false;
   buildPayments();
 }
 
@@ -2780,7 +2783,9 @@ function buildPayments(){
   else if(fStatus)rows=rows.filter(r=>r.st===fStatus);
 
   const chip=(key,label,n)=>`<button class="pay-chip pay-chip-${key} ${payStatusFilter===key?'active':''}" onclick="setPayStatus('${key}')">${label} ${n}</button>`;
-  summary.innerHTML=chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`;
+  const chipsHtml=chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`;
+  // Only rewrite if changed — rewriting identical HTML can drop a click that lands mid-render.
+  if(summary.innerHTML!==chipsHtml)summary.innerHTML=chipsHtml;
 
   if(rows.length===0){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
 
@@ -2824,8 +2829,9 @@ function payFilterVal(id){const el=document.getElementById(id);return el?el.valu
 function fillPaySelect(id,allLabel,items,current){
   const sel=document.getElementById(id);if(!sel)return;
   const cur=current||'';
-  sel.innerHTML=`<option value="">${allLabel}</option>`+items.map(i=>`<option value="${esc(i)}"${cur===i?' selected':''}>${esc(i)}</option>`).join('');
-  if(cur&&!items.includes(cur))sel.innerHTML+=`<option value="${esc(cur)}" selected>${esc(cur)}</option>`;
+  let html=`<option value="">${allLabel}</option>`+items.map(i=>`<option value="${esc(i)}"${cur===i?' selected':''}>${esc(i)}</option>`).join('');
+  if(cur&&!items.includes(cur))html+=`<option value="${esc(cur)}" selected>${esc(cur)}</option>`;
+  if(sel.innerHTML!==html)sel.innerHTML=html; // avoid needless rewrite (can drop focus/clicks)
   sel.value=cur;
 }
 
