@@ -1773,7 +1773,7 @@ function buildRoadmap(){
     let status,badgeClass,badgeText;
     if(total>0&&done===total){status='completed';badgeClass='badge-completed';badgeText='✓ Completed';}
     else if(done>0||inProg>0){status='current';badgeClass='badge-current';badgeText='● In Progress';if(!isNALevel&&!inProgressLevel)inProgressLevel=level.name;}
-    else{status='upcoming';badgeClass='badge-upcoming';badgeText='Up Next';}
+    else{status='upcoming';badgeClass='badge-upcoming';badgeText='Upcoming';}
     // Editors see an explicit N/A badge on a not-applicable level (hidden from parents)
     if(isNALevel&&canEditProgress()){badgeClass='badge-locked';badgeText='⊘ Not applicable';}
     const pct=total>0?Math.round((done/total)*100):0;
