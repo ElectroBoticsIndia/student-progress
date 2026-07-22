@@ -1750,7 +1750,8 @@ function buildRoadmap(){
   const hasAnyProgress=allProgress.some(p=>p['Student ID']===sid);
 
   let completedLevels=0, visibleLevels=0, totalPctSum=0;
-  let latestCompletion={date:'',level:''}; // level with the most recent topic completion date
+  let latestCompletion={dateObj:null,level:''}; // level with the most recent (parsed) completion date
+  let inProgressLevel=''; // a level currently being worked on (started but not finished)
 
   const cardsHtml=allLevels.map((level,i)=>{
     // Merged master + progress topics (so all topics show, even with no progress)
@@ -1771,7 +1772,7 @@ function buildRoadmap(){
     const total=topics.length;
     let status,badgeClass,badgeText;
     if(total>0&&done===total){status='completed';badgeClass='badge-completed';badgeText='✓ Completed';}
-    else if(done>0||inProg>0){status='current';badgeClass='badge-current';badgeText='● In Progress';}
+    else if(done>0||inProg>0){status='current';badgeClass='badge-current';badgeText='● In Progress';if(!isNALevel&&!inProgressLevel)inProgressLevel=level.name;}
     else{status='upcoming';badgeClass='badge-upcoming';badgeText='Up Next';}
     // Editors see an explicit N/A badge on a not-applicable level (hidden from parents)
     if(isNALevel&&canEditProgress()){badgeClass='badge-locked';badgeText='⊘ Not applicable';}
@@ -1790,8 +1791,14 @@ function buildRoadmap(){
     const certUrl=(cert&&cert['Certificate URL'])||'';
     // Prefer the latest Completion Date from this level's topics
     const completionDate=topics.map(t=>t.completionDate).filter(Boolean).sort().slice(-1)[0]||(cert&&cert['Completion Date'])||'';
-    // Track which level has the most recent completion date → used for "Currently in X"
-    if(!isNALevel&&completionDate&&completionDate>latestCompletion.date){latestCompletion={date:completionDate,level:level.name};}
+    // Track which level has the most recent completion date → used for "Currently in X".
+    // Compare as real dates (string comparison mis-orders DD/MM/YYYY-style dates).
+    if(!isNALevel&&completionDate){
+      const cd=new Date(completionDate);
+      if(!isNaN(cd)&&(latestCompletion.dateObj===null||cd>latestCompletion.dateObj)){
+        latestCompletion={dateObj:cd,level:level.name};
+      }
+    }
     const hasTemplate=level.certTemplate&&(status==='completed'||certUrl||completionDate);
     // Status-based colour (replaces per-level brand colours for cleaner readability):
     // completed = green, in-progress = amber, upcoming/locked = neutral grey.
@@ -1892,7 +1899,7 @@ function buildRoadmap(){
         <div class="progress-summary-stats">
           <span><strong>${completedLevels}</strong> of <strong>${visibleLevels}</strong> levels completed</span>
           <span class="dot">•</span>
-          <span>Currently in <strong>${esc(latestCompletion.level||curLvl||allLevels[curIdx]?.name||'—')}</strong></span>
+          <span>Currently in <strong>${esc(inProgressLevel||latestCompletion.level||curLvl||'—')}</strong></span>
         </div>
       </div>
     </div>`;
