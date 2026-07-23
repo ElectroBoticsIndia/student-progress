@@ -1341,6 +1341,7 @@ function prefetchStudent(id){
 
 let studentOrigin=null; // where to return when leaving a student profile: 'dashboard' | 'search' | null
 let originStudentId=null; // which student row to scroll back to on the dashboard
+let originTab=null;       // which dashboard tab we launched from ('students' | 'risk' | ...)
 
 async function selectStudent(id,origin){
   currentStudent=allStudents.find(s=>s.ID===id);
@@ -1350,6 +1351,7 @@ async function selectStudent(id,origin){
   if(origin)studentOrigin=origin;
   else studentOrigin=document.getElementById('adminDashboard').classList.contains('active')?'dashboard':'search';
   originStudentId=id; // remember which row to return to
+  originTab=dashTab;  // and which tab, so Back lands on the right one
   document.getElementById('searchResults').classList.remove('open');
   document.getElementById('errorMsg').classList.remove('show');
   // Show the dashboard shell (header renders instantly) with a loading state
@@ -1395,20 +1397,17 @@ function logout(){
 // Checks the At-Risk table first (if expanded), then the All Students table.
 function scrollToStudentRow(id){
   if(!id)return;
+  // Return to the tab the student was opened from, then highlight the row there.
+  const tab=(originTab==='risk'||originTab==='students')?originTab:'students';
+  if(dashTab!==tab)setDashTab(tab);
   setTimeout(()=>{
-    // Find the row and make sure its tab is showing before scrolling to it
-    const riskRow=document.querySelector(`#riskTable tr[data-sid="${CSS.escape(id)}"]`);
-    const tableRow=document.querySelector(`#tableBody tr[data-sid="${CSS.escape(id)}"]`);
-    const row=riskRow||tableRow;
+    const sel=tab==='risk'?`#riskTable tr[data-sid="${CSS.escape(id)}"]`:`#tableBody tr[data-sid="${CSS.escape(id)}"]`;
+    const row=document.querySelector(sel);
     if(!row)return;
-    if(riskRow&&dashTab!=='risk')setDashTab('risk');
-    else if(!riskRow&&tableRow&&dashTab!=='students')setDashTab('students');
-    requestAnimationFrame(()=>{
-      row.scrollIntoView({behavior:'smooth',block:'center'});
-      row.classList.add('row-flash');
-      setTimeout(()=>row.classList.remove('row-flash'),1600);
-    });
-  },60); // small delay so the dashboard is visible before scrolling
+    row.scrollIntoView({behavior:'smooth',block:'center'});
+    row.classList.add('row-flash');
+    setTimeout(()=>row.classList.remove('row-flash'),1600);
+  },80); // small delay so the tab is visible before scrolling
 }
 
 function backToStudentGate(){
