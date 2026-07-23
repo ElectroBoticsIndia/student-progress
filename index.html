@@ -386,6 +386,7 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-chip.active.pay-chip-paid{background:var(--green-bg,#eef6d8);color:#5a7a00;border-color:#8ab600}
 .pay-chip.active.pay-chip-ignore{background:var(--surface-alt);color:var(--text);border-color:var(--text-light)}
 .pay-chip.active.pay-chip-kitdue{background:var(--accent-light);color:var(--accent-dark);border-color:var(--accent)}
+.pay-chip.active.pay-chip-compdue{background:var(--accent-light);color:var(--accent-dark);border-color:var(--accent)}
 .pay-chip.active.pay-chip-all{background:var(--accent-light);color:var(--accent-dark);border-color:var(--accent)}
 .pay-total{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
 .pay-badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
@@ -2787,7 +2788,7 @@ function buildPayments(){
   );
 
   // Compute status per student, tally BEFORE the status filter (so counts reflect the group)
-  let paid=0,ignore=0,pending=0,kitdue=0;
+  let paid=0,ignore=0,pending=0,kitdue=0,compdue=0;
   let rows=students.map(s=>{
     const rec=payRecord(s.ID,year,month,'Fee');
     const st=rec?String(rec.Status||'').toLowerCase():'pending';
@@ -2795,24 +2796,28 @@ function buildPayments(){
     const kitRec=payRecord(s.ID,year,month,'Kit'); // null = kit not flagged for this month
     const kitSt=kitRec?String(kitRec.Status||'').toLowerCase():'';
     if(kitSt&&kitSt!=='paid')kitdue++; // flagged but not yet paid
-    return {s,rec,st,kitRec,kitSt};
+    const compRec=payRecord(s.ID,year,month,'Components');
+    const compSt=compRec?String(compRec.Status||'').toLowerCase():'';
+    if(compSt&&compSt!=='paid')compdue++;
+    return {s,rec,st,kitRec,kitSt,compRec,compSt};
   });
   const groupTotal=rows.length;
 
-  // Status filter narrows which rows show. 'kitdue' filters on the Kit sub-status.
+  // Status filter narrows which rows show. 'kitdue'/'compdue' filter on sub-statuses.
   if(fStatus==='kitdue')rows=rows.filter(r=>r.kitSt&&r.kitSt!=='paid');
+  else if(fStatus==='compdue')rows=rows.filter(r=>r.compSt&&r.compSt!=='paid');
   else if(fStatus)rows=rows.filter(r=>r.st===fStatus);
 
   const chip=(key,label,n)=>`<button class="pay-chip pay-chip-${key} ${payStatusFilter===key?'active':''}" onclick="setPayStatus('${key}')">${label} ${n}</button>`;
-  const chipsHtml=chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`;
+  const chipsHtml=chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue)+`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`;
   // Only rewrite if changed — rewriting identical HTML can drop a click that lands mid-render.
   if(summary.innerHTML!==chipsHtml)summary.innerHTML=chipsHtml;
 
   if(rows.length===0){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
 
   list.innerHTML=`<table class="pay-table"><thead><tr>
-    <th>Student</th><th>Tutor</th><th>Batch</th><th>Fee</th><th>Payment Ref</th><th>Status</th><th>Kit</th><th>Action</th>
-    </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt})=>{
+    <th>Student</th><th>Batch</th><th>Fee</th><th>Payment Ref</th><th>Status</th><th>Kit</th><th>Components</th><th>Action</th>
+    </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,compRec,compSt})=>{
       const fee=s['Monthly Fee']||'';
       const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
       const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?('₹'+esc(String(rec.Amount))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
@@ -2826,6 +2831,16 @@ function buildPayments(){
       }else{
         kitCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><button class="pay-act pay-act-paid" onclick="openKitForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${esc(s.ID)}')">Remove</button></div>`;
       }
+      // Components cell: same flow as Kit, stored as Type='Components'
+      let compCell='';
+      if(!compRec){
+        compCell=`<button class="pay-act pay-act-kit" onclick="flagComponents('${esc(s.ID)}')" title="Flag components payment required">+ Components</button>`;
+      }else if(compSt==='paid'){
+        const cd=`${compRec.Amount?('₹'+esc(String(compRec.Amount))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;
+        compCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}')">Undo</button></div>`;
+      }else{
+        compCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}')">Remove</button></div>`;
+      }
       let action='';
       if(st==='pending'){
         const wa=`<button class="pay-act pay-act-wa" title="Send WhatsApp reminder" onclick="payWhatsApp('${esc(s.ID)}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg></button>`;
@@ -2835,12 +2850,12 @@ function buildPayments(){
       }
       return `<tr>
         <td><strong>${esc(s.Name)}</strong><br><span class="pay-sid">${esc(s.ID)}</span></td>
-        <td>${esc(s.Tutor||'—')}</td>
         <td>${esc(s.Batch||'—')}</td>
         <td>${fee?('₹'+esc(String(fee))):'—'}</td>
         <td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" data-sid="${esc(s.ID)}" onblur="savePaymentRef('${esc(s.ID)}',this)"></td>
         <td>${badge}${detail}</td>
         <td>${kitCell}</td>
+        <td>${compCell}</td>
         <td>${action}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
@@ -3084,6 +3099,36 @@ async function revertKit(sid){
   const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
   if(!confirm('Remove the kit payment entry for this month?'))return;
   const ok=await postPayment({action:'deletePayment',type:'Kit',studentId:sid,year:year,month:month});
+  if(ok)await loadPayments();else alert('Could not update. Please try again.');
+}
+
+// ─── Components payment (Type='Components', same flow as Kit) ────────
+async function flagComponents(sid){
+  const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
+  const ok=await postPayment({action:'savePayment',type:'Components',studentId:sid,year:year,month:month,status:'Pending',markedBy:(studentUser&&studentUser.email)||''});
+  if(ok)await loadPayments();else alert('Could not flag components. Please try again.');
+}
+
+function openComponentsForm(sid,name){
+  const year=document.getElementById('payYear').value;
+  const month=document.getElementById('payMonth').value;
+  payCurrentCtx={studentId:sid,year:year,month:month,type:'Components'};
+  document.getElementById('paymentModalTitle').textContent='Components Payment';
+  document.getElementById('paymentModalSub').textContent=`${name} · Components · ${PAY_MONTHS[month-1]} ${year}`;
+  document.getElementById('pay_Amount').value='';
+  const today=new Date();
+  document.getElementById('pay_Date').value=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  document.getElementById('pay_Method').value='';
+  document.getElementById('pay_Note').value='';
+  document.getElementById('pay_Msg').textContent='';
+  document.getElementById('pay_SaveBtn').disabled=false;
+  document.getElementById('paymentModal').classList.add('open');
+}
+
+async function revertComponents(sid){
+  const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
+  if(!confirm('Remove the components payment entry for this month?'))return;
+  const ok=await postPayment({action:'deletePayment',type:'Components',studentId:sid,year:year,month:month});
   if(ok)await loadPayments();else alert('Could not update. Please try again.');
 }
 
