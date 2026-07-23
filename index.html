@@ -357,6 +357,9 @@ table.avail td.occ{border:1px solid transparent}
 .risk-dot.red{background:var(--red)} .risk-dot.yellow{background:var(--amber)} .risk-dot.green{background:var(--green)} .risk-dot.nodata{background:var(--text-light)}
 .risk-filter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
 .risk-chip{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .2s}
+.risk-stat-btn{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 13px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.risk-stat-btn:hover{border-color:var(--text-light)}
+.risk-stat-btn.active{background:var(--accent-light);color:var(--accent-dark);border-color:var(--accent)}
 .risk-chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 table.risk{border-collapse:collapse;width:100%;min-width:640px}
 table.risk th{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
@@ -755,7 +758,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div class="risk-head risk-toggle" onclick="toggleRisk()">
         <div class="chart-title" style="margin-bottom:0;">At-Risk Students <span id="riskWindowNote" class="risk-window"></span></div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="risk-chevron" id="riskChevron">▾</span>
+          <span class="risk-chevron open" id="riskChevron">▾</span>
         </div>
       </div>
       <div class="risk-summary" id="riskSummary"></div>
@@ -766,7 +769,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         🟢 On track = above both ·
         ⚪ No data = no attendance/assignments recorded
       </div>
-      <div class="risk-detail" id="riskDetail" style="display:none;">
+      <div class="risk-detail" id="riskDetail" style="display:block;">
         <div class="risk-filter" id="riskFilter"></div>
         <div class="avail-scroll"><div id="riskTable"></div></div>
       </div>
@@ -3396,7 +3399,7 @@ async function loadRiskList(force){
 
 function setRiskCol(key,val){riskCol[key]=val;renderRisk();}
 
-let riskExpanded=false;
+let riskExpanded=true;
 function toggleRisk(){
   riskExpanded=!riskExpanded;
   document.getElementById('riskDetail').style.display=riskExpanded?'block':'none';
@@ -3439,11 +3442,14 @@ function renderRisk(){
   if(!riskData)return;
   const c=riskData.counts||{red:0,yellow:0,green:0,nodata:0};
   // Summary chips
+  // Summary chips — clickable, they filter the table by risk band (like the payments chips)
+  const rc=(band,label,n)=>`<button class="risk-stat risk-stat-btn${riskCol.risk===band?' active':''}" onclick="setRiskCol('risk','${band}')"><span class="risk-dot ${band}"></span>${n} ${label}</button>`;
   document.getElementById('riskSummary').innerHTML=
-    `<span class="risk-stat"><span class="risk-dot red"></span>${c.red} at risk</span>`+
-    `<span class="risk-stat"><span class="risk-dot yellow"></span>${c.yellow} watch</span>`+
-    `<span class="risk-stat"><span class="risk-dot green"></span>${c.green} on track</span>`+
-    `<span class="risk-stat"><span class="risk-dot nodata"></span>${c.nodata} no data</span>`;
+    rc('red','at risk',c.red)+
+    rc('yellow','watch',c.yellow)+
+    rc('green','on track',c.green)+
+    rc('nodata','no data',c.nodata)+
+    `<button class="risk-stat risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${(c.red||0)+(c.yellow||0)+(c.green||0)+(c.nodata||0)}</button>`;
   // Only build the table when the card is expanded (keeps it light by default)
   if(!riskExpanded)return;
   document.getElementById('riskFilter').innerHTML='';
