@@ -447,6 +447,9 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .trend-canvas-wrap{height:320px;position:relative;min-width:520px;transition:opacity .2s}
 .pay-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .pay-filters select{font-family:var(--font-mono);font-size:11px;padding:6px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;outline:none}
+.pay-search{font-family:var(--font-mono);font-size:11px;padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text);outline:none;min-width:150px}
+.pay-search:focus{border-color:var(--accent)}
+.pay-search::placeholder{color:var(--text-light)}
 .pay-filters select:focus{border-color:var(--accent)}
 .pay-act-wa{color:#128c4b;border-color:#cde8d8;display:inline-flex;align-items:center;justify-content:center;padding:6px 9px}
 .pay-act-wa:hover{background:#25d366;color:#fff;border-color:#25d366}
@@ -809,6 +812,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         </div>
       </div>
       <div class="pay-filters" onclick="event.stopPropagation()">
+        <input type="text" id="payFilterName" class="pay-search" placeholder="Search student…" oninput="buildPayments()">
         <select id="payFilterCountry" onchange="buildPayments()"></select>
         <select id="payFilterLevel" onchange="buildPayments()"></select>
         <select id="payFilterTutor" onchange="buildPayments()"></select>
@@ -2813,11 +2817,13 @@ function buildPayments(){
   fillPaySelect('payFilterBatch','All batches',uniq('batch','Batch'),fBatch);
 
   // Apply the category filters to the student set
+  const nameQ=(payFilterVal('payFilterName')||'').trim().toLowerCase();
   let students=base.filter(s=>
     (!fCountry||(s.Country||'')===fCountry)&&
     (!fLevel||(s['Current Level']||'')===fLevel)&&
     (!fTutor||(s.Tutor||'')===fTutor)&&
-    (!fBatch||(s.Batch||'')===fBatch)
+    (!fBatch||(s.Batch||'')===fBatch)&&
+    (!nameQ||String(s.Name||'').toLowerCase().includes(nameQ)||String(s.ID||'').toLowerCase().includes(nameQ))
   );
 
   // Compute status per student, tally BEFORE the status filter (so counts reflect the group)
