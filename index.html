@@ -313,6 +313,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 /* Charts */
 .charts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-bottom:28px}
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.dash-tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:0}
+.dash-tab{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:10px 16px;border:none;background:transparent;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap}
+.dash-tab:hover{color:var(--text)}
+.dash-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent)}
 .chart-title{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
 .chart-container{position:relative;min-height:280px}
 .avail-scroll{overflow-x:auto}
@@ -710,6 +714,14 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
 
   <!-- Admin Dashboard -->
   <div class="admin-screen" id="adminDashboard">
+    <div class="dash-tabs" id="dashTabs">
+      <button class="dash-tab active" data-tab="summary" onclick="setDashTab('summary')">Summary</button>
+      <button class="dash-tab" data-tab="students" onclick="setDashTab('students')">All Students</button>
+      <button class="dash-tab" data-tab="risk" onclick="setDashTab('risk')">At-Risk</button>
+      <button class="dash-tab" data-tab="tutor" onclick="setDashTab('tutor')">Tutor</button>
+      <button class="dash-tab" data-tab="payments" id="dashTabPayments" onclick="setDashTab('payments')">Payments</button>
+    </div>
+    <div class="dash-panel" id="panel-summary">
     <div class="stats-grid" id="statsGrid"></div>
     <div class="charts-grid" id="chartsGrid">
       <div class="chart-card"><div class="chart-title">Students per Level</div><div class="chart-container"><canvas id="chartLevel"></canvas></div></div>
@@ -730,13 +742,15 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
               <option value="year">Calendar Year</option>
             </select>
           </div>
-          <span class="risk-chevron" id="enrollChevron">▾</span>
+          <span class="risk-chevron open" id="enrollChevron">▾</span>
         </div>
       </div>
-      <div id="enrollBody" style="display:none;">
+      <div id="enrollBody" style="display:block;">
         <div class="enroll-scroll"><div class="enroll-canvas-wrap" id="enrollCanvasWrap"><canvas id="chartEnrollment"></canvas></div></div>
       </div>
     </div>
+    </div><!-- /panel-summary -->
+    <div class="dash-panel" id="panel-risk" style="display:none;">
     <div class="chart-card" id="riskCard" style="margin-bottom:28px;">
       <div class="risk-head risk-toggle" onclick="toggleRisk()">
         <div class="chart-title" style="margin-bottom:0;">At-Risk Students <span id="riskWindowNote" class="risk-window"></span></div>
@@ -757,25 +771,29 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <div class="avail-scroll"><div id="riskTable"></div></div>
       </div>
     </div>
+    </div><!-- /panel-risk -->
+    <div class="dash-panel" id="panel-tutor" style="display:none;">
     <div class="chart-card" id="tutorStatsCard" style="margin-bottom:28px;">
       <div class="pay-head card-toggle" onclick="toggleCard('tutorStatsBody','tutorStatsChevron',renderTutorStats)">
         <div class="chart-title card-toggle-title" style="margin-bottom:0;">Tutor Performance <span class="risk-window" id="tutorStatsNote"></span></div>
-        <span class="risk-chevron" id="tutorStatsChevron">▾</span>
+        <span class="risk-chevron open" id="tutorStatsChevron">▾</span>
       </div>
-      <div id="tutorStatsBody" style="display:none;">
+      <div id="tutorStatsBody" style="display:block;">
         <div class="avail-scroll"><div id="tutorStatsTable"></div></div>
       </div>
     </div>
     <div class="chart-card" id="availabilityCard" style="margin-bottom:28px;">
       <div class="pay-head card-toggle" onclick="toggleCard('availBody','availChevron',buildAvailabilityGrid)">
         <div class="chart-title card-toggle-title" style="margin-bottom:0;">Tutor Availability by Day &amp; Time Slot <span class="card-summary" id="availSummary"></span></div>
-        <span class="risk-chevron" id="availChevron">▾</span>
+        <span class="risk-chevron open" id="availChevron">▾</span>
       </div>
-      <div id="availBody" style="display:none;">
+      <div id="availBody" style="display:block;">
         <div id="availabilityLegend" class="avail-legend"></div>
         <div class="avail-scroll"><div id="availabilityGrid"></div></div>
       </div>
     </div>
+    </div><!-- /panel-tutor -->
+    <div class="dash-panel" id="panel-payments" style="display:none;">
     <div class="chart-card" id="paymentsCard" style="margin-bottom:28px;">
       <div class="pay-head card-toggle" onclick="toggleCard('payBody','payChevron')">
         <div class="chart-title" style="margin-bottom:0;">Fee Payments</div>
@@ -784,7 +802,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
             <select id="payMonth" onchange="buildPayments()"></select>
             <select id="payYear" onchange="loadPayments()"></select>
           </div>
-          <span class="risk-chevron" id="payChevron">▾</span>
+          <span class="risk-chevron open" id="payChevron">▾</span>
         </div>
       </div>
       <div class="pay-filters" onclick="event.stopPropagation()">
@@ -794,16 +812,16 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <select id="payFilterBatch" onchange="buildPayments()"></select>
       </div>
       <div class="pay-summary" id="paySummary"></div>
-      <div id="payBody" style="display:none;">
+      <div id="payBody" style="display:block;">
         <div class="avail-scroll"><div id="paymentsList"></div></div>
       </div>
     </div>
     <div class="chart-card" id="trendCard" style="margin-bottom:28px;display:none;">
       <div class="pay-head card-toggle" onclick="toggleCard('trendBody','trendChevron',renderTrendChart)">
         <div class="chart-title card-toggle-title" style="margin-bottom:0;">Attendance &amp; Payment Trend <span class="card-summary" id="trendSummary"></span></div>
-        <span class="risk-chevron" id="trendChevron">▾</span>
+        <span class="risk-chevron open" id="trendChevron">▾</span>
       </div>
-      <div id="trendBody" style="display:none;">
+      <div id="trendBody" style="display:block;">
         <div class="trend-controls-row">
           <div class="trend-toggle" id="trendToggle">
             <button class="trend-tab active" data-region="india" onclick="setTrendRegion('india')">India</button>
@@ -816,6 +834,8 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <div class="enroll-scroll"><div class="trend-canvas-wrap"><canvas id="chartTrend"></canvas></div></div>
       </div>
     </div>
+    </div><!-- /panel-payments -->
+    <div class="dash-panel" id="panel-students" style="display:none;">
     <div class="table-card">
       <div class="table-header">
         <div class="table-title">All Students <span id="tableCount" style="color:var(--accent);"></span></div>
@@ -869,6 +889,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <tbody id="tableBody"></tbody>
       </table></div>
     </div>
+    </div><!-- /panel-students -->
   </div>
 </div>
 
@@ -1372,12 +1393,18 @@ function logout(){
 function scrollToStudentRow(id){
   if(!id)return;
   setTimeout(()=>{
-    const row=document.querySelector(`#riskTable tr[data-sid="${CSS.escape(id)}"]`)
-            ||document.querySelector(`#tableBody tr[data-sid="${CSS.escape(id)}"]`);
+    // Find the row and make sure its tab is showing before scrolling to it
+    const riskRow=document.querySelector(`#riskTable tr[data-sid="${CSS.escape(id)}"]`);
+    const tableRow=document.querySelector(`#tableBody tr[data-sid="${CSS.escape(id)}"]`);
+    const row=riskRow||tableRow;
     if(!row)return;
-    row.scrollIntoView({behavior:'smooth',block:'center'});
-    row.classList.add('row-flash');
-    setTimeout(()=>row.classList.remove('row-flash'),1600);
+    if(riskRow&&dashTab!=='risk')setDashTab('risk');
+    else if(!riskRow&&tableRow&&dashTab!=='students')setDashTab('students');
+    requestAnimationFrame(()=>{
+      row.scrollIntoView({behavior:'smooth',block:'center'});
+      row.classList.add('row-flash');
+      setTimeout(()=>row.classList.remove('row-flash'),1600);
+    });
   },60); // small delay so the dashboard is visible before scrolling
 }
 
@@ -2536,17 +2563,21 @@ function buildCharts(){
   buildEnrollmentChart();
   buildAvailabilityGrid();
   updateCardSummaries();
-  // Fee Payments + Attendance/Payment Trend are admin-only
+  // Fee Payments + Attendance/Payment Trend are admin-only (whole Payments tab)
   const payCard=document.getElementById('paymentsCard');
   const trendCard=document.getElementById('trendCard');
+  const payTab=document.getElementById('dashTabPayments');
   if(userRole==='admin'){
+    if(payTab)payTab.style.display='';
     if(payCard)payCard.style.display='';
     initPayments();
     if(trendCard)trendCard.style.display='';
     initTrend();
   }else{
+    if(payTab)payTab.style.display='none';
     if(payCard)payCard.style.display='none';
     if(trendCard)trendCard.style.display='none';
+    if(dashTab==='payments')setDashTab('summary'); // never leave a tutor on the payments tab
   }
 }
 
@@ -3278,8 +3309,9 @@ function drillToTable(type,value){
     if([...bs.options].some(o=>o.value===b))bs.value=b;
   }
   applyFilters();
+  setDashTab('students'); // the table lives on the All Students tab
   const card=document.querySelector('.table-card');
-  if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+  if(card)requestAnimationFrame(()=>card.scrollIntoView({behavior:'smooth',block:'start'}));
 }
 
 function applyFilters(){
@@ -3370,6 +3402,27 @@ function toggleRisk(){
   document.getElementById('riskDetail').style.display=riskExpanded?'block':'none';
   document.getElementById('riskChevron').classList.toggle('open',riskExpanded);
   if(riskExpanded)renderRisk(); // build the table only when opened
+}
+
+// ─── Admin dashboard tabs ─────────────────────────────────────────────
+let dashTab='summary';
+function setDashTab(tab){
+  dashTab=tab;
+  ['summary','students','risk','tutor','payments'].forEach(t=>{
+    const p=document.getElementById('panel-'+t);
+    if(p)p.style.display=(t===tab)?'block':'none';
+  });
+  document.querySelectorAll('#dashTabs .dash-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tab')===tab));
+  window.scrollTo(0,0);
+  // Charts need a re-render when their panel becomes visible (canvas was hidden)
+  requestAnimationFrame(()=>{
+    try{
+      if(tab==='summary'){buildCharts();if(document.getElementById('enrollBody').style.display!=='none')buildEnrollmentChart();}
+      if(tab==='tutor'){renderTutorStats();if(document.getElementById('availBody').style.display!=='none')buildAvailabilityGrid();}
+      if(tab==='payments'){if(document.getElementById('trendBody').style.display!=='none')renderTrendChart();}
+      if(tab==='risk'&&riskExpanded)renderRisk();
+    }catch(e){console.warn('tab render',e);}
+  });
 }
 
 // Generic collapse/expand for dashboard cards. Runs the optional render callback
