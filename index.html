@@ -3033,19 +3033,19 @@ function renderTrendChart(){
   const C={activeIn:'#008fa0',payIn:'#8ab600',attIn:'#eab43a',activeI:'#0a6b78',payI:'#5a7a00',attI:'#c98f1e'};
   if(trendRegion==='india'){
     addSet('Active','india','active',C.activeIn);
-    addSet('Payments','india','payments',C.payIn);
     addSet('Attendance-eq','india','attendance',C.attIn);
+    addSet('Payments','india','payments',C.payIn);
   }else if(trendRegion==='intl'){
     addSet('Active','intl','active',C.activeIn);
-    addSet('Payments','intl','payments',C.payIn);
     addSet('Attendance-eq','intl','attendance',C.attIn);
-  }else{ // both — show payments & attendance per region + a combined active line feel via bars
+    addSet('Payments','intl','payments',C.payIn);
+  }else{ // both — Active / Attendance / Payments per region
     addSet('India · Active','india','active',C.activeIn);
-    addSet('India · Pay','india','payments',C.payIn);
     addSet('India · Att','india','attendance',C.attIn);
+    addSet('India · Pay','india','payments',C.payIn);
     addSet('Intl · Active','intl','active',C.activeI);
-    addSet('Intl · Pay','intl','payments',C.payI);
     addSet('Intl · Att','intl','attendance',C.attI);
+    addSet('Intl · Pay','intl','payments',C.payI);
   }
 
   if(trendChart)trendChart.destroy();
