@@ -437,6 +437,17 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .ts-count.ts-yellow{color:#9a7200}
 .ts-count.ts-red{color:#c0472a}
 .ts-count.ts-nodata{color:var(--text-light)}
+.ts-cell{display:inline-flex;align-items:center;gap:6px}
+.ts-note-btn{display:inline-flex;align-items:center;justify-content:center;padding:3px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
+.ts-note-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tn-list{max-height:280px;overflow-y:auto;margin-bottom:14px}
+.tn-item{padding:10px 0;border-bottom:1px solid var(--border)}
+.tn-item:last-child{border-bottom:none}
+.tn-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-bottom:3px}
+.tn-text{font-size:13px;color:var(--text);white-space:pre-wrap}
+.tn-empty{padding:20px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
+#tn_Input{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical}
+#tn_Input:focus{border-color:var(--accent)}
 .trend-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .trend-controls-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .trend-controls-row #trendYear{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
@@ -1016,6 +1027,27 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <button class="share-btn share-img" onclick="shareTo('download')"><span class="share-ico">⬇</span>Download</button>
       </div>
       <p class="share-note">Edit the message above if you like. On a phone, “Share via apps” sends the certificate image with your message to WhatsApp, Instagram, LinkedIn, etc. On a computer, use “Download” then attach it to your post.</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tutorNotesModal">
+  <div class="modal-card" style="max-width:480px;">
+    <div class="modal-head">
+      <h3 id="tutorNotesTitle">Notes</h3>
+      <button class="modal-close" onclick="closeTutorNotes()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="tn-list" id="tutorNotesList"></div>
+      <div class="form-row">
+        <label>Add a note</label>
+        <textarea id="tn_Input" rows="3" placeholder="Type a note…"></textarea>
+      </div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeTutorNotes()">Close</button>
+        <button class="wa-btn pf-save" id="tn_SaveBtn" onclick="saveTutorNote()">Add note</button>
+      </div>
+      <p class="topics-save-msg" id="tn_Msg" style="text-align:right;margin-top:8px;"></p>
     </div>
   </div>
 </div>
@@ -3396,6 +3428,7 @@ async function loadRiskList(force){
     document.getElementById('riskWindowNote').textContent='· last '+data.window_weeks+' weeks';
     renderRisk();
     renderTutorStats(); // tutor performance derives from the same risk data
+    loadTutorNotes();   // fetch notes so the icons open instantly
   }catch(e){
     console.error('risk load error:',e);
     summary.innerHTML='<div class="risk-loading-inline" style="color:var(--red);">Could not load risk data. '+esc(e.message)+'</div>';
@@ -3585,17 +3618,80 @@ function renderTutorStats(){
     <th>On track</th><th>Watch</th><th>At risk</th><th>No data</th>
     </tr></thead><tbody>${tutors.map(t=>{
       const g=map[t];
+      const noteBtn=(cat)=>`<button class="ts-note-btn" title="${cat} notes" onclick="openTutorNotes('${esc(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;
       return `<tr>
         <td><strong>${esc(t)}</strong></td>
         <td>${g.total}</td>
-        <td>${pctBadge(g.attSum,g.attN)}</td>
-        <td>${pctBadge(g.subSum,g.subN)}</td>
+        <td><span class="ts-cell">${pctBadge(g.attSum,g.attN)}${noteBtn('Attendance')}</span></td>
+        <td><span class="ts-cell">${pctBadge(g.subSum,g.subN)}${noteBtn('Submission')}</span></td>
         <td><span class="ts-count ts-green">${g.green}</span></td>
         <td><span class="ts-count ts-yellow">${g.yellow}</span></td>
         <td><span class="ts-count ts-red">${g.red}</span></td>
         <td><span class="ts-count ts-nodata">${g.nodata}</span></td>
       </tr>`;
     }).join('')}</tbody></table>`;
+}
+
+// ─── Tutor notes (running log per tutor + category) ──────────────────
+let tutorNotesData=[];        // all notes from the sheet
+let tutorNotesCtx={tutor:'',category:''};
+
+async function loadTutorNotes(){
+  try{
+    if(SHEET_WEBAPP_URL){
+      const res=await fetch(SHEET_WEBAPP_URL+'?action=getTutorNotes');
+      const data=await res.json();
+      tutorNotesData=(data&&data.ok&&Array.isArray(data.notes))?data.notes:[];
+    }
+  }catch(e){console.warn('getTutorNotes failed:',e);tutorNotesData=[];}
+}
+
+function openTutorNotes(tutor,category){
+  tutorNotesCtx={tutor,category};
+  document.getElementById('tutorNotesTitle').textContent=`${category} notes · ${tutor}`;
+  document.getElementById('tn_Input').value='';
+  document.getElementById('tn_Msg').textContent='';
+  document.getElementById('tn_SaveBtn').disabled=false;
+  renderTutorNotesList();
+  document.getElementById('tutorNotesModal').classList.add('open');
+}
+function closeTutorNotes(){document.getElementById('tutorNotesModal').classList.remove('open');}
+
+function renderTutorNotesList(){
+  const box=document.getElementById('tutorNotesList');
+  const {tutor,category}=tutorNotesCtx;
+  const notes=tutorNotesData.filter(n=>String(n.Tutor||'').trim()===tutor&&String(n.Category||'').trim()===category)
+    .sort((a,b)=>String(b.Timestamp||'').localeCompare(String(a.Timestamp||''))); // newest first
+  if(!notes.length){box.innerHTML='<div class="tn-empty">No notes yet.</div>';return;}
+  box.innerHTML=notes.map(n=>`<div class="tn-item">
+    <div class="tn-meta">${esc(String(n.Timestamp||''))}${n.Author?(' · '+esc(String(n.Author))):''}</div>
+    <div class="tn-text">${esc(String(n.Note||''))}</div>
+  </div>`).join('');
+}
+
+async function saveTutorNote(){
+  const note=document.getElementById('tn_Input').value.trim();
+  const msg=document.getElementById('tn_Msg');
+  const btn=document.getElementById('tn_SaveBtn');
+  if(!note){msg.textContent='Please type a note.';msg.className='topics-save-msg err';return;}
+  btn.disabled=true;msg.innerHTML='<span class="risk-spinner"></span>Saving…';msg.className='topics-save-msg saving';
+  const author=(studentUser&&studentUser.email)||'';
+  let ok=false;
+  try{
+    if(SHEET_WEBAPP_URL){
+      const res=await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'addTutorNote',tutor:tutorNotesCtx.tutor,category:tutorNotesCtx.category,note,author})});
+      const data=await res.json();ok=!!(data&&data.ok);
+    }
+  }catch(e){console.error('addTutorNote error:',e);}
+  if(ok){
+    document.getElementById('tn_Input').value='';
+    msg.textContent='';btn.disabled=false;
+    await loadTutorNotes();
+    renderTutorNotesList();
+  }else{
+    msg.textContent='Could not save. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;
+  }
 }
 
 // Build a one-line summary for a student row
