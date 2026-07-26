@@ -2852,8 +2852,15 @@ function buildPayments(){
   const year=document.getElementById('payYear').value;
   const month=document.getElementById('payMonth').value;
 
-  // Active students form the base set
-  const base=allStudents.filter(s=>(s.Status||'Active').toLowerCase()==='active');
+  // Active students who had already joined by the selected month form the base set.
+  // (A student who joins in July shouldn't appear as Pending for earlier months.)
+  const selY=parseInt(year,10), selM=parseInt(month,10);
+  const joinedBy=(s)=>{
+    const j=parseJoinYM(s['Join Date']);
+    if(!j)return true; // no/unparseable join date → don't hide them
+    return (j.y<selY)||(j.y===selY&&j.m<=selM);
+  };
+  const base=allStudents.filter(s=>(s.Status||'Active').toLowerCase()==='active'&&joinedBy(s));
 
   // Read current filter selections
   const fCountry=payFilterVal('payFilterCountry'),fLevel=payFilterVal('payFilterLevel'),
@@ -3660,7 +3667,11 @@ function renderTutorStats(){
     <th>On track</th><th>Watch</th><th>At risk</th><th>No data</th>
     </tr></thead><tbody>${tutors.map(t=>{
       const g=map[t];
-      const noteBtn=(cat)=>`<button class="ts-note-btn" title="${cat} notes" onclick="openTutorNotes('${esc(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;
+      const noteBtn=(cat)=>{
+        const latest=latestTutorNote(t,cat);
+        const tip=latest?`${cat} — latest (${latest.Timestamp||''}):\n${latest.Note||''}`:`${cat} notes — none yet`;
+        return `<button class="ts-note-btn" title="${esc(tip)}" data-tutor="${esc(t)}" data-cat="${cat}" onclick="openTutorNotes('${esc(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;
+      };
       return `<tr>
         <td><strong>${esc(t)}</strong></td>
         <td>${g.total}</td>
@@ -3678,6 +3689,23 @@ function renderTutorStats(){
 let tutorNotesData=[];        // all notes from the sheet
 let tutorNotesCtx={tutor:'',category:''};
 
+// Most recent note for a tutor+category (by Timestamp), or null.
+function latestTutorNote(tutor,category){
+  const notes=tutorNotesData.filter(n=>String(n.Tutor||'').trim()===tutor&&String(n.Category||'').trim()===category)
+    .sort((a,b)=>String(b.Timestamp||'').localeCompare(String(a.Timestamp||'')));
+  return notes.length?notes[0]:null;
+}
+
+// Refresh the hover tooltips on the note icons (called after notes load/change,
+// so titles are correct even if the table rendered before notes arrived).
+function refreshTutorNoteTips(){
+  document.querySelectorAll('#tutorStatsTable .ts-note-btn').forEach(btn=>{
+    const t=btn.getAttribute('data-tutor'), cat=btn.getAttribute('data-cat');
+    const latest=latestTutorNote(t,cat);
+    btn.title=latest?`${cat} — latest (${latest.Timestamp||''}):\n${latest.Note||''}`:`${cat} notes — none yet`;
+  });
+}
+
 async function loadTutorNotes(){
   try{
     if(SHEET_WEBAPP_URL){
@@ -3686,6 +3714,7 @@ async function loadTutorNotes(){
       tutorNotesData=(data&&data.ok&&Array.isArray(data.notes))?data.notes:[];
     }
   }catch(e){console.warn('getTutorNotes failed:',e);tutorNotesData=[];}
+  refreshTutorNoteTips(); // update icon tooltips once notes are in
 }
 
 function openTutorNotes(tutor,category){
