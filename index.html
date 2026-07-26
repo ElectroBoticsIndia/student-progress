@@ -2820,6 +2820,32 @@ function payRecord(sid,year,month,type){
     && ((String(p.Type||'').trim()||'Fee')===wantType))||null;
 }
 
+// ─── Local patch of paymentsData (avoids a full server refetch per action) ──
+// Insert or update a record in the in-memory array, keyed by student+year+month+type.
+function payUpsertLocal(sid,year,month,type,fields){
+  const t=type||'Fee';
+  let rec=payRecord(sid,year,month,t);
+  if(rec){Object.assign(rec,fields);}
+  else{
+    rec=Object.assign({'Student ID':String(sid),'Year':String(year),'Month':String(month),'Type':t},fields);
+    paymentsData.push(rec);
+  }
+}
+function payRemoveLocal(sid,year,month,type){
+  const t=type||'Fee';
+  paymentsData=paymentsData.filter(p=>!(String(p['Student ID']).trim()===String(sid).trim()
+    && String(p.Year).trim()===String(year).trim()
+    && String(p.Month).trim()===String(month).trim()
+    && ((String(p.Type||'').trim()||'Fee')===t)));
+}
+// Show a small inline spinner inside the clicked button while an action runs.
+function payBtnBusy(btn){
+  if(!btn)return null;
+  const prev=btn.innerHTML; btn.disabled=true;
+  btn.innerHTML='<span class="risk-spinner"></span>';
+  return ()=>{try{btn.innerHTML=prev;btn.disabled=false;}catch(e){}};
+}
+
 function buildPayments(){
   const list=document.getElementById('paymentsList');
   const summary=document.getElementById('paySummary');
@@ -2895,29 +2921,29 @@ function buildPayments(){
       // Kit cell: not flagged → "+ Kit"; flagged pending → Paid/Remove; paid → badge + Undo
       let kitCell='';
       if(!kitRec){
-        kitCell=`<button class="pay-act pay-act-kit" onclick="flagKit('${esc(s.ID)}')" title="Flag kit payment required">+ Kit</button>`;
+        kitCell=`<button class="pay-act pay-act-kit" onclick="flagKit('${esc(s.ID)}',this)" title="Flag kit payment required">+ Kit</button>`;
       }else if(kitSt==='paid'){
         const kd=`${kitRec.Amount?('₹'+esc(String(kitRec.Amount))):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;
-        kitCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${esc(s.ID)}')">Undo</button></div>`;
+        kitCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${esc(s.ID)}',this)">Undo</button></div>`;
       }else{
-        kitCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><button class="pay-act pay-act-paid" onclick="openKitForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${esc(s.ID)}')">Remove</button></div>`;
+        kitCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><button class="pay-act pay-act-paid" onclick="openKitForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${esc(s.ID)}',this)">Remove</button></div>`;
       }
       // Components cell: same flow as Kit, stored as Type='Components'
       let compCell='';
       if(!compRec){
-        compCell=`<button class="pay-act pay-act-kit" onclick="flagComponents('${esc(s.ID)}')" title="Flag components payment required">+ Components</button>`;
+        compCell=`<button class="pay-act pay-act-kit" onclick="flagComponents('${esc(s.ID)}',this)" title="Flag components payment required">+ Components</button>`;
       }else if(compSt==='paid'){
         const cd=`${compRec.Amount?('₹'+esc(String(compRec.Amount))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;
-        compCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}')">Undo</button></div>`;
+        compCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}',this)">Undo</button></div>`;
       }else{
-        compCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}')">Remove</button></div>`;
+        compCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}',this)">Remove</button></div>`;
       }
       let action='';
       if(st==='pending'){
         const wa=`<button class="pay-act pay-act-wa" title="Send WhatsApp reminder" onclick="payWhatsApp('${esc(s.ID)}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg></button>`;
-        action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}')">Ignore</button></div></div>`;
+        action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}',this)">Ignore</button></div></div>`;
       }else{
-        action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${esc(s.ID)}')">Undo</button>`;
+        action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${esc(s.ID)}',this)">Undo</button>`;
       }
       return `<tr>
         <td><strong>${esc(s.Name)}</strong><br><span class="pay-sid">${esc(s.ID)}</span></td>
@@ -2989,21 +3015,29 @@ async function savePaymentForm(){
     note:document.getElementById('pay_Note').value.trim(),markedBy:(studentUser&&studentUser.email)||''
   };
   const ok=await postPayment(body);
-  if(ok){closePaymentForm();await loadPayments();}
+  if(ok){
+    payUpsertLocal(payCurrentCtx.studentId,payCurrentCtx.year,payCurrentCtx.month,payCurrentCtx.type||'Fee',
+      {Status:'Paid',Amount:body.amount,'Paid Date':body.paidDate,Method:body.method,Note:body.note});
+    closePaymentForm();buildPayments();
+  }
   else{msg.textContent='Could not save. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;}
 }
 
-async function markPaymentIgnore(sid){
+async function markPaymentIgnore(sid,btn){
   const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
+  const done=payBtnBusy(btn);
   const ok=await postPayment({action:'savePayment',studentId:sid,year:year,month:month,status:'Ignore',markedBy:(studentUser&&studentUser.email)||''});
-  if(ok)await loadPayments();else alert('Could not update. Please try again.');
+  if(ok){payUpsertLocal(sid,year,month,'Fee',{Status:'Ignore'});buildPayments();}
+  else{if(done)done();alert('Could not update. Please try again.');}
 }
 
-async function revertPayment(sid){
+async function revertPayment(sid,btn){
   const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
   if(!confirm('Revert this to Pending? This removes the Paid/Ignore record for this month.'))return;
+  const done=payBtnBusy(btn);
   const ok=await postPayment({action:'deletePayment',studentId:sid,year:year,month:month});
-  if(ok)await loadPayments();else alert('Could not update. Please try again.');
+  if(ok){payRemoveLocal(sid,year,month,'Fee');buildPayments();}
+  else{if(done)done();alert('Could not update. Please try again.');}
 }
 
 async function postPayment(body){
@@ -3142,10 +3176,12 @@ function renderTrendChart(){
 // ─── Kit payment (Type='Kit', coexists with the monthly Fee) ─────────
 // Flag that a kit payment is required this month → creates a Kit "Pending" marker.
 // We store a Pending Kit record so the flag persists; amount is added when marked paid.
-async function flagKit(sid){
+async function flagKit(sid,btn){
   const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
+  const done=payBtnBusy(btn);
   const ok=await postPayment({action:'savePayment',type:'Kit',studentId:sid,year:year,month:month,status:'Pending',markedBy:(studentUser&&studentUser.email)||''});
-  if(ok)await loadPayments();else alert('Could not flag kit. Please try again.');
+  if(ok){payUpsertLocal(sid,year,month,'Kit',{Status:'Pending'});buildPayments();}
+  else{if(done)done();alert('Could not flag kit. Please try again.');}
 }
 
 // Open the shared payment modal in Kit mode (no fee default — amount entered manually).
@@ -3166,18 +3202,22 @@ function openKitForm(sid,name){
 }
 
 // Remove a Kit record (un-flag, or undo a paid kit) → reverts to not-flagged.
-async function revertKit(sid){
+async function revertKit(sid,btn){
   const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
   if(!confirm('Remove the kit payment entry for this month?'))return;
+  const done=payBtnBusy(btn);
   const ok=await postPayment({action:'deletePayment',type:'Kit',studentId:sid,year:year,month:month});
-  if(ok)await loadPayments();else alert('Could not update. Please try again.');
+  if(ok){payRemoveLocal(sid,year,month,'Kit');buildPayments();}
+  else{if(done)done();alert('Could not update. Please try again.');}
 }
 
 // ─── Components payment (Type='Components', same flow as Kit) ────────
-async function flagComponents(sid){
+async function flagComponents(sid,btn){
   const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
+  const done=payBtnBusy(btn);
   const ok=await postPayment({action:'savePayment',type:'Components',studentId:sid,year:year,month:month,status:'Pending',markedBy:(studentUser&&studentUser.email)||''});
-  if(ok)await loadPayments();else alert('Could not flag components. Please try again.');
+  if(ok){payUpsertLocal(sid,year,month,'Components',{Status:'Pending'});buildPayments();}
+  else{if(done)done();alert('Could not flag components. Please try again.');}
 }
 
 function openComponentsForm(sid,name){
@@ -3196,11 +3236,13 @@ function openComponentsForm(sid,name){
   document.getElementById('paymentModal').classList.add('open');
 }
 
-async function revertComponents(sid){
+async function revertComponents(sid,btn){
   const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
   if(!confirm('Remove the components payment entry for this month?'))return;
+  const done=payBtnBusy(btn);
   const ok=await postPayment({action:'deletePayment',type:'Components',studentId:sid,year:year,month:month});
-  if(ok)await loadPayments();else alert('Could not update. Please try again.');
+  if(ok){payRemoveLocal(sid,year,month,'Components');buildPayments();}
+  else{if(done)done();alert('Could not update. Please try again.');}
 }
 
 // ─── Tutor Availability Grid (days × time slots) ──────────────────────
