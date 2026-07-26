@@ -3669,7 +3669,7 @@ function renderTutorStats(){
       const g=map[t];
       const noteBtn=(cat)=>{
         const latest=latestTutorNote(t,cat);
-        const tip=latest?`${cat} — latest (${latest.Timestamp||''}):\n${latest.Note||''}`:`${cat} notes — none yet`;
+        const tip=latest?`${latest.Author||'Note'} (${latest.Timestamp||''}):\n${latest.Note||''}`:`${cat} notes — none yet`;
         return `<button class="ts-note-btn" title="${esc(tip)}" data-tutor="${esc(t)}" data-cat="${cat}" onclick="openTutorNotes('${esc(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;
       };
       return `<tr>
@@ -3702,7 +3702,7 @@ function refreshTutorNoteTips(){
   document.querySelectorAll('#tutorStatsTable .ts-note-btn').forEach(btn=>{
     const t=btn.getAttribute('data-tutor'), cat=btn.getAttribute('data-cat');
     const latest=latestTutorNote(t,cat);
-    btn.title=latest?`${cat} — latest (${latest.Timestamp||''}):\n${latest.Note||''}`:`${cat} notes — none yet`;
+    btn.title=latest?`${latest.Author||'Note'} (${latest.Timestamp||''}):\n${latest.Note||''}`:`${cat} notes — none yet`;
   });
 }
 
