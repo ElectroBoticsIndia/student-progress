@@ -969,7 +969,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <select id="f_InactiveReason" onchange="onReasonChange()">
           <option value="">— Select a reason —</option>
           <option value="Waiting for batch">Waiting for batch</option>
-          <option value="Higher std.">Higher std.</option>
+          <option value="Academics / higher grade">Academics / higher grade</option>
           <option value="Lost interest">Lost interest</option>
           <option value="Re-location">Re-location</option>
           <option value="Other">Other</option>
@@ -3982,7 +3982,7 @@ function openStudentForm(id){
 function closeStudentForm(){document.getElementById('studentModal').classList.remove('open');editingStudentId=null;}
 
 // ─── Inactive reason (shown only when Status = Inactive) ──────────────
-const PRESET_REASONS=['Waiting for batch','Higher std.','Lost interest','Re-location'];
+const PRESET_REASONS=['Waiting for batch','Academics / higher grade','Lost interest','Re-location'];
 function onStatusChange(){
   const inactive=document.getElementById('f_Status').value==='Inactive';
   document.getElementById('inactiveReasonRow').style.display=inactive?'':'none';
