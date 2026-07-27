@@ -464,6 +464,9 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .lead-summary{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
 .lead-total{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text);padding:5px 0;margin-right:4px}
 .lead-stat{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--text-dim)}
+.lead-stat-btn{cursor:pointer;background:#fff;transition:all .15s}
+.lead-stat-btn:hover{border-color:var(--text-light)}
+.lead-stat-btn.active{outline:2px solid var(--accent);outline-offset:1px}
 .lead-badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
 .lead-badge-new{background:var(--accent-light);color:var(--accent-dark)}
 .lead-badge-progress{background:#fdf1d6;color:#9a7200}
@@ -471,6 +474,8 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .lead-badge-lost{background:#fdeae5;color:#c0472a}
 .lead-notes-cell{max-width:220px;white-space:normal;font-size:12px;color:var(--text-dim)}
 .lead-conv-note{font-family:var(--font-mono);font-size:11px;font-weight:700;color:#5a7a00;margin-left:4px;white-space:nowrap}
+.lead-action-cell{white-space:nowrap}
+.lead-action-cell .pay-act{display:inline-block;vertical-align:middle}
 #l_Notes{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical}
 .pay-search:focus{border-color:var(--accent)}
 .pay-search::placeholder{color:var(--text-light)}
@@ -1143,10 +1148,14 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <label>Source</label>
         <select id="l_Source" onchange="onLeadSourceChange()">
           <option value="">— How did they find us? —</option>
-          <option value="Google Search">Google Search</option>
-          <option value="AI chat">AI chat</option>
-          <option value="Recommendation from a friend">Recommendation from a friend</option>
-          <option value="Social Media (Insta, WhatsApp, LinkedIn)">Social Media (Insta, WhatsApp, LinkedIn)</option>
+          <option value="Google">Google</option>
+          <option value="Website">Website</option>
+          <option value="Reference">Reference</option>
+          <option value="Instagram">Instagram</option>
+          <option value="AI Agent">AI Agent</option>
+          <option value="Summer Camp">Summer Camp</option>
+          <option value="Apartment Outreach">Apartment Outreach</option>
+          <option value="Stalls">Stalls</option>
           <option value="Others">Others</option>
         </select>
         <input type="text" id="l_SourceOther" placeholder="Please specify the source" style="display:none;margin-top:8px;">
@@ -3919,6 +3928,13 @@ let editingLeadId=null;
 let convertingLeadId=null; // set while converting a lead → student
 const LEAD_STATUSES=['Enquiry','Trial Pending','Waiting for a batch','Converted','Dropped'];
 
+// Click a summary chip → set the status filter dropdown and re-render the table.
+function setLeadStatusFilter(status){
+  const sel=document.getElementById('leadStatusFilter');
+  if(sel)sel.value=status;
+  renderLeads();
+}
+
 async function loadLeads(){
   const list=document.getElementById('leadsList');
   if(list)list.innerHTML='<div class="pay-loading"><span class="risk-spinner"></span>Loading leads…</div>';
@@ -3952,8 +3968,11 @@ function renderLeads(){
   // Summary counts by status (of all leads, before filter)
   const counts={};LEAD_STATUSES.forEach(s=>counts[s]=0);
   leadsData.forEach(l=>{const s=String(l.Status||'Enquiry');if(counts[s]!==undefined)counts[s]++;});
-  if(summary)summary.innerHTML=`<span class="lead-total">${leadsData.length} leads</span>`+
-    LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<span class="lead-stat ${leadStatusClass(s)}">${counts[s]} ${esc(s)}</span>`).join('');
+  if(summary){
+    const totalBtn=`<button class="lead-stat lead-stat-btn${fStatus===''?' active':''}" onclick="setLeadStatusFilter('')">${leadsData.length} All</button>`;
+    const chips=LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="lead-stat lead-stat-btn ${leadStatusClass(s)}${fStatus===s?' active':''}" onclick="setLeadStatusFilter('${esc(s)}')">${counts[s]} ${esc(s)}</button>`).join('');
+    summary.innerHTML=totalBtn+chips;
+  }
 
   if(!rows.length){list.innerHTML='<div class="pay-empty">No leads yet. Click "+ Add Lead" to add one.</div>';return;}
   list.innerHTML=`<table class="pay-table lead-table"><thead><tr>
@@ -3966,7 +3985,7 @@ function renderLeads(){
       <td>${esc(l.Source||'—')}</td>
       <td><span class="lead-badge ${leadStatusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
       <td class="lead-notes-cell">${esc(l.Notes||'')}</td>
-      <td><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button> <button class="pay-act" onclick="openLeadHistory('${esc(l['Lead ID'])}')">History</button>${String(l.Status||'').toLowerCase()==='converted'?` <span class="lead-conv-note">✓ ${esc(l['Converted Student ID']||'Converted')}</span>`:` <button class="pay-act pay-act-kit" onclick="convertLead('${esc(l['Lead ID'])}')">Convert</button>`}</td>
+      <td class="lead-action-cell"><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button> <button class="pay-act" onclick="openLeadHistory('${esc(l['Lead ID'])}')">History</button>${String(l.Status||'').toLowerCase()==='converted'?` <span class="lead-conv-note">✓ ${esc(l['Converted Student ID']||'Converted')}</span>`:` <button class="pay-act pay-act-kit" onclick="convertLead('${esc(l['Lead ID'])}')">Convert</button>`}</td>
     </tr>`).join('')}</tbody></table>`;
 }
 
@@ -3991,7 +4010,7 @@ function openLeadForm(id){
 function closeLeadForm(){document.getElementById('leadModal').classList.remove('open');editingLeadId=null;}
 
 // Lead source: dropdown + "Others" reveals a text box (like inactive reason).
-const LEAD_SOURCES=['Google Search','AI chat','Recommendation from a friend','Social Media (Insta, WhatsApp, LinkedIn)'];
+const LEAD_SOURCES=['Google','Website','Reference','Instagram','AI Agent','Summer Camp','Apartment Outreach','Stalls'];
 function onLeadSourceChange(){
   const other=document.getElementById('l_Source').value==='Others';
   const tb=document.getElementById('l_SourceOther');
