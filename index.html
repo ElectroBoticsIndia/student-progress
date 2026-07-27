@@ -3937,6 +3937,13 @@ function setLeadStatusFilter(status){
   renderLeads();
 }
 
+// Patch a single lead in the in-memory array (avoids a full reload per action).
+function leadUpsertLocal(id,fields){
+  let rec=leadsData.find(l=>String(l['Lead ID'])===String(id));
+  if(rec)Object.assign(rec,fields);
+  else{rec=Object.assign({'Lead ID':String(id)},fields);leadsData.push(rec);}
+}
+
 async function loadLeads(){
   const list=document.getElementById('leadsList');
   if(list)list.innerHTML='<div class="pay-loading"><span class="risk-spinner"></span>Loading leads…</div>';
@@ -3965,7 +3972,7 @@ function renderLeads(){
   const fStatus=document.getElementById('leadStatusFilter').value;
   let rows=leadsData.slice();
   if(fStatus)rows=rows.filter(l=>String(l.Status||'')===fStatus);
-  if(q)rows=rows.filter(l=>String(l.Name||'').toLowerCase().includes(q)||String(l.Contact||'').toLowerCase().includes(q));
+  if(q)rows=rows.filter(l=>['Name','Country','Contact','Preferred Batch','Source','Status','Notes','Lead ID','Converted Student ID'].some(k=>String(l[k]||'').toLowerCase().includes(q)));
 
   // Summary counts by status (of all leads, before filter)
   const counts={};LEAD_STATUSES.forEach(s=>counts[s]=0);
@@ -4075,7 +4082,11 @@ async function saveLead(){
       }
     }
   }catch(e){console.error('saveLead error:',e);}
-  if(ok){closeLeadForm();await loadLeads();}
+  if(ok){
+    // Patch just this lead locally and re-render (no full reload)
+    leadUpsertLocal(savedId,lead);
+    closeLeadForm();renderLeads();
+  }
   else{msg.textContent='Could not save. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;}
 }
 
@@ -4143,7 +4154,8 @@ async function saveLeadHistory(){
     document.getElementById('lh_Note').value='';
     msg.textContent='';btn.disabled=false;
     await loadLeadHistory();renderLeadHistoryList();
-    await loadLeads(); // refresh the table's current status
+    leadUpsertLocal(historyLeadId,{Status:status}); // patch table's current status locally
+    renderLeads();
   }else{
     msg.textContent='Could not save. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;
   }
@@ -4468,7 +4480,7 @@ async function saveStudent(){
           body:JSON.stringify({action:'addLeadHistory',leadId:leadId,status:'Converted',note:'Converted to student '+sid,author:(studentUser&&studentUser.email)||''})});
       }catch(convErr){console.warn('lead convert link failed:',convErr);}
       convertingLeadId=null;
-      if(typeof loadLeads==='function')loadLeads(); // refresh leads table
+      if(typeof leadUpsertLocal==='function'){leadUpsertLocal(leadId,{Status:'Converted','Converted Student ID':sid});if(typeof renderLeads==='function')renderLeads();}
     }
     // Refresh everything that depends on student data
     populateFilters();applyFilters();buildStats();buildCharts();
