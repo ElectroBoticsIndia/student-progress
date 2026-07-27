@@ -1079,6 +1079,39 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   </div>
 </div>
 
+<div class="modal-overlay" id="leadHistoryModal">
+  <div class="modal-card" style="max-width:500px;">
+    <div class="modal-head">
+      <h3 id="leadHistoryTitle">Lead History</h3>
+      <button class="modal-close" onclick="closeLeadHistory()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="tn-list" id="leadHistoryList"></div>
+      <div class="form-row">
+        <label>Update status</label>
+        <select id="lh_Status">
+          <option value="New">New</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Interested">Interested</option>
+          <option value="Demo scheduled">Demo scheduled</option>
+          <option value="Follow-up">Follow-up</option>
+          <option value="Converted">Converted</option>
+          <option value="Lost">Lost</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Note (what happened)</label>
+        <textarea id="lh_Note" rows="2" placeholder="e.g. Called, discussed weekend batch…"></textarea>
+      </div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeLeadHistory()">Close</button>
+        <button class="wa-btn pf-save" id="lh_SaveBtn" onclick="saveLeadHistory()">Add update</button>
+      </div>
+      <p class="topics-save-msg" id="lh_Msg" style="text-align:right;margin-top:8px;"></p>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="leadModal">
   <div class="modal-card" style="max-width:460px;">
     <div class="modal-head">
@@ -3926,7 +3959,7 @@ function renderLeads(){
       <td>${esc(l['Preferred Batch']||'—')}</td>
       <td><span class="lead-badge ${leadStatusClass(l.Status)}">${esc(l.Status||'New')}</span></td>
       <td class="lead-notes-cell">${esc(l.Notes||'')}</td>
-      <td><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button></td>
+      <td><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button> <button class="pay-act" onclick="openLeadHistory('${esc(l['Lead ID'])}')">History</button></td>
     </tr>`).join('')}</tbody></table>`;
 }
 
@@ -3958,17 +3991,98 @@ async function saveLead(){
   const lead={Name:name,Country:document.getElementById('l_Country').value.trim(),Contact:contact,
     'Preferred Batch':document.getElementById('l_Batch').value.trim(),Status:document.getElementById('l_Status').value,
     Notes:document.getElementById('l_Notes').value.trim()};
+  // Detect status change (or new lead) so we can log a history entry
+  const oldLead=editingLeadId?leadsData.find(l=>String(l['Lead ID'])===String(editingLeadId)):null;
+  const oldStatus=oldLead?String(oldLead.Status||''):'';
+  const newStatus=lead.Status;
   btn.disabled=true;msg.innerHTML='<span class="risk-spinner"></span>Saving…';msg.className='topics-save-msg saving';
-  let ok=false;
+  let ok=false, savedId=editingLeadId;
   try{
     if(SHEET_WEBAPP_URL){
       const body=editingLeadId?{action:'updateLead',id:editingLeadId,lead}:{action:'addLead',lead};
       const res=await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
       const data=await res.json();ok=!!(data&&data.ok);
+      if(ok&&data.id)savedId=data.id;
+      // Log history: on creation, or when status changed
+      if(ok&&savedId&&(!editingLeadId||newStatus!==oldStatus)){
+        const note=editingLeadId?`Status changed from ${oldStatus||'—'} to ${newStatus}`:`Lead created with status ${newStatus}`;
+        await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body:JSON.stringify({action:'addLeadHistory',leadId:savedId,status:newStatus,note,author:(studentUser&&studentUser.email)||''})});
+      }
     }
   }catch(e){console.error('saveLead error:',e);}
   if(ok){closeLeadForm();await loadLeads();}
   else{msg.textContent='Could not save. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;}
+}
+
+// ─── Lead history (Phase 2) ───────────────────────────────────────────
+let leadHistoryData=[];
+let historyLeadId=null;
+
+async function loadLeadHistory(){
+  try{
+    if(SHEET_WEBAPP_URL){
+      const res=await fetch(SHEET_WEBAPP_URL+'?action=getLeadHistory');
+      const data=await res.json();
+      leadHistoryData=(data&&data.ok&&Array.isArray(data.history))?data.history:[];
+    }
+  }catch(e){console.warn('getLeadHistory failed:',e);leadHistoryData=[];}
+}
+
+async function openLeadHistory(id){
+  historyLeadId=id;
+  const lead=leadsData.find(l=>String(l['Lead ID'])===String(id));
+  document.getElementById('leadHistoryTitle').textContent=lead?`History · ${lead.Name||id}`:'Lead History';
+  document.getElementById('lh_Status').value=lead?(lead.Status||'New'):'New';
+  document.getElementById('lh_Note').value='';
+  document.getElementById('lh_Msg').textContent='';
+  document.getElementById('lh_SaveBtn').disabled=false;
+  document.getElementById('leadHistoryList').innerHTML='<div class="tn-empty"><span class="risk-spinner"></span> Loading…</div>';
+  document.getElementById('leadHistoryModal').classList.add('open');
+  await loadLeadHistory();
+  renderLeadHistoryList();
+}
+function closeLeadHistory(){document.getElementById('leadHistoryModal').classList.remove('open');historyLeadId=null;}
+
+function renderLeadHistoryList(){
+  const box=document.getElementById('leadHistoryList');
+  const items=leadHistoryData.filter(h=>String(h['Lead ID']||'').trim()===String(historyLeadId).trim())
+    .sort((a,b)=>String(b.Timestamp||'').localeCompare(String(a.Timestamp||''))); // newest first
+  if(!items.length){box.innerHTML='<div class="tn-empty">No history yet.</div>';return;}
+  box.innerHTML=items.map(h=>`<div class="tn-item">
+    <div class="tn-meta">${h.Status?`<span class="lead-badge ${leadStatusClass(h.Status)}" style="margin-right:6px;">${esc(String(h.Status))}</span>`:''}${esc(String(h.Timestamp||''))}${h.Author?(' · '+esc(String(h.Author))):''}</div>
+    ${h.Note?`<div class="tn-text">${esc(String(h.Note))}</div>`:''}
+  </div>`).join('');
+}
+
+async function saveLeadHistory(){
+  const status=document.getElementById('lh_Status').value;
+  const note=document.getElementById('lh_Note').value.trim();
+  const msg=document.getElementById('lh_Msg');const btn=document.getElementById('lh_SaveBtn');
+  if(!note&&!status){msg.textContent='Add a note or change the status.';msg.className='topics-save-msg err';return;}
+  btn.disabled=true;msg.innerHTML='<span class="risk-spinner"></span>Saving…';msg.className='topics-save-msg saving';
+  let ok=false;
+  try{
+    if(SHEET_WEBAPP_URL){
+      // Log the history entry
+      const res=await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'addLeadHistory',leadId:historyLeadId,status,note,author:(studentUser&&studentUser.email)||''})});
+      const data=await res.json();ok=!!(data&&data.ok);
+      // Also update the lead's current status to match
+      if(ok){
+        await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body:JSON.stringify({action:'updateLead',id:historyLeadId,lead:{Status:status}})});
+      }
+    }
+  }catch(e){console.error('saveLeadHistory error:',e);}
+  if(ok){
+    document.getElementById('lh_Note').value='';
+    msg.textContent='';btn.disabled=false;
+    await loadLeadHistory();renderLeadHistoryList();
+    await loadLeads(); // refresh the table's current status
+  }else{
+    msg.textContent='Could not save. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;
+  }
 }
 
 function riskLine(s){
