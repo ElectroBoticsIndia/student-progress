@@ -1092,7 +1092,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
       <div class="form-row">
         <label>Country</label>
-        <input type="text" id="l_Country" placeholder="Country">
+        <div class="combo" data-field="l_Country">
+          <select class="combo-select" onchange="onComboSelect('l_Country')"></select>
+          <input type="text" class="combo-new" id="l_Country" placeholder="Type a new country" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('l_Country')" style="display:none;" title="Back to list">↩</button>
+        </div>
       </div>
       <div class="form-row">
         <label>Mobile Contact <span class="req">*</span></label>
@@ -1100,7 +1104,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
       <div class="form-row">
         <label>Preferred Batch</label>
-        <input type="text" id="l_Batch" placeholder="e.g. Weekend mornings">
+        <div class="combo" data-field="l_Batch">
+          <select class="combo-select" onchange="onComboSelect('l_Batch')"></select>
+          <input type="text" class="combo-new" id="l_Batch" placeholder="Type a new batch (e.g. Sun - 9:30 am)" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('l_Batch')" style="display:none;" title="Back to list">↩</button>
+        </div>
       </div>
       <div class="form-row">
         <label>Status</label>
@@ -3927,11 +3935,14 @@ function openLeadForm(id){
   const lead=id?leadsData.find(l=>String(l['Lead ID'])===String(id)):null;
   document.getElementById('leadModalTitle').textContent=lead?'Edit Lead':'Add Lead';
   document.getElementById('l_Name').value=lead?(lead.Name||''):'';
-  document.getElementById('l_Country').value=lead?(lead.Country||''):'';
   document.getElementById('l_Contact').value=lead?(lead.Contact||''):'';
-  document.getElementById('l_Batch').value=lead?(lead['Preferred Batch']||''):'';
   document.getElementById('l_Status').value=lead?(lead.Status||'New'):'New';
   document.getElementById('l_Notes').value=lead?(lead.Notes||''):'';
+  // Country & Batch dropdowns prepopulated from existing students (+ Add new)
+  fillCombo('l_Country',allStudents.map(s=>s.Country));
+  fillCombo('l_Batch',allStudents.map(s=>s.Batch));
+  setComboValue('l_Country',lead?(lead.Country||''):'');
+  setComboValue('l_Batch',lead?(lead['Preferred Batch']||''):'');
   document.getElementById('l_Msg').textContent='';
   document.getElementById('l_SaveBtn').disabled=false;
   document.getElementById('leadModal').classList.add('open');
