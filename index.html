@@ -475,6 +475,7 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .lead-notes-cell{max-width:220px;white-space:normal;font-size:12px;color:var(--text-dim)}
 .lead-conv-note{font-family:var(--font-mono);font-size:11px;font-weight:700;color:#5a7a00;margin-left:4px;white-space:nowrap}
 .lead-action-cell{white-space:nowrap}
+.pay-act-history:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .lead-action-cell .pay-act{display:inline-block;vertical-align:middle}
 #l_Notes{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical}
 .pay-search:focus{border-color:var(--accent)}
@@ -1151,6 +1152,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
           <option value="Google">Google</option>
           <option value="Website">Website</option>
           <option value="Reference">Reference</option>
+          <option value="WhatsApp">WhatsApp</option>
           <option value="Instagram">Instagram</option>
           <option value="AI Agent">AI Agent</option>
           <option value="Summer Camp">Summer Camp</option>
@@ -3985,7 +3987,7 @@ function renderLeads(){
       <td>${esc(l.Source||'—')}</td>
       <td><span class="lead-badge ${leadStatusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
       <td class="lead-notes-cell">${esc(l.Notes||'')}</td>
-      <td class="lead-action-cell"><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button> <button class="pay-act" onclick="openLeadHistory('${esc(l['Lead ID'])}')">History</button>${String(l.Status||'').toLowerCase()==='converted'?` <span class="lead-conv-note">✓ ${esc(l['Converted Student ID']||'Converted')}</span>`:` <button class="pay-act pay-act-kit" onclick="convertLead('${esc(l['Lead ID'])}')">Convert</button>`}</td>
+      <td class="lead-action-cell"><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button> <button class="pay-act pay-act-history" onclick="openLeadHistory('${esc(l['Lead ID'])}')">History</button>${String(l.Status||'').toLowerCase()==='converted'?` <span class="lead-conv-note">✓ ${esc(l['Converted Student ID']||'Converted')}</span>`:` <button class="pay-act pay-act-kit" onclick="convertLead('${esc(l['Lead ID'])}')">Convert</button>`}</td>
     </tr>`).join('')}</tbody></table>`;
 }
 
@@ -4010,7 +4012,7 @@ function openLeadForm(id){
 function closeLeadForm(){document.getElementById('leadModal').classList.remove('open');editingLeadId=null;}
 
 // Lead source: dropdown + "Others" reveals a text box (like inactive reason).
-const LEAD_SOURCES=['Google','Website','Reference','Instagram','AI Agent','Summer Camp','Apartment Outreach','Stalls'];
+const LEAD_SOURCES=['Google','Website','Reference','WhatsApp','Instagram','AI Agent','Summer Camp','Apartment Outreach','Stalls'];
 function onLeadSourceChange(){
   const other=document.getElementById('l_Source').value==='Others';
   const tb=document.getElementById('l_SourceOther');
