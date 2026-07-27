@@ -459,6 +459,18 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .pay-filters select{font-family:var(--font-mono);font-size:11px;padding:6px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;outline:none}
 .pay-search{font-family:var(--font-mono);font-size:11px;padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text);outline:none;min-width:150px}
+.lead-add-btn{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:7px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer}
+.lead-add-btn:hover{background:var(--accent-dark)}
+.lead-summary{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.lead-total{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text);padding:5px 0;margin-right:4px}
+.lead-stat{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--text-dim)}
+.lead-badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
+.lead-badge-new{background:var(--accent-light);color:var(--accent-dark)}
+.lead-badge-progress{background:#fdf1d6;color:#9a7200}
+.lead-badge-converted{background:#eef6d8;color:#5a7a00}
+.lead-badge-lost{background:#fdeae5;color:#c0472a}
+.lead-notes-cell{max-width:220px;white-space:normal;font-size:12px;color:var(--text-dim)}
+#l_Notes{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical}
 .pay-search:focus{border-color:var(--accent)}
 .pay-search::placeholder{color:var(--text-light)}
 .pay-filters select:focus{border-color:var(--accent)}
@@ -737,6 +749,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <button class="dash-tab" data-tab="risk" onclick="setDashTab('risk')">At-Risk</button>
       <button class="dash-tab" data-tab="tutor" onclick="setDashTab('tutor')">Tutor</button>
       <button class="dash-tab" data-tab="payments" id="dashTabPayments" onclick="setDashTab('payments')">Payments</button>
+      <button class="dash-tab" data-tab="leads" id="dashTabLeads" onclick="setDashTab('leads')">Leads</button>
     </div>
     <div class="dash-panel" id="panel-summary">
     <div class="stats-grid" id="statsGrid"></div>
@@ -853,6 +866,29 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       </div>
     </div>
     </div><!-- /panel-payments -->
+    <div class="dash-panel" id="panel-leads" style="display:none;">
+    <div class="chart-card" id="leadsCard" style="margin-bottom:28px;">
+      <div class="pay-head">
+        <div class="chart-title" style="margin-bottom:0;">Leads</div>
+        <div class="pay-controls">
+          <input type="text" id="leadSearch" class="pay-search" placeholder="Search lead…" oninput="renderLeads()">
+          <select id="leadStatusFilter" onchange="renderLeads()">
+            <option value="">All statuses</option>
+            <option value="New">New</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Interested">Interested</option>
+            <option value="Demo scheduled">Demo scheduled</option>
+            <option value="Follow-up">Follow-up</option>
+            <option value="Converted">Converted</option>
+            <option value="Lost">Lost</option>
+          </select>
+          <button class="btn-primary lead-add-btn" onclick="openLeadForm()">+ Add Lead</button>
+        </div>
+      </div>
+      <div class="lead-summary" id="leadSummary"></div>
+      <div class="avail-scroll"><div id="leadsList"></div></div>
+    </div>
+    </div><!-- /panel-leads -->
     <div class="dash-panel" id="panel-students" style="display:none;">
     <div class="table-card">
       <div class="table-header">
@@ -1039,6 +1075,54 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <button class="share-btn share-img" onclick="shareTo('download')"><span class="share-ico">⬇</span>Download</button>
       </div>
       <p class="share-note">Edit the message above if you like. On a phone, “Share via apps” sends the certificate image with your message to WhatsApp, Instagram, LinkedIn, etc. On a computer, use “Download” then attach it to your post.</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="leadModal">
+  <div class="modal-card" style="max-width:460px;">
+    <div class="modal-head">
+      <h3 id="leadModalTitle">Add Lead</h3>
+      <button class="modal-close" onclick="closeLeadForm()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Student Name <span class="req">*</span></label>
+        <input type="text" id="l_Name" placeholder="Student name">
+      </div>
+      <div class="form-row">
+        <label>Country</label>
+        <input type="text" id="l_Country" placeholder="Country">
+      </div>
+      <div class="form-row">
+        <label>Mobile Contact <span class="req">*</span></label>
+        <input type="text" id="l_Contact" placeholder="With country code, e.g. 9198…">
+      </div>
+      <div class="form-row">
+        <label>Preferred Batch</label>
+        <input type="text" id="l_Batch" placeholder="e.g. Weekend mornings">
+      </div>
+      <div class="form-row">
+        <label>Status</label>
+        <select id="l_Status">
+          <option value="New">New</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Interested">Interested</option>
+          <option value="Demo scheduled">Demo scheduled</option>
+          <option value="Follow-up">Follow-up</option>
+          <option value="Converted">Converted</option>
+          <option value="Lost">Lost</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Additional Information</label>
+        <textarea id="l_Notes" rows="3" placeholder="Any details from the enquiry…"></textarea>
+      </div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeLeadForm()">Cancel</button>
+        <button class="wa-btn pf-save" id="l_SaveBtn" onclick="saveLead()">Save</button>
+      </div>
+      <p class="topics-save-msg" id="l_Msg" style="text-align:right;margin-top:8px;"></p>
     </div>
   </div>
 </div>
@@ -2617,17 +2701,21 @@ function buildCharts(){
   const payCard=document.getElementById('paymentsCard');
   const trendCard=document.getElementById('trendCard');
   const payTab=document.getElementById('dashTabPayments');
+  const leadsTab=document.getElementById('dashTabLeads');
   if(userRole==='admin'){
     if(payTab)payTab.style.display='';
+    if(leadsTab)leadsTab.style.display='';
     if(payCard)payCard.style.display='';
     initPayments();
     if(trendCard)trendCard.style.display='';
     initTrend();
+    loadLeads();
   }else{
     if(payTab)payTab.style.display='none';
+    if(leadsTab)leadsTab.style.display='none';
     if(payCard)payCard.style.display='none';
     if(trendCard)trendCard.style.display='none';
-    if(dashTab==='payments')setDashTab('summary'); // never leave a tutor on the payments tab
+    if(dashTab==='payments'||dashTab==='leads')setDashTab('summary');
   }
 }
 
@@ -3510,7 +3598,7 @@ function toggleRisk(){
 let dashTab='summary';
 function setDashTab(tab){
   dashTab=tab;
-  ['summary','students','risk','tutor','payments'].forEach(t=>{
+  ['summary','students','risk','tutor','payments','leads'].forEach(t=>{
     const p=document.getElementById('panel-'+t);
     if(p)p.style.display=(t===tab)?'block':'none';
   });
@@ -3523,6 +3611,7 @@ function setDashTab(tab){
       if(tab==='tutor'){renderTutorStats();if(document.getElementById('availBody').style.display!=='none')buildAvailabilityGrid();}
       if(tab==='payments'){if(document.getElementById('trendBody').style.display!=='none')renderTrendChart();}
       if(tab==='risk'&&riskExpanded)renderRisk();
+      if(tab==='leads'&&!leadsData.length)loadLeads();
     }catch(e){console.warn('tab render',e);}
   });
 }
@@ -3778,6 +3867,99 @@ async function saveTutorNote(){
 }
 
 // Build a one-line summary for a student row
+// ─── Leads (Phase 1: CRUD) ────────────────────────────────────────────
+let leadsData=[];
+let editingLeadId=null;
+const LEAD_STATUSES=['New','Contacted','Interested','Demo scheduled','Follow-up','Converted','Lost'];
+
+async function loadLeads(){
+  const list=document.getElementById('leadsList');
+  if(list)list.innerHTML='<div class="pay-loading"><span class="risk-spinner"></span>Loading leads…</div>';
+  try{
+    if(SHEET_WEBAPP_URL){
+      const res=await fetch(SHEET_WEBAPP_URL+'?action=getLeads');
+      const data=await res.json();
+      leadsData=(data&&data.ok&&Array.isArray(data.leads))?data.leads:[];
+    }else{leadsData=[];}
+  }catch(e){console.warn('getLeads failed:',e);leadsData=[];}
+  renderLeads();
+}
+
+function leadStatusClass(st){
+  const s=String(st||'').toLowerCase();
+  if(s==='converted')return 'lead-badge-converted';
+  if(s==='lost')return 'lead-badge-lost';
+  if(s==='new')return 'lead-badge-new';
+  return 'lead-badge-progress';
+}
+
+function renderLeads(){
+  const list=document.getElementById('leadsList');const summary=document.getElementById('leadSummary');
+  if(!list)return;
+  const q=(document.getElementById('leadSearch').value||'').trim().toLowerCase();
+  const fStatus=document.getElementById('leadStatusFilter').value;
+  let rows=leadsData.slice();
+  if(fStatus)rows=rows.filter(l=>String(l.Status||'')===fStatus);
+  if(q)rows=rows.filter(l=>String(l.Name||'').toLowerCase().includes(q)||String(l.Contact||'').toLowerCase().includes(q));
+
+  // Summary counts by status (of all leads, before filter)
+  const counts={};LEAD_STATUSES.forEach(s=>counts[s]=0);
+  leadsData.forEach(l=>{const s=String(l.Status||'New');if(counts[s]!==undefined)counts[s]++;});
+  if(summary)summary.innerHTML=`<span class="lead-total">${leadsData.length} leads</span>`+
+    LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<span class="lead-stat ${leadStatusClass(s)}">${counts[s]} ${esc(s)}</span>`).join('');
+
+  if(!rows.length){list.innerHTML='<div class="pay-empty">No leads yet. Click "+ Add Lead" to add one.</div>';return;}
+  list.innerHTML=`<table class="pay-table lead-table"><thead><tr>
+    <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Status</th><th>Notes</th><th>Action</th>
+    </tr></thead><tbody>${rows.map(l=>`<tr>
+      <td><strong>${esc(l.Name||'—')}</strong></td>
+      <td>${esc(l.Country||'—')}</td>
+      <td>${esc(l.Contact||'—')}</td>
+      <td>${esc(l['Preferred Batch']||'—')}</td>
+      <td><span class="lead-badge ${leadStatusClass(l.Status)}">${esc(l.Status||'New')}</span></td>
+      <td class="lead-notes-cell">${esc(l.Notes||'')}</td>
+      <td><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function openLeadForm(id){
+  editingLeadId=id||null;
+  const lead=id?leadsData.find(l=>String(l['Lead ID'])===String(id)):null;
+  document.getElementById('leadModalTitle').textContent=lead?'Edit Lead':'Add Lead';
+  document.getElementById('l_Name').value=lead?(lead.Name||''):'';
+  document.getElementById('l_Country').value=lead?(lead.Country||''):'';
+  document.getElementById('l_Contact').value=lead?(lead.Contact||''):'';
+  document.getElementById('l_Batch').value=lead?(lead['Preferred Batch']||''):'';
+  document.getElementById('l_Status').value=lead?(lead.Status||'New'):'New';
+  document.getElementById('l_Notes').value=lead?(lead.Notes||''):'';
+  document.getElementById('l_Msg').textContent='';
+  document.getElementById('l_SaveBtn').disabled=false;
+  document.getElementById('leadModal').classList.add('open');
+}
+function closeLeadForm(){document.getElementById('leadModal').classList.remove('open');editingLeadId=null;}
+
+async function saveLead(){
+  const msg=document.getElementById('l_Msg');const btn=document.getElementById('l_SaveBtn');
+  const name=document.getElementById('l_Name').value.trim();
+  const contact=document.getElementById('l_Contact').value.trim();
+  if(!name){msg.textContent='Please enter the student name.';msg.className='topics-save-msg err';return;}
+  if(!contact){msg.textContent='Please enter the mobile contact.';msg.className='topics-save-msg err';return;}
+  const lead={Name:name,Country:document.getElementById('l_Country').value.trim(),Contact:contact,
+    'Preferred Batch':document.getElementById('l_Batch').value.trim(),Status:document.getElementById('l_Status').value,
+    Notes:document.getElementById('l_Notes').value.trim()};
+  btn.disabled=true;msg.innerHTML='<span class="risk-spinner"></span>Saving…';msg.className='topics-save-msg saving';
+  let ok=false;
+  try{
+    if(SHEET_WEBAPP_URL){
+      const body=editingLeadId?{action:'updateLead',id:editingLeadId,lead}:{action:'addLead',lead};
+      const res=await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+      const data=await res.json();ok=!!(data&&data.ok);
+    }
+  }catch(e){console.error('saveLead error:',e);}
+  if(ok){closeLeadForm();await loadLeads();}
+  else{msg.textContent='Could not save. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;}
+}
+
 function riskLine(s){
   const att=s.att_rate!==null&&s.att_rate!==undefined?Math.round(s.att_rate*100)+'%':'no data';
   const sub=s.sub_rate!==null&&s.sub_rate!==undefined?Math.round(s.sub_rate*100)+'%':'no data';
