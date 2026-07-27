@@ -470,6 +470,7 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .lead-badge-converted{background:#eef6d8;color:#5a7a00}
 .lead-badge-lost{background:#fdeae5;color:#c0472a}
 .lead-notes-cell{max-width:220px;white-space:normal;font-size:12px;color:var(--text-dim)}
+.lead-conv-note{font-family:var(--font-mono);font-size:11px;font-weight:700;color:#5a7a00;margin-left:4px;white-space:nowrap}
 #l_Notes{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical}
 .pay-search:focus{border-color:var(--accent)}
 .pay-search::placeholder{color:var(--text-light)}
@@ -874,13 +875,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
           <input type="text" id="leadSearch" class="pay-search" placeholder="Search lead…" oninput="renderLeads()">
           <select id="leadStatusFilter" onchange="renderLeads()">
             <option value="">All statuses</option>
-            <option value="New">New</option>
-            <option value="Contacted">Contacted</option>
-            <option value="Interested">Interested</option>
-            <option value="Demo scheduled">Demo scheduled</option>
-            <option value="Follow-up">Follow-up</option>
+            <option value="Enquiry">Enquiry</option>
+            <option value="Trial Pending">Trial Pending</option>
+            <option value="Waiting for a batch">Waiting for a batch</option>
             <option value="Converted">Converted</option>
-            <option value="Lost">Lost</option>
+            <option value="Dropped">Dropped</option>
           </select>
           <button class="btn-primary lead-add-btn" onclick="openLeadForm()">+ Add Lead</button>
         </div>
@@ -1090,13 +1089,10 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
       <div class="form-row">
         <label>Update status</label>
         <select id="lh_Status">
-          <option value="New">New</option>
-          <option value="Contacted">Contacted</option>
-          <option value="Interested">Interested</option>
-          <option value="Demo scheduled">Demo scheduled</option>
-          <option value="Follow-up">Follow-up</option>
-          <option value="Converted">Converted</option>
-          <option value="Lost">Lost</option>
+          <option value="Enquiry">Enquiry</option>
+          <option value="Trial Pending">Trial Pending</option>
+          <option value="Waiting for a batch">Waiting for a batch</option>
+          <option value="Dropped">Dropped</option>
         </select>
       </div>
       <div class="form-row">
@@ -1144,15 +1140,24 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         </div>
       </div>
       <div class="form-row">
+        <label>Source</label>
+        <select id="l_Source" onchange="onLeadSourceChange()">
+          <option value="">— How did they find us? —</option>
+          <option value="Google Search">Google Search</option>
+          <option value="AI chat">AI chat</option>
+          <option value="Recommendation from a friend">Recommendation from a friend</option>
+          <option value="Social Media (Insta, WhatsApp, LinkedIn)">Social Media (Insta, WhatsApp, LinkedIn)</option>
+          <option value="Others">Others</option>
+        </select>
+        <input type="text" id="l_SourceOther" placeholder="Please specify the source" style="display:none;margin-top:8px;">
+      </div>
+      <div class="form-row">
         <label>Status</label>
         <select id="l_Status">
-          <option value="New">New</option>
-          <option value="Contacted">Contacted</option>
-          <option value="Interested">Interested</option>
-          <option value="Demo scheduled">Demo scheduled</option>
-          <option value="Follow-up">Follow-up</option>
-          <option value="Converted">Converted</option>
-          <option value="Lost">Lost</option>
+          <option value="Enquiry">Enquiry</option>
+          <option value="Trial Pending">Trial Pending</option>
+          <option value="Waiting for a batch">Waiting for a batch</option>
+          <option value="Dropped">Dropped</option>
         </select>
       </div>
       <div class="form-row">
@@ -3911,7 +3916,8 @@ async function saveTutorNote(){
 // ─── Leads (Phase 1: CRUD) ────────────────────────────────────────────
 let leadsData=[];
 let editingLeadId=null;
-const LEAD_STATUSES=['New','Contacted','Interested','Demo scheduled','Follow-up','Converted','Lost'];
+let convertingLeadId=null; // set while converting a lead → student
+const LEAD_STATUSES=['Enquiry','Trial Pending','Waiting for a batch','Converted','Dropped'];
 
 async function loadLeads(){
   const list=document.getElementById('leadsList');
@@ -3929,9 +3935,9 @@ async function loadLeads(){
 function leadStatusClass(st){
   const s=String(st||'').toLowerCase();
   if(s==='converted')return 'lead-badge-converted';
-  if(s==='lost')return 'lead-badge-lost';
-  if(s==='new')return 'lead-badge-new';
-  return 'lead-badge-progress';
+  if(s==='dropped')return 'lead-badge-lost';
+  if(s==='enquiry')return 'lead-badge-new';
+  return 'lead-badge-progress'; // Trial Pending, Waiting for a batch
 }
 
 function renderLeads(){
@@ -3945,21 +3951,22 @@ function renderLeads(){
 
   // Summary counts by status (of all leads, before filter)
   const counts={};LEAD_STATUSES.forEach(s=>counts[s]=0);
-  leadsData.forEach(l=>{const s=String(l.Status||'New');if(counts[s]!==undefined)counts[s]++;});
+  leadsData.forEach(l=>{const s=String(l.Status||'Enquiry');if(counts[s]!==undefined)counts[s]++;});
   if(summary)summary.innerHTML=`<span class="lead-total">${leadsData.length} leads</span>`+
     LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<span class="lead-stat ${leadStatusClass(s)}">${counts[s]} ${esc(s)}</span>`).join('');
 
   if(!rows.length){list.innerHTML='<div class="pay-empty">No leads yet. Click "+ Add Lead" to add one.</div>';return;}
   list.innerHTML=`<table class="pay-table lead-table"><thead><tr>
-    <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Status</th><th>Notes</th><th>Action</th>
+    <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
     </tr></thead><tbody>${rows.map(l=>`<tr>
       <td><strong>${esc(l.Name||'—')}</strong></td>
       <td>${esc(l.Country||'—')}</td>
       <td>${esc(l.Contact||'—')}</td>
       <td>${esc(l['Preferred Batch']||'—')}</td>
-      <td><span class="lead-badge ${leadStatusClass(l.Status)}">${esc(l.Status||'New')}</span></td>
+      <td>${esc(l.Source||'—')}</td>
+      <td><span class="lead-badge ${leadStatusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
       <td class="lead-notes-cell">${esc(l.Notes||'')}</td>
-      <td><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button> <button class="pay-act" onclick="openLeadHistory('${esc(l['Lead ID'])}')">History</button></td>
+      <td><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l['Lead ID'])}')">Edit</button> <button class="pay-act" onclick="openLeadHistory('${esc(l['Lead ID'])}')">History</button>${String(l.Status||'').toLowerCase()==='converted'?` <span class="lead-conv-note">✓ ${esc(l['Converted Student ID']||'Converted')}</span>`:` <button class="pay-act pay-act-kit" onclick="convertLead('${esc(l['Lead ID'])}')">Convert</button>`}</td>
     </tr>`).join('')}</tbody></table>`;
 }
 
@@ -3969,18 +3976,53 @@ function openLeadForm(id){
   document.getElementById('leadModalTitle').textContent=lead?'Edit Lead':'Add Lead';
   document.getElementById('l_Name').value=lead?(lead.Name||''):'';
   document.getElementById('l_Contact').value=lead?(lead.Contact||''):'';
-  document.getElementById('l_Status').value=lead?(lead.Status||'New'):'New';
+  document.getElementById('l_Status').value=lead?(lead.Status||'Enquiry'):'Enquiry';
   document.getElementById('l_Notes').value=lead?(lead.Notes||''):'';
   // Country & Batch dropdowns prepopulated from existing students (+ Add new)
   fillCombo('l_Country',allStudents.map(s=>s.Country));
   fillCombo('l_Batch',allStudents.map(s=>s.Batch));
   setComboValue('l_Country',lead?(lead.Country||''):'');
   setComboValue('l_Batch',lead?(lead['Preferred Batch']||''):'');
+  setLeadSourceFromValue(lead?(lead.Source||''):'');
   document.getElementById('l_Msg').textContent='';
   document.getElementById('l_SaveBtn').disabled=false;
   document.getElementById('leadModal').classList.add('open');
 }
 function closeLeadForm(){document.getElementById('leadModal').classList.remove('open');editingLeadId=null;}
+
+// Lead source: dropdown + "Others" reveals a text box (like inactive reason).
+const LEAD_SOURCES=['Google Search','AI chat','Recommendation from a friend','Social Media (Insta, WhatsApp, LinkedIn)'];
+function onLeadSourceChange(){
+  const other=document.getElementById('l_Source').value==='Others';
+  const tb=document.getElementById('l_SourceOther');
+  tb.style.display=other?'':'none';
+  if(!other)tb.value='';
+}
+function setLeadSourceFromValue(val){
+  val=String(val||'').trim();
+  const sel=document.getElementById('l_Source');const tb=document.getElementById('l_SourceOther');
+  if(val&&LEAD_SOURCES.indexOf(val)===-1){sel.value='Others';tb.value=val;tb.style.display='';}
+  else{sel.value=val;tb.value='';tb.style.display='none';}
+}
+function currentLeadSource(){
+  const sel=document.getElementById('l_Source').value;
+  if(sel==='Others')return document.getElementById('l_SourceOther').value.trim();
+  return sel;
+}
+
+// Convert a lead → open the Add Student form pre-filled with Name/Country/Contact.
+// On successful student save, the lead is marked Converted and linked (see saveStudent).
+function convertLead(id){
+  const lead=leadsData.find(l=>String(l['Lead ID'])===String(id));
+  if(!lead)return;
+  convertingLeadId=id;
+  openStudentForm();            // opens in ADD mode, clears fields
+  document.getElementById('studentModalTitle').textContent='Convert Lead → Student';
+  document.getElementById('f_Name').value=lead.Name||'';
+  setComboValue('f_Country',lead.Country||'');
+  document.getElementById('f_Contact').value=lead.Contact||'';
+  // Batch left blank to choose fresh (per your preference)
+}
 
 async function saveLead(){
   const msg=document.getElementById('l_Msg');const btn=document.getElementById('l_SaveBtn');
@@ -3990,6 +4032,7 @@ async function saveLead(){
   if(!contact){msg.textContent='Please enter the mobile contact.';msg.className='topics-save-msg err';return;}
   const lead={Name:name,Country:document.getElementById('l_Country').value.trim(),Contact:contact,
     'Preferred Batch':document.getElementById('l_Batch').value.trim(),Status:document.getElementById('l_Status').value,
+    Source:currentLeadSource(),
     Notes:document.getElementById('l_Notes').value.trim()};
   // Detect status change (or new lead) so we can log a history entry
   const oldLead=editingLeadId?leadsData.find(l=>String(l['Lead ID'])===String(editingLeadId)):null;
@@ -4033,7 +4076,7 @@ async function openLeadHistory(id){
   historyLeadId=id;
   const lead=leadsData.find(l=>String(l['Lead ID'])===String(id));
   document.getElementById('leadHistoryTitle').textContent=lead?`History · ${lead.Name||id}`:'Lead History';
-  document.getElementById('lh_Status').value=lead?(lead.Status||'New'):'New';
+  document.getElementById('lh_Status').value=lead?(lead.Status||'Enquiry'):'Enquiry';
   document.getElementById('lh_Note').value='';
   document.getElementById('lh_Msg').textContent='';
   document.getElementById('lh_SaveBtn').disabled=false;
@@ -4286,7 +4329,7 @@ function openStudentForm(id){
   updatePhotoPreview(); // show existing/empty photo preview
 }
 
-function closeStudentForm(){document.getElementById('studentModal').classList.remove('open');editingStudentId=null;}
+function closeStudentForm(){document.getElementById('studentModal').classList.remove('open');editingStudentId=null;convertingLeadId=null;}
 
 // ─── Inactive reason (shown only when Status = Inactive) ──────────────
 const PRESET_REASONS=['Waiting for batch','Academics / higher grade','Lost interest','Re-location'];
@@ -4394,6 +4437,18 @@ async function saveStudent(){
     else{const idx=allStudents.findIndex(s=>s.ID===editingStudentId);if(idx>-1)allStudents[idx]=rec;}
 
     msg.textContent=mode==='add'?'Student added ✓':'Student updated ✓';msg.className='modal-msg ok';
+    // If this add was a lead conversion, mark the lead Converted + link + log history
+    if(mode==='add'&&convertingLeadId){
+      const leadId=convertingLeadId;const sid=rec.ID;
+      try{
+        await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body:JSON.stringify({action:'updateLead',id:leadId,lead:{Status:'Converted','Converted Student ID':sid}})});
+        await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body:JSON.stringify({action:'addLeadHistory',leadId:leadId,status:'Converted',note:'Converted to student '+sid,author:(studentUser&&studentUser.email)||''})});
+      }catch(convErr){console.warn('lead convert link failed:',convErr);}
+      convertingLeadId=null;
+      if(typeof loadLeads==='function')loadLeads(); // refresh leads table
+    }
     // Refresh everything that depends on student data
     populateFilters();applyFilters();buildStats();buildCharts();
     setTimeout(closeStudentForm,700);
