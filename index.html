@@ -2665,10 +2665,16 @@ function buildStats(){
 // ─── Admin Charts ────────────────────────────────
 
 let charts={};
+// True on narrow (mobile) screens — used to disable hover tooltips on touch.
+function isMobileView(){return window.matchMedia&&window.matchMedia('(max-width:600px)').matches;}
+
 function buildCharts(){
   Object.values(charts).forEach(c=>c.destroy());charts={};
   const colors=['#008fa0','#8ab600','#eab43a','#d76241','#6c5ce7','#00b894','#e84393','#00cec9'];
   const fontMono='JetBrains Mono';
+  // On mobile the values already show on the bars (datalabels), so disable hover
+  // tooltips there — they get stuck/awkward on touch. Laptop keeps them.
+  const noTipOnMobile={enabled:!isMobileView()};
 
   // Register datalabels plugin
   Chart.register(ChartDataLabels);
@@ -2684,6 +2690,7 @@ function buildCharts(){
       onClick:(e,els)=>{if(els.length){const lbl=allLevels.map(l=>l.name)[els[0].index];drillToTable('level',lbl);}},
       plugins:{
         legend:{display:false},
+        tooltip:noTipOnMobile,
         datalabels:{anchor:'end',align:'top',color:'#0a373a',font:{family:fontMono,size:12,weight:700},formatter:v=>v>0?v:''}
       },
       scales:{
@@ -2709,6 +2716,7 @@ function buildCharts(){
       onClick:(e,els)=>{if(els.length){const lbl=countryLabels[els[0].index];drillToTable('country',lbl);}},
       plugins:{
         legend:{display:false},
+        tooltip:noTipOnMobile,
         datalabels:{
           anchor:'end',align:'right',color:'#0a373a',clamp:true,clip:false,
           font:{family:fontMono,size:11,weight:700},
@@ -2742,6 +2750,7 @@ function buildCharts(){
       onClick:(e,els)=>{if(els.length){const lbl=tutorLabels[els[0].index];drillToTable('tutor',lbl);}},
       plugins:{
         legend:{display:false},
+        tooltip:noTipOnMobile,
         datalabels:{anchor:'end',align:'right',color:'#0a373a',font:{family:fontMono,size:12,weight:700},formatter:v=>v>0?v:''}
       },
       scales:{
@@ -2901,6 +2910,7 @@ function buildEnrollmentChart(){
       layout:{padding:{top:22}},
       plugins:{
         legend:{labels:{font:{family:fontMono,size:11},color:'#5a8a8e',usePointStyle:true}},
+        tooltip:noTipOnMobile,
       },
       scales:{
         x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9',maxRotation:45,minRotation:0},grid:{display:false}},
