@@ -2760,9 +2760,9 @@ function buildCharts(){
     }
   });
 
-  buildEnrollmentChart();
-  buildAvailabilityGrid();
-  updateCardSummaries();
+  try{buildEnrollmentChart();}catch(e){console.warn('buildEnrollmentChart failed:',e);}
+  try{buildAvailabilityGrid();}catch(e){console.warn('buildAvailabilityGrid failed:',e);}
+  try{updateCardSummaries();}catch(e){console.warn('updateCardSummaries failed:',e);}
   // Fee Payments + Attendance/Payment Trend are admin-only (whole Payments tab)
   const payCard=document.getElementById('paymentsCard');
   const trendCard=document.getElementById('trendCard');
@@ -2910,7 +2910,7 @@ function buildEnrollmentChart(){
       layout:{padding:{top:22}},
       plugins:{
         legend:{labels:{font:{family:fontMono,size:11},color:'#5a8a8e',usePointStyle:true}},
-        tooltip:noTipOnMobile,
+        tooltip:{enabled:!isMobileView()},
       },
       scales:{
         x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9',maxRotation:45,minRotation:0},grid:{display:false}},
