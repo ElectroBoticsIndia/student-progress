@@ -592,6 +592,11 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   .app{padding:16px 12px 40px}
   .wa-actions{gap:10px}
   .wa-actions .wa-btn{flex:1 1 0;min-width:0}
+  /* Leads header controls: wrap so the Add Lead button stays on screen */
+  .lead-controls{flex-wrap:wrap;gap:8px;width:100%}
+  .lead-controls .pay-search{flex:1 1 100%;min-width:0}
+  .lead-controls #leadStatusFilter{flex:1 1 auto;min-width:0}
+  .lead-controls .lead-add-btn{flex:1 1 auto}
   /* Trend controls now sit on their own row below the summary; wrap on mobile */
   .trend-controls-row{gap:8px}
   .trend-controls-row .trend-toggle{flex:1 1 100%}
@@ -877,7 +882,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
     <div class="chart-card" id="leadsCard" style="margin-bottom:28px;">
       <div class="pay-head">
         <div class="chart-title" style="margin-bottom:0;">Leads</div>
-        <div class="pay-controls">
+        <div class="pay-controls lead-controls">
           <input type="text" id="leadSearch" class="pay-search" placeholder="Search lead…" oninput="renderLeads()">
           <select id="leadStatusFilter" onchange="renderLeads()">
             <option value="">All statuses</option>
@@ -3337,7 +3342,7 @@ function renderTrendChart(){
       plugins:{
         legend:{display:true,position:'top',labels:{font:{family:fontMono,size:11},boxWidth:12,boxHeight:12,padding:10,usePointStyle:false}},
         datalabels:{anchor:'end',align:'end',offset:-2,color:'#0a373a',font:{family:fontMono,size:9,weight:700},formatter:v=>v>0?v:''},
-        tooltip:{titleFont:{family:fontMono},bodyFont:{family:fontMono}}
+        tooltip:{enabled:!isMobileView(),titleFont:{family:fontMono},bodyFont:{family:fontMono}}
       },
       scales:{
         x:{grid:{display:false},ticks:{font:{family:fontMono,size:11}}},
@@ -3345,6 +3350,9 @@ function renderTrendChart(){
       }
     }
   });
+  // Scroll the chart to the right so the latest month is visible by default
+  const scroller=document.querySelector('#trendCard .enroll-scroll');
+  if(scroller)requestAnimationFrame(()=>{scroller.scrollLeft=scroller.scrollWidth;});
 }
 
 // ─── Kit payment (Type='Kit', coexists with the monthly Fee) ─────────
