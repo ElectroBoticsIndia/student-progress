@@ -421,6 +421,7 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .pay-act-kit{color:var(--accent-dark);border-color:var(--accent-light);background:var(--accent-light)}
 .pay-act-kit:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .pay-kit-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+.pay-kit-actions{display:flex;gap:5px;flex-wrap:wrap}
 .pay-empty{padding:28px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
 .pay-loading{padding:28px 16px;font-family:var(--font-mono);font-size:12px;color:var(--text-light);display:flex;align-items:center;justify-content:center;gap:10px}
 .pay-loading .risk-spinner{display:inline-block;width:18px;height:18px;margin-right:0}
@@ -3113,9 +3114,9 @@ function buildPayments(){
         compCell=`<button class="pay-act pay-act-kit" onclick="flagComponents('${esc(s.ID)}',this)" title="Flag components payment required">+ Components</button>`;
       }else if(compSt==='paid'){
         const cd=`${compRec.Amount?('₹'+esc(String(compRec.Amount))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;
-        compCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}',this)">Undo</button></div>`;
+        compCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Edit</button><button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}',this)">Undo</button></div></div>`;
       }else{
-        compCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}',this)">Remove</button></div>`;
+        compCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}',this)">Remove</button></div></div>`;
       }
       let action='';
       if(st==='pending'){
@@ -3406,13 +3407,16 @@ function openComponentsForm(sid,name){
   const year=document.getElementById('payYear').value;
   const month=document.getElementById('payMonth').value;
   payCurrentCtx={studentId:sid,year:year,month:month,type:'Components'};
-  document.getElementById('paymentModalTitle').textContent='Components Payment';
+  const existing=payRecord(sid,year,month,'Components'); // pre-fill when editing
+  const isPaid=existing&&String(existing.Status||'').toLowerCase()==='paid';
+  document.getElementById('paymentModalTitle').textContent=isPaid?'Edit Components Payment':'Components Payment';
   document.getElementById('paymentModalSub').textContent=`${name} · Components · ${PAY_MONTHS[month-1]} ${year}`;
-  document.getElementById('pay_Amount').value='';
+  document.getElementById('pay_Amount').value=existing&&existing.Amount?String(existing.Amount):'';
   const today=new Date();
-  document.getElementById('pay_Date').value=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-  document.getElementById('pay_Method').value='';
-  document.getElementById('pay_Note').value='';
+  const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  document.getElementById('pay_Date').value=(existing&&existing['Paid Date'])?String(existing['Paid Date']):todayStr;
+  document.getElementById('pay_Method').value=(existing&&existing.Method)?String(existing.Method):'';
+  document.getElementById('pay_Note').value=(existing&&existing.Note)?String(existing.Note):'';
   document.getElementById('pay_Msg').textContent='';
   document.getElementById('pay_SaveBtn').disabled=false;
   document.getElementById('paymentModal').classList.add('open');
