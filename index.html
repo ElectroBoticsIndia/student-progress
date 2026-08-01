@@ -1211,6 +1211,21 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
   </div>
 </div>
 
+<div class="modal-overlay" id="compHistModal">
+  <div class="modal-card" style="max-width:460px;">
+    <div class="modal-head">
+      <h3 id="compHistTitle">Components History</h3>
+      <button class="modal-close" onclick="closeComponentHistory()" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="tn-list" id="compHistList"></div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeComponentHistory()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="paymentModal">
   <div class="modal-card" style="max-width:420px;">
     <div class="modal-head">
@@ -3114,9 +3129,9 @@ function buildPayments(){
         compCell=`<button class="pay-act pay-act-kit" onclick="flagComponents('${esc(s.ID)}',this)" title="Flag components payment required">+ Components</button>`;
       }else if(compSt==='paid'){
         const cd=`${compRec.Amount?('₹'+esc(String(compRec.Amount))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;
-        compCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Edit</button><button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}',this)">Undo</button></div></div>`;
+        compCell=`<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${esc(s.ID)}','${esc(s.Name)}',this)" title="Log this cycle and reopen as due for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${esc(s.ID)}','${esc(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}',this)">Undo</button></div></div>`;
       }else{
-        compCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}',this)">Remove</button></div></div>`;
+        compCell=`<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${esc(s.ID)}','${esc(s.Name)}')">History</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}',this)">Remove</button></div></div>`;
       }
       let action='';
       if(st==='pending'){
@@ -3429,6 +3444,58 @@ async function revertComponents(sid,btn){
   const ok=await postPayment({action:'deletePayment',type:'Components',studentId:sid,year:year,month:month});
   if(ok){payRemoveLocal(sid,year,month,'Components');buildPayments();}
   else{if(done)done();alert('Could not update. Please try again.');}
+}
+
+// "New purchase": log the just-completed paid cycle to ComponentHistory, then
+// reopen the Components record as Due so the admin can track the new purchase.
+async function newComponentPurchase(sid,name,btn){
+  const year=document.getElementById('payYear').value, month=document.getElementById('payMonth').value;
+  const rec=payRecord(sid,year,month,'Components');
+  if(!rec||String(rec.Status||'').toLowerCase()!=='paid'){alert('No paid components to reopen.');return;}
+  if(!confirm('Log the current paid components and reopen as "due" for a new purchase?'))return;
+  const done=payBtnBusy(btn);
+  let ok=false;
+  try{
+    if(SHEET_WEBAPP_URL){
+      // 1) archive the completed cycle
+      await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'addComponentHistory',studentId:sid,year,month,amount:rec.Amount||'',paidDate:rec['Paid Date']||'',method:rec.Method||'',note:rec.Note||'',by:(studentUser&&studentUser.email)||''})});
+      // 2) reopen the record as Pending (clears amount/date so it shows as due)
+      const res=await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'savePayment',type:'Components',studentId:sid,year,month,status:'Pending',amount:'',paidDate:'',method:'',note:'',markedBy:(studentUser&&studentUser.email)||''})});
+      const data=await res.json();ok=!!(data&&data.ok);
+    }
+  }catch(e){console.error('newComponentPurchase error:',e);}
+  if(ok){payUpsertLocal(sid,year,month,'Components',{Status:'Pending',Amount:'','Paid Date':'',Method:'',Note:''});buildPayments();}
+  else{if(done)done();alert('Could not reopen. Please try again.');}
+}
+
+// ─── Component payment history (past paid cycles per student) ─────────
+let componentHistoryData=[];
+async function openComponentHistory(sid,name){
+  document.getElementById('compHistTitle').textContent=`Components History · ${name}`;
+  document.getElementById('compHistList').innerHTML='<div class="tn-empty"><span class="risk-spinner"></span> Loading…</div>';
+  document.getElementById('compHistModal').classList.add('open');
+  try{
+    if(SHEET_WEBAPP_URL){
+      const res=await fetch(SHEET_WEBAPP_URL+'?action=getComponentHistory');
+      const data=await res.json();
+      componentHistoryData=(data&&data.ok&&Array.isArray(data.history))?data.history:[];
+    }
+  }catch(e){console.warn('getComponentHistory failed:',e);componentHistoryData=[];}
+  renderComponentHistory(sid);
+}
+function closeComponentHistory(){document.getElementById('compHistModal').classList.remove('open');}
+function renderComponentHistory(sid){
+  const box=document.getElementById('compHistList');
+  const items=componentHistoryData.filter(h=>String(h['Student ID']||'').trim()===String(sid).trim())
+    .sort((a,b)=>String(b['Logged At']||'').localeCompare(String(a['Logged At']||''))); // newest first
+  if(!items.length){box.innerHTML='<div class="tn-empty">No past component payments logged.</div>';return;}
+  box.innerHTML=items.map(h=>`<div class="tn-item">
+    <div class="tn-meta">${h.Amount?('₹'+esc(String(h.Amount))):''}${h['Paid Date']?(' · paid '+esc(String(h['Paid Date']))):''}${h.Month&&h.Year?(' · '+esc(String(h.Month))+'/'+esc(String(h.Year))):''}</div>
+    ${h.Note?`<div class="tn-text">${esc(String(h.Note))}</div>`:''}
+    <div class="tn-meta" style="opacity:.7;">logged ${esc(String(h['Logged At']||''))}${h.LoggedBy?(' · '+esc(String(h.LoggedBy))):''}</div>
+  </div>`).join('');
 }
 
 // ─── Tutor Availability Grid (days × time slots) ──────────────────────
