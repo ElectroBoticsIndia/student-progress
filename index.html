@@ -849,7 +849,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         </div>
       </div>
       <div class="pay-filters" onclick="event.stopPropagation()">
-        <input type="text" id="payFilterName" class="pay-search" placeholder="Search student…" oninput="buildPayments()">
+        <input type="text" id="payFilterName" class="pay-search" placeholder="Search name, ref, note…" oninput="buildPayments()">
         <select id="payFilterCountry" onchange="buildPayments()"></select>
         <select id="payFilterLevel" onchange="buildPayments()"></select>
         <select id="payFilterTutor" onchange="buildPayments()"></select>
@@ -3069,14 +3069,28 @@ function buildPayments(){
   fillPaySelect('payFilterTutor','All tutors',uniq('tutor','Tutor'),fTutor);
   fillPaySelect('payFilterBatch','All batches',uniq('batch','Batch'),fBatch);
 
-  // Apply the category filters to the student set
+  // Apply the category filters to the student set. The search box matches the
+  // student's name/ID/Payment Ref, plus the notes on their Fee/Kit/Components
+  // payment records for the selected month.
   const nameQ=(payFilterVal('payFilterName')||'').trim().toLowerCase();
+  const payMatch=(s)=>{
+    if(!nameQ)return true;
+    if(String(s.Name||'').toLowerCase().includes(nameQ))return true;
+    if(String(s.ID||'').toLowerCase().includes(nameQ))return true;
+    if(String(s['Payment Ref']||'').toLowerCase().includes(nameQ))return true;
+    // Notes from this student's payment records for the selected month
+    for(const t of ['Fee','Kit','Components']){
+      const r=payRecord(s.ID,year,month,t);
+      if(r&&String(r.Note||'').toLowerCase().includes(nameQ))return true;
+    }
+    return false;
+  };
   let students=base.filter(s=>
     (!fCountry||(s.Country||'')===fCountry)&&
     (!fLevel||(s['Current Level']||'')===fLevel)&&
     (!fTutor||(s.Tutor||'')===fTutor)&&
     (!fBatch||(s.Batch||'')===fBatch)&&
-    (!nameQ||String(s.Name||'').toLowerCase().includes(nameQ)||String(s.ID||'').toLowerCase().includes(nameQ))
+    payMatch(s)
   );
 
   // Compute status per student, tally BEFORE the status filter (so counts reflect the group)
