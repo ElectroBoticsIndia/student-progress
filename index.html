@@ -475,6 +475,10 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .lead-badge-lost{background:#fdeae5;color:#c0472a}
 .lead-notes-cell{max-width:220px;white-space:normal;font-size:12px;color:var(--text-dim)}
 .lead-conv-note{font-family:var(--font-mono);font-size:11px;font-weight:700;color:#5a7a00;margin-left:4px;white-space:nowrap}
+.lead-delete-btn{width:100%;margin-top:10px;padding:9px;border:1px solid var(--red,#d76241);border-radius:8px;background:#fff;color:var(--red,#d76241);font-family:var(--font-mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .18s}
+.lead-delete-btn:hover{background:var(--red,#d76241);color:#fff}
+.lead-tel{color:var(--accent-dark,#006d7a);text-decoration:none;border-bottom:1px dashed var(--accent,#008fa0)}
+.lead-tel:hover{color:var(--accent,#008fa0)}
 .lead-action-cell{white-space:nowrap}
 .pay-act-history:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .lead-action-cell .pay-act{display:inline-block;vertical-align:middle}
@@ -1185,6 +1189,7 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <button class="wa-btn wa-cancel" onclick="closeLeadForm()">Cancel</button>
         <button class="wa-btn pf-save" id="l_SaveBtn" onclick="saveLead()">Save</button>
       </div>
+      <button class="lead-delete-btn" id="l_DeleteBtn" onclick="deleteLead()" style="display:none;">Delete this lead</button>
       <p class="topics-save-msg" id="l_Msg" style="text-align:right;margin-top:8px;"></p>
     </div>
   </div>
@@ -4092,7 +4097,7 @@ function renderLeads(){
     </tr></thead><tbody>${rows.map(l=>`<tr>
       <td><strong>${esc(l.Name||'—')}</strong></td>
       <td>${esc(l.Country||'—')}</td>
-      <td>${esc(l.Contact||'—')}</td>
+      <td>${l.Contact?`<a href="tel:${esc(String(l.Contact).replace(/[^0-9+]/g,''))}" class="lead-tel">${esc(l.Contact)}</a>`:'—'}</td>
       <td>${esc(l['Preferred Batch']||'—')}</td>
       <td>${esc(l.Source||'—')}</td>
       <td><span class="lead-badge ${leadStatusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
@@ -4117,9 +4122,34 @@ function openLeadForm(id){
   setLeadSourceFromValue(lead?(lead.Source||''):'');
   document.getElementById('l_Msg').textContent='';
   document.getElementById('l_SaveBtn').disabled=false;
+  document.getElementById('l_DeleteBtn').style.display=editingLeadId?'':'none';
   document.getElementById('leadModal').classList.add('open');
 }
 function closeLeadForm(){document.getElementById('leadModal').classList.remove('open');editingLeadId=null;}
+
+// Delete the lead currently open in the edit form (e.g. a duplicate).
+async function deleteLead(){
+  if(!editingLeadId)return;
+  const lead=leadsData.find(l=>String(l['Lead ID'])===String(editingLeadId));
+  const nm=lead?(lead.Name||editingLeadId):editingLeadId;
+  if(!confirm('Delete lead "'+nm+'"? This cannot be undone.'))return;
+  const msg=document.getElementById('l_Msg');const btn=document.getElementById('l_DeleteBtn');
+  btn.disabled=true;msg.innerHTML='<span class="risk-spinner"></span>Deleting…';msg.className='topics-save-msg saving';
+  const id=editingLeadId;let ok=false;
+  try{
+    if(SHEET_WEBAPP_URL){
+      const res=await fetch(SHEET_WEBAPP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'deleteLead',id})});
+      const data=await res.json();ok=!!(data&&data.ok);
+    }
+  }catch(e){console.error('deleteLead error:',e);}
+  if(ok){
+    leadsData=leadsData.filter(l=>String(l['Lead ID'])!==String(id)); // patch locally
+    closeLeadForm();renderLeads();
+  }else{
+    msg.textContent='Could not delete. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;
+  }
+}
 
 // Lead source: dropdown + "Others" reveals a text box (like inactive reason).
 const LEAD_SOURCES=['Google','Website','Reference','WhatsApp','Instagram','AI Agent','Summer Camp','Apartment Outreach','Stalls'];
