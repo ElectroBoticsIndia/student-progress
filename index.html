@@ -475,8 +475,10 @@ table.risk tbody tr:hover{background:var(--accent-light)}
 .lead-badge-lost{background:#fdeae5;color:#c0472a}
 .lead-notes-cell{max-width:220px;white-space:normal;font-size:12px;color:var(--text-dim)}
 .lead-conv-note{font-family:var(--font-mono);font-size:11px;font-weight:700;color:#5a7a00;margin-left:4px;white-space:nowrap}
-.lead-delete-btn{width:100%;margin-top:10px;padding:9px;border:1px solid var(--red,#d76241);border-radius:8px;background:#fff;color:var(--red,#d76241);font-family:var(--font-mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .18s}
-.lead-delete-btn:hover{background:var(--red,#d76241);color:#fff}
+.lead-actions-row{display:flex;align-items:center;gap:10px}
+.lead-actions-row .wa-cancel{margin-left:auto} /* push Cancel+Save right, trash stays left */
+.lead-trash-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;flex:0 0 auto;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
+.lead-trash-btn:hover{border-color:var(--red,#d76241);color:var(--red,#d76241);background:#fff5f2}
 .lead-tel{color:var(--accent-dark,#006d7a);text-decoration:none;border-bottom:1px dashed var(--accent,#008fa0)}
 .lead-tel:hover{color:var(--accent,#008fa0)}
 .lead-action-cell{white-space:nowrap}
@@ -1185,11 +1187,13 @@ table.enroll-sum .new-pos{color:var(--accent);font-weight:700}
         <label>Additional Information</label>
         <textarea id="l_Notes" rows="3" placeholder="Any details from the enquiry…"></textarea>
       </div>
-      <div class="wa-actions">
+      <div class="wa-actions lead-actions-row">
+        <button class="lead-trash-btn" id="l_DeleteBtn" onclick="deleteLead()" title="Delete this lead" aria-label="Delete this lead" style="display:none;">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 5v6m4-6v6"/></svg>
+        </button>
         <button class="wa-btn wa-cancel" onclick="closeLeadForm()">Cancel</button>
         <button class="wa-btn pf-save" id="l_SaveBtn" onclick="saveLead()">Save</button>
       </div>
-      <button class="lead-delete-btn" id="l_DeleteBtn" onclick="deleteLead()" style="display:none;">Delete this lead</button>
       <p class="topics-save-msg" id="l_Msg" style="text-align:right;margin-top:8px;"></p>
     </div>
   </div>
