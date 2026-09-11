@@ -1421,6 +1421,19 @@ async function fetchSheet(sheetName){
   return rows;
 }
 
+// Retry a fetch function a few times with a short backoff — used for the
+// critical Users load so transient Google slowness can't wrongly deny access.
+async function fetchWithRetry(fn,label,tries=3){
+  let lastErr;
+  for(let i=0;i<tries;i++){
+    try{return await fn();}
+    catch(e){lastErr=e;console.warn(`${label} attempt ${i+1}/${tries} failed:`,e.message);
+      if(i<tries-1)await new Promise(r=>setTimeout(r,400*(i+1)));}
+  }
+  throw lastErr||new Error(label+' failed');
+}
+let usersLoaded=false; // true only when the Users sheet actually loaded (not empty-on-failure)
+
 // Load ALL students via the Apps Script endpoint (ignores any sheet UI filter),
 // falling back to gviz only if the endpoint is unavailable.
 async function fetchStudents(){
@@ -1454,17 +1467,19 @@ async function loadData(){
   if(!SHEET_ID){document.getElementById('configNotice').style.display='block';document.getElementById('configNotice').innerHTML='<strong>Setup Required:</strong> Set SHEET_ID in the code.';loadDemoData();return}
   document.getElementById('configNotice').style.display='none';
   try{
-    // Fetch Students, Levels and Users in PARALLEL (was sequential → ~3× slower)
+    // Fetch Students, Levels and Users in PARALLEL (was sequential → ~3× slower).
+    // Users is the access list — retry it so a transient failure can't deny valid staff.
     const [studentsR,levelsR,usersR,topicsR]=await Promise.allSettled([
       fetchStudents(),
       fetchSheet('Levels'),
-      fetchSheet('Users'),
+      fetchWithRetry(()=>fetchSheet('Users'),'Users'),
       fetchTopics()
     ]);
     if(studentsR.status!=='fulfilled')throw new Error('Could not load Students: '+(studentsR.reason&&studentsR.reason.message||studentsR.reason));
     const students=studentsR.value;
     const levels=levelsR.status==='fulfilled'?levelsR.value:[];
-    allUsers=(usersR.status==='fulfilled'&&Array.isArray(usersR.value))?usersR.value:[];
+    if(usersR.status==='fulfilled'&&Array.isArray(usersR.value)){allUsers=usersR.value;usersLoaded=true;}
+    else{allUsers=[];usersLoaded=false;console.error('Users sheet failed to load after retries — access checks will ask the user to retry.');}
     allTopicsMaster=(topicsR.status==='fulfilled'&&Array.isArray(topicsR.value))?topicsR.value:[];
     if(students.length===0)throw new Error('Students sheet is empty');
     // Progress/Projects/Certificates are loaded on-demand per student (see loadStudentData),
@@ -1707,35 +1722,56 @@ async function handleStudentLogin(response){
     await dataReady;
   }
 
-  // 1) Admin or Tutor (from Users sheet) → student search workflow.
-  //    Admins additionally get the Admin dashboard button; tutors are blocked
-  //    from the dashboard (handled in showAdminLogin / hasAdminAccess).
-  const role=roleForEmail(email);
-  userRole=role; // 'admin', 'tutor', or ''
-  applyAdminBtnVisibility();
-  // Domain explicitly allowed to browse as a viewer (optional)
-  const isViewerDomain=STUDENT_DOMAINS.length>0&&STUDENT_DOMAINS.includes(domain);
-
-  if(role==='admin'||role==='tutor'||isViewerDomain){
-    myStudents=[];
-    showAccountMenu(role||'viewer');
-    enterSearchScreen();
-    return;
+  // If the Users access list failed to load (Google slowness/outage), we can't
+  // reliably tell an admin/tutor from a parent — so retry the Users sheet once
+  // more here rather than wrongly denying a valid staff member.
+  if(!usersLoaded){
+    try{
+      const u=await fetchWithRetry(()=>fetchSheet('Users'),'Users(retry)',2);
+      if(Array.isArray(u)){allUsers=u;usersLoaded=true;}
+    }catch(e){console.error('Users still unavailable at sign-in:',e.message);}
   }
 
-  // 2) Parent/student → students mapped to this email in the Students sheet
+  // Decide access (staff → search, parent → their students, else deny/retry).
+  decideAccessFor(email);
+}
+
+// Retry loading the Users access list, then re-run the sign-in decision.
+async function retryAccessCheck(){
+  const err=document.getElementById('studentLoginError');
+  if(err)err.innerHTML='<span class="risk-spinner"></span> Checking again…';
+  try{
+    const u=await fetchWithRetry(()=>fetchSheet('Users'),'Users(manual-retry)',3);
+    if(Array.isArray(u)){allUsers=u;usersLoaded=true;}
+  }catch(e){console.error('manual access retry failed:',e.message);}
+  if(err){err.classList.remove('show');err.innerHTML='';}
+  if(studentUser&&studentUser.email)decideAccessFor(studentUser.email);
+}
+
+// Decide where a signed-in email goes (staff → search, parent → their students,
+// else deny/retry). Extracted so it can be re-run after an access-list retry.
+function decideAccessFor(rawEmail){
+  const email=(rawEmail||'').toLowerCase();
+  const domain=email.split('@')[1]||'';
+  const role=roleForEmail(email);
+  userRole=role;
+  applyAdminBtnVisibility();
+  const isViewerDomain=STUDENT_DOMAINS.length>0&&STUDENT_DOMAINS.includes(domain);
+  if(role==='admin'||role==='tutor'||isViewerDomain){
+    myStudents=[];showAccountMenu(role||'viewer');enterSearchScreen();return;
+  }
   const mine=studentsForEmail(email);
   myStudents=mine;
-  if(mine.length===1){
-    showAccountMenu('parent');
-    selectStudent(mine[0].ID);
-  }else if(mine.length>1){
-    showAccountMenu('parent');
-    showStudentPicker(mine);
-  }else{
-    // Not a known user and no student mapping → deny
+  if(mine.length===1){showAccountMenu('parent');selectStudent(mine[0].ID);}
+  else if(mine.length>1){showAccountMenu('parent');showStudentPicker(mine);}
+  else{
     myStudents=[];
-    document.getElementById('studentLoginError').classList.add('show');
+    if(!usersLoaded){
+      const err=document.getElementById('studentLoginError');
+      if(err){err.innerHTML='We couldn\'t verify your access just now (the server was busy). <button onclick="retryAccessCheck()" style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">Retry</button>';err.classList.add('show');}
+    }else{
+      document.getElementById('studentLoginError').classList.add('show');
+    }
   }
 }
 
