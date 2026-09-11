@@ -4162,7 +4162,9 @@ function openLeadForm(id){
   setLeadSourceFromValue(lead?(lead.Source||''):'');
   document.getElementById('l_Msg').textContent='';
   document.getElementById('l_SaveBtn').disabled=false;
-  document.getElementById('l_DeleteBtn').style.display=editingLeadId?'':'none';
+  const delBtn=document.getElementById('l_DeleteBtn');
+  delBtn.style.display=editingLeadId?'':'none';
+  delBtn.disabled=false; // reset in case a previous delete left it disabled
   document.getElementById('leadModal').classList.add('open');
 }
 function closeLeadForm(){document.getElementById('leadModal').classList.remove('open');editingLeadId=null;}
@@ -4185,6 +4187,7 @@ async function deleteLead(){
   }catch(e){console.error('deleteLead error:',e);}
   if(ok){
     leadsData=leadsData.filter(l=>String(l['Lead ID'])!==String(id)); // patch locally
+    btn.disabled=false; // reset for next use
     closeLeadForm();renderLeads();
   }else{
     msg.textContent='Could not delete. Please try again.';msg.className='topics-save-msg err';btn.disabled=false;
