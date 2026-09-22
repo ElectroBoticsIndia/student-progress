@@ -803,6 +803,16 @@ table.avail td.occ{border:1px solid transparent}
 .fee-row .fr-x{flex:none;background:none;border:none;cursor:pointer;color:var(--text-light);font-size:13px;
   line-height:1;padding:0 3px}
 .fee-row .fr-x:hover{color:var(--red,#d76241)}
+/* Settings save bar — pinned to the bottom of the screen so it is reachable from any
+   card, since it saves three of them that are not next to each other. */
+.set-savebar{position:sticky;bottom:0;z-index:20;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  margin-top:4px;padding:12px 18px;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;box-shadow:0 -3px 14px rgba(0,0,0,.07)}
+.set-savebar-txt{flex:1;min-width:190px;display:flex;flex-direction:column;gap:3px}
+.set-savebar-hint{font-family:var(--font-mono);font-size:10px;color:var(--text-light);line-height:1.45}
+.set-dirty{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--amber-dark,#8a6a00)}
+.set-savebar .btn-primary{flex:none}
+@media(max-width:600px){.set-savebar{padding:10px 12px;gap:8px}.set-savebar .btn-primary{width:100%}}
 /* The technical reason behind a failed sign-in. Small and muted — a parent can ignore it,
    an admin can act on it, and nobody has to open the console to see it. */
 .login-diag{margin:10px 0;padding:8px 10px;border-radius:6px;background:var(--amber-light);
@@ -1114,10 +1124,6 @@ table.avail td.occ{border:1px solid transparent}
         </div>
         <div class="set-grid" id="fxGrid"></div>
         <div class="set-note" style="margin-top:12px;">Manual values are the fallback whenever a live fetch fails or is turned off. Enter how many rupees one unit is worth.</div>
-        <div class="stu-mig-actions" style="margin-top:14px;">
-          <button class="btn-primary" onclick="saveSettings()">Save settings</button>
-          <span class="msg" id="setMsg"></span>
-        </div>
       </div>
     </div>
 
@@ -1207,6 +1213,18 @@ table.avail td.occ{border:1px solid transparent}
           <select id="setAsgYear" class="pay-mini"></select>
         </div>
       </div>
+    </div>
+
+    <!-- Pinned so the button is reachable from any card. It used to live inside the
+         Currency card while actually saving three, so changing a month at the bottom
+         left you scrolling back up to a button that gave no sign it applied. -->
+    <div class="set-savebar">
+      <div class="set-savebar-txt">
+        <span id="setDirty" class="set-dirty" style="display:none;">● Unsaved changes</span>
+        <span class="set-savebar-hint">Saves currency rates, data start and history months. The repair tools and frozen rates have their own buttons.</span>
+      </div>
+      <span class="msg" id="setMsg"></span>
+      <button class="btn-primary" onclick="saveSettings()">Save settings</button>
     </div>
 
   </div>
@@ -1584,7 +1602,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-09-22d';
+const BUILD='2026-09-22e';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -2433,6 +2451,16 @@ function sessionsBetween(student,from,to){
 /* How many sessions should have happened in this month SO FAR: the student's own class
    day, counted from the later of the month start and their join date, up to the earlier
    of the month end and today. */
+/* A month is billed as four classes however many times the batch day falls in it. Five
+   Sundays do not make a fifth class owed, so the expectation is CAPPED here — it is not
+   a flat 4: a student who joined on the 20th still expects one, and the current month
+   still counts only up to today.
+
+   Only the EXPECTED side is capped. Attendance is whatever actually happened, including
+   compensation classes, so a busy month can legitimately read 5 of 4 — 125%, above 100
+   for the first time, and correct. The health bands treat anything at or above 75% as on
+   track, so that still shows green. */
+const MAX_CLASSES_PER_MONTH=4;
 function glExpected(year,month,student){
   const today=new Date();
   const monthEnd=new Date(year,month,0);
@@ -2440,7 +2468,7 @@ function glExpected(year,month,student){
   const jd=parseD(student&&student['Join Date']);
   if(jd&&jd>from)from=jd;
   const to=today<monthEnd?today:monthEnd;
-  return sessionsBetween(student,from,to);
+  return Math.min(sessionsBetween(student,from,to),MAX_CLASSES_PER_MONTH);
 }
 function glTier(done,expected){
   if(!expected)return 'none';
@@ -4556,7 +4584,7 @@ const inr=(n)=>'₹'+Math.round(Number(n)||0).toLocaleString('en-IN');
 const isMonthComplete=(y,m)=>{const now=new Date();return y<now.getFullYear()||(y===now.getFullYear()&&m<now.getMonth()+1);};
 
 /* ── Settings screen ── */
-window.setFxMode=function(mode){appSettings.fxMode=mode;renderSettings();};
+window.setFxMode=function(mode){appSettings.fxMode=mode;renderSettings();setMarkDirty();};
 window.renderSettings=async function(){
   await loadSettings();
   $('fxModeLive').classList.toggle('active',appSettings.fxMode==='live');
@@ -4590,8 +4618,24 @@ window.renderSettings=async function(){
   // Unset module floors show the global Data Start, so the boxes always read truthfully.
   fillStart('setAttMonth','setAttYear',appSettings.attStart||ds);
   fillStart('setAsgMonth','setAsgYear',appSettings.asgStart||ds);
+  wireSettingsDirty();
   renderFrozenList();
 };
+/* The save bar only helps if it says whether you still need to press it. Every control
+   the bar is responsible for flips this on; saving clears it. */
+window.setMarkDirty=function(){
+  const el=$('setDirty');if(el)el.style.display='';
+  const m=$('setMsg');if(m&&m.className==='msg ok'){m.textContent='';m.className='msg';}
+};
+function setClearDirty(){const el=$('setDirty');if(el)el.style.display='none';}
+// Registered once, after renderSettings has built the controls.
+function wireSettingsDirty(){
+  ['setDataMonth','setDataYear','setAttMonth','setAttYear','setAsgMonth','setAsgYear']
+    .forEach(id=>{const e=$(id);if(e&&!e.dataset.dirtyWired){e.dataset.dirtyWired='1';
+      e.addEventListener('change',setMarkDirty);}});
+  const g=$('fxGrid');
+  if(g&&!g.dataset.dirtyWired){g.dataset.dirtyWired='1';g.addEventListener('input',setMarkDirty);}
+}
 window.onFxInput=function(c,v){const n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(n>0)appSettings.fx[c]=n;};
 window.fetchFxNow=async function(){
   const el=$('fxStatus');el.innerHTML='<span class="spinner"></span> Fetching…';
@@ -4614,7 +4658,7 @@ window.saveSettings=async function(){
       attStart:asStr(appSettings.attStart),asgStart:asStr(appSettings.asgStart),
       updatedAt:serverTimestamp(),updatedBy:(currentUser&&currentUser.email)||''
     },{merge:true});
-    msg.textContent='Saved.';msg.className='msg ok';
+    msg.textContent='Saved.';msg.className='msg ok';setClearDirty();
     if(paymentsLoaded)buildRevenue();
   }catch(e){console.error('saveSettings',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';}
 };
