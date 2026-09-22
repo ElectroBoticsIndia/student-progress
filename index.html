@@ -58,6 +58,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .login-icon img{width:100%;height:100%;object-fit:contain}
 .login-title{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
 .login-sub{font-size:14px;color:var(--text-dim);margin-bottom:24px;line-height:1.5}
+/* Which file is actually live. GitHub Pages caches hard, and a stale copy looks exactly
+   like a bug that was already fixed — that ambiguity cost real time. */
+.build-tag{margin-top:18px;font-family:var(--font-mono);font-size:10px;color:var(--text-light);opacity:.65}
 .google-btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-body);font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;transition:all .2s}
 .google-btn:hover{box-shadow:var(--shadow);border-color:var(--accent)}
 .google-btn img{width:18px;height:18px}
@@ -776,6 +779,30 @@ table.avail td.occ{border:1px solid transparent}
   text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
 .pem-check input{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);
   border-radius:7px;min-width:260px;background:var(--card);color:var(--text)}
+/* Fee history, inside the student form. The effective-from month sits under the fee
+   because the two are one decision — a new number without a date is meaningless. */
+.fee-eff{display:flex;align-items:center;gap:8px;margin-top:8px}
+.fee-eff>label{flex:none;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:.5px;margin:0}
+.fee-eff input{font-family:var(--font-mono);font-size:12px;padding:6px 9px;border:1px solid var(--border);
+  border-radius:7px;background:#fff;color:var(--text)}
+.fee-note{margin-top:8px;padding:7px 10px;border-radius:7px;background:var(--amber-light);
+  border:1px solid var(--amber);font-family:var(--font-mono);font-size:10.5px;line-height:1.5;color:var(--text)}
+.fee-note.ok{background:var(--surface-alt);border-color:var(--border);color:var(--text-dim)}
+.fee-hist{margin-top:10px}
+.fee-hist:empty{display:none}
+.fee-hist-t{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.fee-row{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid var(--border);
+  font-family:var(--font-mono);font-size:11px}
+.fee-row:last-child{border-bottom:none}
+.fee-row .fr-amt{flex:none;min-width:74px;font-weight:700;color:var(--text)}
+.fee-row .fr-span{flex:1;color:var(--text-dim)}
+.fee-row .fr-lvl{flex:none;color:var(--text-light);font-size:10px;max-width:150px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.fee-row .fr-x{flex:none;background:none;border:none;cursor:pointer;color:var(--text-light);font-size:13px;
+  line-height:1;padding:0 3px}
+.fee-row .fr-x:hover{color:var(--red,#d76241)}
 /* The technical reason behind a failed sign-in. Small and muted — a parent can ignore it,
    an admin can act on it, and nobody has to open the console to see it. */
 .login-diag{margin:10px 0;padding:8px 10px;border-radius:6px;background:var(--amber-light);
@@ -845,6 +872,7 @@ table.avail td.occ{border:1px solid transparent}
         </button>
       </div>
       <div class="error-msg" id="loginErr"></div>
+      <div class="build-tag" id="buildTag"></div>
     </div>
   </div>
 
@@ -1106,6 +1134,19 @@ table.avail td.occ{border:1px solid transparent}
     </div>
 
     <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Repair · Fee History</span></div></div>
+      <div class="aa-sub">Each student's fee now carries the month it took effect, so raising a fee leaves earlier months at the rate they were actually billed. Students who have never had a fee change carry no history yet, which would leave every past month with no rate at all. This writes one entry per student — their current fee, effective from the month they joined. <strong>Run this once before changing any fees.</strong></div>
+      <div style="padding:4px 20px 20px;">
+        <div class="stu-mig-actions">
+          <button class="wa-btn wa-cancel" style="padding:7px 14px;font-size:12px;" onclick="repairFeeHistory(true)">Check first</button>
+          <button class="btn-primary" onclick="repairFeeHistory(false)">Seed fee history</button>
+          <span class="msg" id="fhMsg"></span>
+        </div>
+        <div id="fhList" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Repair · Parent Sign-in</span></div></div>
       <div class="aa-sub">A parent signs in with Google and the app finds their children by matching their address against the student's <strong>parentEmails</strong> list. That list is built from the Parent / Student Email field, but only when a student is saved through the Add / Edit form — records that came in any other way carry the email without the list, and those parents are told their account isn't linked to any student. This rebuilds the list for every student from the email already on their record. Nothing else on the record is touched.</div>
       <div style="padding:4px 20px 20px;">
@@ -1147,6 +1188,23 @@ table.avail td.occ{border:1px solid transparent}
           <label class="set-label">First month with data</label>
           <select id="setDataMonth" class="pay-mini"></select>
           <select id="setDataYear" class="pay-mini"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Student Detail · History From</span></div></div>
+      <div class="aa-sub">Attendance and assignments began being tracked on different dates. These floors apply to the cards and month drill-downs on a <strong>student's page only</strong> — the trends and tutor screens keep using Data Start above, so the same student can read differently in the two places. Leave a row at the Data Start month to keep today's behaviour.</div>
+      <div style="padding:4px 20px 20px;">
+        <div class="set-row">
+          <label class="set-label">Attendance from</label>
+          <select id="setAttMonth" class="pay-mini"></select>
+          <select id="setAttYear" class="pay-mini"></select>
+        </div>
+        <div class="set-row">
+          <label class="set-label">Assignments from</label>
+          <select id="setAsgMonth" class="pay-mini"></select>
+          <select id="setAsgYear" class="pay-mini"></select>
         </div>
       </div>
     </div>
@@ -1406,7 +1464,15 @@ table.avail td.occ{border:1px solid transparent}
         <input type="text" id="s_CurrencyOther" placeholder="3-letter code, e.g. AED" maxlength="3" style="display:none;margin-top:8px;text-transform:uppercase;">
         <small>Used for this student's fee, kit and components amounts.</small>
       </div>
-      <div class="form-row"><label>Monthly Fee</label><input type="text" id="s_Fee" placeholder="e.g. 1500" inputmode="decimal"></div>
+      <div class="form-row"><label>Monthly Fee</label>
+        <input type="text" id="s_Fee" placeholder="e.g. 1500" inputmode="decimal" oninput="feeFormPreview()">
+        <div class="fee-eff">
+          <label for="s_FeeFrom">Effective from</label>
+          <input type="month" id="s_FeeFrom" onchange="feeFormPreview()">
+        </div>
+        <div id="s_FeeNote" class="fee-note" style="display:none;"></div>
+        <div id="s_FeeHist" class="fee-hist"></div>
+      </div>
       <div class="form-row"><label>Payment Ref</label><input type="text" id="s_PayRef" placeholder="acct / UPI ref (optional)"></div>
       <div class="form-row"><label>Photo URL</label><input type="text" id="s_Photo" placeholder="Google Drive share link or image URL (optional)" oninput="updatePhotoPreview()"><div id="photoPreview" class="photo-preview" style="display:none;"></div></div>
     </div>
@@ -1516,6 +1582,14 @@ function statusClass(st){const s=String(st||'').toLowerCase();
   if(s==='converted')return 'lead-badge-converted';if(s==='dropped')return 'lead-badge-lost';
   if(s==='enquiry')return 'lead-badge-new';return 'lead-badge-progress';}
 
+/* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
+   is obvious at a glance instead of being mistaken for an unfixed bug. */
+const BUILD='2026-09-22d';
+(function stampBuild(){
+  const el=document.getElementById('buildTag');
+  if(el)el.textContent='build '+BUILD;
+})();
+
 window.doGoogleSignIn=async function(){
   $('loginErr').textContent='';
   try{ await signInWithPopup(auth,new GoogleAuthProvider()); }
@@ -1565,7 +1639,12 @@ async function enterParentMode(email){
     // signing in with a different Google account from the one on their child's record.
     $('loginErr').innerHTML='<strong>'+esc(email)+'</strong> isn\'t linked to any student. '
       +'If you have another Google account, sign out and try that one \u2014 otherwise contact '
-      +'ElectroBotics and we\'ll add this address. <a href="#" onclick="doSignOut();return false;">Sign out</a>';
+      +'ElectroBotics and we\'ll add this address.'
+      // Says the lookup SUCCEEDED and found nothing, as opposed to having been refused.
+      // Without this the two outcomes are indistinguishable from the outside.
+      +'<div class="login-diag">Lookup ran without error and matched <strong>0</strong> student records on '
+      +'<code>parentEmails</code>.</div>'
+      +'<a href="#" onclick="doSignOut();return false;">Sign out</a>';
     return;
   }
   userRole='parent';
@@ -2163,7 +2242,9 @@ window.downloadStudentsExcel=function(){
   const rows=(filteredStudents.length?filteredStudents:studentsData).map(s=>({
     'ID':s.ID||'','Name':s.Name||'','Current Level':s['Current Level']||'','Tutor':s.Tutor||'',
     'Country':s.Country||'','Batch':s.Batch||'','Status':s.Status||'Active','Join Date':s['Join Date']||'',
-    'Email':s.Email||'','Contact':s.Contact||'','School':s.School||'','Address':s.Address||'','Monthly Fee':s['Monthly Fee']||''
+    'Email':s.Email||'','Contact':s.Contact||'','School':s.School||'','Address':s.Address||'','Monthly Fee':s['Monthly Fee']||'',
+    // 'Monthly Fee' is the latest rate SET, which may not start until a future month.
+    'Fee Effective From':(feeEntries(s).slice(-1)[0]||{}).from||''
   }));
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Students');
@@ -2172,6 +2253,12 @@ window.downloadStudentsExcel=function(){
 
 /* ── Profile / roadmap ── */
 window.openProfile=async function(id){
+  /* The month floors and the data-start month live in settings/app, and until now
+     loadSettings() only ran from the Payments and Settings screens. A parent lands
+     straight here and never visits either, so their child's page silently used the
+     built-in default instead of what is configured. Cached behind settingsLoaded, and
+     settings/app is readable by any signed-in user, so this costs one read at most. */
+  try{ await loadSettings(); }catch(e){ console.warn('profile settings',e); }
   currentStudentId=id;
   selectedStudentId=id;
   if(userRole!=='parent')profileReturnTab=activeTab;   // Back goes where you came from
@@ -2439,18 +2526,18 @@ function renderProfileGlance(){
       <div class="glance-foot">View by month ${chev}</div>
     </button>`;
   // Totals: the current month for this year, the whole year otherwise.
-  const sumYear=(src)=>{let n=0,e=0;const from=glFromMonth(g.selYear,s);
+  const sumYear=(src,mod)=>{let n=0,e=0;const from=glFromMonth(g.selYear,s,mod);
     for(let m=from;m<=sc.month;m++){n+=(src[m]||{count:0}).count;e+=glExpected(g.selYear,m,s);}return {n,e};};
   let html='';
   if(g.att===null)html+=card('att','Attendance','none','—','','Not available');
   else{
-    const v=sc.isNow?{n:(g.att[sc.month]||{count:0}).count,e:glExpected(g.selYear,sc.month,s)}:sumYear(g.att);
+    const v=sc.isNow?{n:(g.att[sc.month]||{count:0}).count,e:glExpected(g.selYear,sc.month,s)}:sumYear(g.att,'att');
     html+=card('att','Attendance',glTier(v.n,v.e),v.n,v.n===1?'class':'classes',
       `attended in ${esc(period)}<br>${v.e?esc(v.e+' expected'+(sc.isNow?' so far':'')):'not started yet'}`);
   }
   if(g.asg===null)html+=card('asg','Assignments','none','—','','Not available');
   else{
-    const v=sc.isNow?{n:(g.asg[sc.month]||{count:0}).count,e:glExpected(g.selYear,sc.month,s)}:sumYear(g.asg);
+    const v=sc.isNow?{n:(g.asg[sc.month]||{count:0}).count,e:glExpected(g.selYear,sc.month,s)}:sumYear(g.asg,'asg');
     html+=card('asg','Assignments',glTier(v.n,v.e),v.n,v.n===1?'demo':'demos',
       `submitted in ${esc(period)}<br>${v.e?esc(v.e+' expected'+(sc.isNow?' so far':'')):'not started yet'}`);
   }
@@ -2461,8 +2548,18 @@ function renderProfileGlance(){
   grid.innerHTML=html;
 }
 // First month worth showing for a student in a year: the data floor, or later if they joined later.
-function glFromMonth(year,student){
-  let from=dataStartMonth(year);
+/* First month worth showing for a student in a year, for ONE module.
+
+   Attendance and assignments started being tracked on different dates \u2014 assignments
+   only from Sep 2026 \u2014 so a single floor made a student's page count months that were
+   never recorded and report everyone as having missed them. `mod` is 'att', 'asg' or
+   'pay'; each falls back to the global Data Start when it has no floor of its own.
+
+   Scoped to the STUDENT DETAIL page by design. The trends and tutor screens keep using
+   the global Data Start, so the same student can legitimately read 75% here and 20%
+   there \u2014 different floors, both correct under their own rule. */
+function glFromMonth(year,student,mod){
+  let from=moduleStartMonth(year,mod);
   const jm=parseJoinYM(student&&student['Join Date']);
   if(jm&&jm.y===year&&jm.mo>from)from=jm.mo;
   if(jm&&jm.y>year)from=13;
@@ -2478,7 +2575,7 @@ window.openGlance=function(key){
   const src=key==='att'?g.att:g.asg;
   if(!src){body.innerHTML='<div class="pay-empty">Not available right now.</div>';showModal('glanceModal');return;}
   const word=key==='att'?'attended':'submitted';
-  const from=glFromMonth(g.year,g.student);
+  const from=glFromMonth(g.year,g.student,key);
   let rows='';
   for(let m=from;m<=g.month;m++){
     const e=src[m]||{count:0,dates:[]};
@@ -2512,13 +2609,14 @@ function glPaymentsHtml(g){
     let cls='due',txt='Pending';
     if(st==='paid'){cls='paid';txt='Paid'+(rec['Paid Date']?' · '+rec['Paid Date']:'');}
     else if(st==='ignore'){cls='skip';txt='Not applicable';}
-    const fee=payAmt(s['Monthly Fee']);
     // A recorded payment is shown in the currency it was RECEIVED in — a student can
-    // pay CAD one month and rupees the next. Only an unrecorded month falls back to
-    // the fee as quoted. Nothing here is converted to rupees.
+    // pay CAD one month and rupees the next. Only an unrecorded month falls back to the
+    // quoted fee, and then to the fee IN FORCE THAT MONTH so an old month keeps its old
+    // rate after a level change. Nothing here is converted to rupees.
+    const fee=feeAmountAt(s,g.selYear,m);
     const recAmt=rec?payAmt(rec.Amount):null;
     const amt=recAmt!==null?recAmt:fee;
-    const aCur=recAmt!==null?payRowCur(rec):cur;
+    const aCur=recAmt!==null?payRowCur(rec):feeCurAt(s,g.selYear,m);
     rows+=`<div class="gl-row" style="grid-template-columns:64px 1fr auto;">
       <span class="gl-month">${esc(PAY_MONTHS[m-1].slice(0,3))}</span>
       <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${amt!==null?esc(money(amt,aCur)):'—'}</span>
@@ -2867,6 +2965,112 @@ function nextStudentId(){
   studentsData.forEach(s=>{const m=String(s.ID||'').match(/^([A-Za-z]+)(\d+)$/);if(m){const n=parseInt(m[2]);if(n>max){max=n;prefix=m[1];pad=m[2].length;}}});
   return prefix+String(max+1).padStart(pad,'0');
 }
+/* ── Fee history, in the student form ──────────────────────────────────────────
+   feeEditing holds the entries as they are being edited. It starts as a copy of the
+   student's stored history so a removal can be undone by cancelling the dialog —
+   nothing is written until Save. */
+let feeEditing=[];
+let feeEditingOrig='';                 // JSON of what was loaded, to detect real changes
+const feeMonthLabel=(from)=>{
+  const m=String(from||'').match(/^(\d{4})-(\d{2})$/);
+  return m?`${PAY_MONTHS[parseInt(m[2],10)-1].slice(0,3)} ${m[1]}`:String(from||'');
+};
+const nextMonthKey=()=>{
+  const n=new Date(),y=n.getFullYear(),m=n.getMonth()+2;
+  return m>12?feeKey(y+1,1):feeKey(y,m);
+};
+function feeLoadForm(st){
+  feeEditing=st?feeEntries(st):[];
+  feeEditingOrig=JSON.stringify(feeEditing);
+  const fromEl=$('s_FeeFrom');
+  // Editing an existing student defaults to next month — the common case is raising a
+  // fee going forward. A brand new student is billed from the month they join, so their
+  // first entry starts there instead and needs no decision.
+  if(fromEl)fromEl.value=st?nextMonthKey():'';
+  feeRenderHist();feeFormPreview();
+}
+function feeRenderHist(){
+  const box=$('s_FeeHist');if(!box)return;
+  if(!feeEditing.length){box.innerHTML='';return;}
+  const rows=feeEditing.map((e,i)=>{
+    const next=feeEditing[i+1];
+    const span=next
+      ? `${feeMonthLabel(e.from)} \u2013 ${feeMonthLabel(feePrevMonth(next.from))}`
+      : `from ${feeMonthLabel(e.from)}`;
+    return `<div class="fee-row">
+      <span class="fr-amt">${esc(money(e.amount,e.currency))}</span>
+      <span class="fr-span">${esc(span)}</span>
+      <span class="fr-lvl">${esc(e.level||'')}</span>
+      ${canManageStudents()?`<button type="button" class="fr-x" title="Remove this entry"
+        onclick="feeRemove(${i})">\u2715</button>`:''}
+    </div>`;
+  }).join('');
+  box.innerHTML='<div class="fee-hist-t">Fee history</div>'+rows;
+}
+// The month before a given 'YYYY-MM', for rendering a closed span.
+/* What `list` already prices a month at, ignoring nothing. Used both by the preview and
+   by Save, so what the note promises and what gets written can never diverge. */
+function feeInForce(list,from){
+  let pick=null;
+  for(const e of list){ if(e.from<=from)pick=e; else break; }
+  return pick;
+}
+function feePrevMonth(from){
+  const m=String(from||'').match(/^(\d{4})-(\d{2})$/);if(!m)return from;
+  let y=+m[1],mo=+m[2]-1;if(mo<1){mo=12;y--;}
+  return feeKey(y,mo);
+}
+window.feeRemove=function(i){
+  const e=feeEditing[i];if(!e)return;
+  if(!confirm(`Remove ${money(e.amount,e.currency)} from ${feeMonthLabel(e.from)}?\n\n`
+    +`Months that were priced by this entry fall back to the one before it. `
+    +`Nothing is written until you press Save.`))return;
+  feeEditing.splice(i,1);
+  feeRenderHist();feeFormPreview();
+};
+/* Says what pressing Save will do to the fee, before it does it. The important case is
+   backdating: setting an earlier month reprices every UNPAID month from there on, and
+   the admin should see which ones. Paid months are never touched. */
+window.feeFormPreview=function(){
+  const note=$('s_FeeNote');if(!note)return;
+  const amt=payAmt(($('s_Fee')||{}).value);
+  const from=feeNormFrom(($('s_FeeFrom')||{}).value);
+  const id=($('s_ID')||{}).value.trim();
+  const st=studentsData.find(x=>String(x.ID)===String(id));
+  const hide=()=>{note.style.display='none';note.textContent='';};
+  if(amt===null||!from)return hide();
+  const cur=currentCurrencyValue();
+  // Already the rate in force for that month \u2014 saving would change nothing.
+  const inForce=feeInForce(feeEditing,from);
+  if(inForce&&inForce.amount===amt&&inForce.currency===cur)return hide();
+  const existing=feeEditing.find(e=>e.from===from);
+  const bits=[`${money(amt,cur)} from ${feeMonthLabel(from)}`
+    +(existing?' (replaces the entry already dated that month)':'')+'.'];
+  // Which unpaid months this actually reprices, within the current year onward.
+  if(st){
+    const now=new Date(),thisY=now.getFullYear(),thisM=now.getMonth()+1;
+    const fy=parseInt(from.slice(0,4),10),fm=parseInt(from.slice(5,7),10);
+    if(fy<thisY||(fy===thisY&&fm<=thisM)){
+      const touched=[];
+      for(let y=fy;y<=thisY;y++){
+        const lo=(y===fy)?fm:1, hi=(y===thisY)?thisM:12;
+        for(let m=lo;m<=hi;m++){
+          const rec=payRecord(String(st.ID),y,m,'Fee');
+          const stt=rec?String(rec.Status||'').toLowerCase():'';
+          if(stt==='paid'||stt==='ignore')continue;          // already settled — untouched
+          touched.push(PAY_MONTHS[m-1].slice(0,3)+' '+y);
+        }
+      }
+      if(touched.length)bits.push(`This reprices ${touched.length} unpaid month(s): `
+        +touched.slice(0,8).join(', ')+(touched.length>8?`, +${touched.length-8} more`:'')+'.');
+      bits.push('Months already marked Paid keep the amount actually received.');
+    }
+  }
+  note.className='fee-note';
+  note.innerHTML=bits.map(esc).join('<br>');
+  note.style.display='';
+};
+
 window.openStudentForm=function(id,prefill){
   if(!canManageStudents())return;   // tutors may edit progress, not the student record
   $('s_Currency').dataset.touched='';
@@ -2891,6 +3095,7 @@ window.openStudentForm=function(id,prefill){
     $('s_JoinDate').value=toDateInputValue(s['Join Date']);
     $('s_Email').value=s.Email||'';$('s_Contact').value=s.Contact||'';
     $('s_Address').value=s.Address||'';$('s_Fee').value=s['Monthly Fee']||'';
+    feeLoadForm(s);
     $('s_PayRef').value=s['Payment Ref']||'';$('s_Photo').value=s.Photo||'';
     setCurrencyValue(studentCurrency(s));
     const reason=s['Inactive Reason']||'';
@@ -2909,6 +3114,7 @@ window.openStudentForm=function(id,prefill){
     $('s_Email').value='';$('s_Contact').value=pf.Contact||'';$('s_Address').value='';$('s_Fee').value='';
     $('s_PayRef').value='';$('s_Photo').value='';$('s_InactiveReason').value='';$('s_InactiveReasonOther').value='';
     setCurrencyValue(currencyForCountry(pf.Country||''));
+    feeLoadForm(null);
     editStatusOnOpen='Active';
   }
   onStuStatusChange();onStuReasonChange();updatePhotoPreview();
@@ -3000,6 +3206,41 @@ window.saveStudent=async function(){
   };
   if(status==='Inactive'&&editStatusOnOpen==='Active')data['Inactive Date']=new Date().toISOString().slice(0,10);
   if(status==='Active')data['Inactive Date']='';
+  /* Fee history. An entry is added only when the fee, its currency or its effective
+     month is actually new — so editing a phone number never writes fee history. Setting
+     a month that already has an entry replaces it rather than duplicating. */
+  {
+    const amt=payAmt($('s_Fee').value), cur=currentCurrencyValue();
+    let from=feeNormFrom($('s_FeeFrom').value);
+    // A new student with no effective month billed from the month they joined.
+    if(!from&&amt!==null){
+      const jd=String(data['Join Date']||'').match(/^(\d{4})-(\d{1,2})/);
+      from=jd?feeKey(+jd[1],+jd[2]):feeKey(new Date().getFullYear(),new Date().getMonth()+1);
+    }
+    const next=feeEditing.slice();
+    /* Add an entry ONLY when it actually changes the rate for that month. The form
+       always arrives pre-filled \u2014 current fee, effective next month \u2014 so without this
+       check every unrelated save (a phone number, an address) would stamp a duplicate
+       entry dated next month and quietly grow the history forever. */
+    const inForce=feeInForce(next,from);
+    const noop=inForce&&inForce.amount===amt&&inForce.currency===cur;
+    if(amt!==null&&from&&!noop){
+      const at=next.findIndex(e=>e.from===from);
+      const entry={from,amount:amt,currency:cur,level:String(data['Current Level']||''),
+        by:(currentUser&&currentUser.email||'').toLowerCase(),at:new Date().toISOString()};
+      if(at>=0)next[at]=entry; else next.push(entry);
+      next.sort((a,b)=>a.from<b.from?-1:(a.from>b.from?1:0));
+    }
+    const cmp=(l)=>JSON.stringify(l.map(e=>({from:e.from,amount:e.amount,currency:e.currency,level:e.level})));
+    if(cmp(next)!==cmp(feeEditing)||feeEditingOrig!==JSON.stringify(feeEditing)){
+      data.feeHistory=next;
+      /* Keep the headline fields on the LAST entry. Backdating can leave a later entry
+         as the newest, and if 'Monthly Fee' kept whatever was typed the two would drift
+         \u2014 which is how the duplicate-entry bug above got its wrong starting value. */
+      const last=next[next.length-1];
+      if(last){data['Monthly Fee']=String(last.amount);data.Currency=last.currency;}
+    }
+  }
   btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='modal-msg';
   try{
     await setDoc(doc(db,'students',id),data,{merge:true});
@@ -3173,6 +3414,90 @@ function dataStartMonth(selY){
   if(selY<d.y)return 13;   // nothing at all for that year
   return d.mo;
 }
+/* Per-module floor, used ONLY by the student detail page. Attendance and assignments
+   began on different dates — assignments from Sep 2026 — and counting a month that was
+   never recorded reports every student as having missed it. Unset falls back to the
+   global Data Start, so a module nobody has configured behaves exactly as before. */
+function moduleStart(mod){
+  const key={att:'attStart',asg:'asgStart'}[mod];
+  const v=key&&typeof appSettings!=='undefined'&&appSettings?appSettings[key]:null;
+  return (v&&v.y&&v.mo)?v:((typeof appSettings!=='undefined'&&appSettings&&appSettings.dataStart)||DATA_START);
+}
+function moduleStartMonth(selY,mod){
+  const d=moduleStart(mod);
+  if(selY>d.y)return 1;
+  if(selY<d.y)return 13;
+  return d.mo;
+}
+/* ═══════════ FEE HISTORY ═══════════
+   A student's fee changes when they move up a level, and the OLD fee must keep
+   applying to the months it covered. Without this, raising a fee silently rewrote
+   every past month: Fee revenue read the current fee for June as well as today, so
+   last quarter's expected revenue moved because of a decision made this quarter, and
+   a parent who owed June at the old rate suddenly owed the new one.
+
+   feeHistory is an array on the student document:
+     [{from:'2026-06', amount:1500, currency:'INR', level:'…', by:'…', at:<ts>}, …]
+
+   'Monthly Fee' and 'Currency' are NOT replaced — they still hold the latest value
+   set, so every export, the students table and the inventory app keep working and no
+   Firestore rule changes. The array is additional.
+
+   The rule: the fee for month M is the LATEST entry whose `from` is on or before M.
+   A month before the first entry uses the first entry, so nothing renders blank on a
+   student whose history starts after their join date. No history at all falls back to
+   'Monthly Fee', which is exactly today's behaviour. */
+const feeKey=(y,m)=>`${y}-${String(m).padStart(2,'0')}`;
+// '2026-6' and '2026-06' must compare equal; string ordering only works zero-padded.
+function feeNormFrom(v){
+  const t=String(v==null?'':v).trim();
+  const m=t.match(/^(\d{4})-(\d{1,2})$/);
+  return m?`${m[1]}-${String(parseInt(m[2],10)).padStart(2,'0')}`:'';
+}
+function feeEntries(st){
+  const raw=(st&&Array.isArray(st.feeHistory))?st.feeHistory:[];
+  return raw.map(e=>{
+      const from=feeNormFrom(e&&e.from), amount=payAmt(e&&e.amount);
+      if(!from||amount===null)return null;
+      return {from,amount,
+        currency:String((e&&e.currency)||'').toUpperCase()||studentCurrency(st),
+        level:String((e&&e.level)||'')};
+    }).filter(Boolean)
+    .sort((a,b)=>a.from<b.from?-1:(a.from>b.from?1:0));
+}
+// The entry in force for a given month, or null when the student has no history.
+function feeAt(st,y,m){
+  const es=feeEntries(st);
+  if(!es.length)return null;
+  const key=feeKey(y,m);
+  let pick=es[0];                       // before the first entry: use the first
+  for(const e of es){ if(e.from<=key)pick=e; else break; }
+  return pick;
+}
+// Fee amount for a month, in that month's quoted currency. Falls back to the record's
+// current fee so a student with no history behaves exactly as before.
+function feeAmountAt(st,y,m){
+  const e=feeAt(st,y,m);
+  return e?e.amount:payAmt(st&&st['Monthly Fee']);
+}
+function feeCurAt(st,y,m){
+  const e=feeAt(st,y,m);
+  return (e&&e.currency)||studentCurrency(st);
+}
+// The rate in force right now — for the places that genuinely mean "today", not a
+// selected month. Differs from 'Monthly Fee' whenever a change is queued for a future
+// month, which is the normal case after setting a new fee effective next month.
+function feeNow(st){
+  const n=new Date();
+  return {amount:feeAmountAt(st,n.getFullYear(),n.getMonth()+1),
+          currency:feeCurAt(st,n.getFullYear(),n.getMonth()+1)};
+}
+// A change dated after this month, if one is queued. Drives the "₹2,000 from Nov" hint.
+function feePending(st){
+  const n=new Date(),key=feeKey(n.getFullYear(),n.getMonth()+1);
+  return feeEntries(st).find(e=>e.from>key)||null;
+}
+
 const CURRENCIES=['INR','USD','CHF','CAD','GBP'];
 const CURRENCY_BY_COUNTRY=[
   [/india/i,'INR'],[/switzerland|swiss/i,'CHF'],
@@ -3220,8 +3545,7 @@ function payCtxFrom(records){
 function payDues(s,selY,selM,ctx){
   if(!ctx){if(!payIndex)buildPayIndex();ctx={rec:payRecord,by:payByStudent,start:payDataStart};}
   const sid=String(s.ID||'').trim();
-  const cur=studentCurrency(s);                 // the currency the fee is QUOTED in
-  const monthly=payAmt(s['Monthly Fee']);       // in that quoted currency
+  const cur=studentCurrency(s);                 // the currency the fee is QUOTED in today
   const items=[],feeMonths=[],extras=[];let total=0,unknown=false;
   const byCur={};   // what is owed, kept in the currency each item is actually billed in
   const jm=parseJoinYM(s['Join Date']);
@@ -3236,8 +3560,10 @@ function payDues(s,selY,selM,ctx){
   const dueOf=(rec,mm)=>{
     const raw=payAmt(rec&&rec.Amount);
     if(raw!==null){const c=payRowCur(rec);return {amount:raw,currency:c,amountINR:toINR(raw,c,selY,mm)};}
-    if(monthly===null)return {amount:null,currency:cur,amountINR:null};
-    return {amount:monthly,currency:cur,amountINR:toINR(monthly,cur,selY,mm)};
+    // No row yet — fall back to the fee IN FORCE THAT MONTH, not the current one.
+    const monthly=feeAmountAt(s,selY,mm), mcur=feeCurAt(s,selY,mm);
+    if(monthly===null)return {amount:null,currency:mcur,amountINR:null};
+    return {amount:monthly,currency:mcur,amountINR:toINR(monthly,mcur,selY,mm)};
   };
   const tally=(d)=>{
     if(d.amountINR===null){unknown=true;return;}
@@ -3285,8 +3611,10 @@ function payDues(s,selY,selM,ctx){
   const totalText=curKeys.length?curKeys.map(k=>money(byCur[k],k)).join(' + '):'';
   const totalINR=total>0?inr(total):'';
   const mixed=curKeys.length>1||(curKeys.length===1&&curKeys[0]!=='INR');
-  const quoted=(cur!=='INR'&&monthly!==null)?money(monthly,cur):'';
-  return {total,unknown,byCur,totalText,totalINR,showINR:mixed,currency:'INR',quoted,quotedCurrency:cur,
+  // The quoted headline uses the rate for the SELECTED month, not today's.
+  const selFee=feeAmountAt(s,selY,selM), selCur=feeCurAt(s,selY,selM);
+  const quoted=(selCur!=='INR'&&selFee!==null)?money(selFee,selCur):'';
+  return {total,unknown,byCur,totalText,totalINR,showINR:mixed,currency:'INR',quoted,quotedCurrency:selCur,
           items,feeMonths,extras,count:items.length,year:selY,startMonth};
 }
 function renderDueCell(s,selY,selM){
@@ -3382,7 +3710,8 @@ window.buildPayments=function(){
   list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Student</th><th>Payment Ref</th><th>Status</th><th>Kit</th><th>Components</th><th>Classes</th><th>Pending</th><th>Action</th>
     </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,comp})=>{
-      const fee=s['Monthly Fee']||'';
+      // This table is scoped to one month, so the fee shown is that month's rate.
+      const fee=(()=>{const v=feeAmountAt(s,selY,selM);return v===null?'':String(v);})();
       const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
       const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?esc(money(payAmt(rec.Amount)||0,payRowCur(rec))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
       const kitCell=renderKitCell(s,kitRec,kitSt);const compCell=renderCompCell(s,comp,selY,selM);
@@ -3395,7 +3724,7 @@ window.buildPayments=function(){
         action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${jsq(s.ID)}','${jsq(s.Name)}','${jsq(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub">${billBtn}<button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${jsq(s.ID)}',this)">Ignore</button></div></div>`;
       }else{action=`<div class="pay-actions"><div class="pay-actions-main">${billBtn}</div><div class="pay-actions-sub"><button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button></div></div>`;}
       // Batch + monthly fee now ride along under the name, like the student ID.
-      const sc=studentCurrency(s),fv=payAmt(fee);
+      const sc=feeCurAt(s,selY,selM),fv=payAmt(fee);
       const feeTxt=fv===null?'':(sc==='INR'?inr(fv):`${money(fv,sc)} ≈ ${inr(toINR(fv,sc,selY,selM))}`);
       const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',feeTxt?esc(feeTxt):''].filter(Boolean).join(' · ');
       return `<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}"><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
@@ -3409,8 +3738,10 @@ function fillPaySelect(id,allLabel,items,current){
 }
 let payCurrentCtx=null;
 window.openPaymentForm=function(sid,name,fee){
-  payShowCurrency(sid,null,true);
+  // Context BEFORE payShowCurrency — it renders the hint, which quotes the fee for the
+  // month in payCurrentCtx. Setting it afterwards left the hint one dialog behind.
   const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Fee',mode:'paid'};
+  payShowCurrency(sid,null,true);
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
   $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
   $('pay_AmountLabel').textContent='Amount received';
@@ -3418,7 +3749,7 @@ window.openPaymentForm=function(sid,name,fee){
   // The suggested amount follows the currency the dropdown just defaulted to, so the
   // number and the code beside it always belong together.
   const amtEl=$('pay_Amount');
-  amtEl.value=payFeeSuggestion(sid,($('pay_Currency')||{}).value||'INR');
+  amtEl.value=payFeeSuggestion(sid,($('pay_Currency')||{}).value||'INR',year,month);
   amtEl.dataset.auto='1';
   const t=new Date();$('pay_Date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
   $('pay_Method').value='';$('pay_Note').value='';$('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;showModal('paymentModal');
@@ -3521,7 +3852,8 @@ window.downloadPaymentsExcel=function(){
     // number is unreadable once a student has paid in more than one.
     const rowCur=(r)=>r&&payAmt(r.Amount)!==null?payRowCur(r):'';
     return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'',
-      'Quoted Currency':studentCurrency(s),'Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'',
+      'Quoted Currency':studentCurrency(s),'Monthly Fee':s['Monthly Fee']||'',
+      'Fee Effective From':(feeEntries(s).slice(-1)[0]||{}).from||'','Payment Ref':s['Payment Ref']||'',
       'Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Currency':rowCur(fee),'Fee Paid Date':fee?fee['Paid Date']:'',
       'Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Kit Currency':rowCur(kit),
       'Component Bills':comp.n||'','Component Bills Paid':comp.n?comp.paid:'',
@@ -3603,9 +3935,12 @@ function lastPaidAmountIn(sid,cur){
 /* What to suggest in the Amount box for the currency currently selected: the quoted fee
    when that IS the quoted currency, otherwise whatever they last paid in it. Never a
    quoted number wearing another currency's label — that is how ₹1,500 became $1,500. */
-function payFeeSuggestion(sid,cur){
+function payFeeSuggestion(sid,cur,y,m){
   const st=studentsData.find(x=>String(x.ID)===String(sid));
-  const quoted=studentCurrency(st),fee=payAmt(st&&st['Monthly Fee']);
+  // The rate for the MONTH BEING PAID — recording a late September payment in December
+  // must offer September's fee, not whatever the fee is today.
+  const yy=parseInt(y,10)||new Date().getFullYear(), mm=parseInt(m,10)||(new Date().getMonth()+1);
+  const quoted=feeCurAt(st,yy,mm), fee=feeAmountAt(st,yy,mm);
   if(String(cur||'').toUpperCase()===quoted)return fee===null?'':String(fee);
   const prev=lastPaidAmountIn(sid,cur);
   return prev===null?'':String(prev);
@@ -3615,16 +3950,19 @@ window.onPayCurrencyChange=function(){
   const el=$('pay_Amount');
   // Re-suggest only while the box still holds a suggestion — never overwrite typing.
   if(el&&el.dataset.auto==='1'&&c&&c.mode==='paid'&&c.type==='Fee'){
-    el.value=payFeeSuggestion(c.studentId,($('pay_Currency')||{}).value||'INR');
+    el.value=payFeeSuggestion(c.studentId,($('pay_Currency')||{}).value||'INR',c.year,c.month);
   }
   payCurHint(c&&c.studentId);
 };
 function payCurHint(sid){
   const st=studentsData.find(x=>String(x.ID)===String(sid));
   const el=$('pay_CurHint');if(!el)return;
-  const quoted=studentCurrency(st),chosen=($('pay_Currency')||{}).value||'INR';
-  const fee=payAmt(st&&st['Monthly Fee']);
-  const now=new Date(),y=now.getFullYear(),m=now.getMonth()+1;
+  const chosen=($('pay_Currency')||{}).value||'INR';
+  // Quote the month being paid, matching the amount suggested in the box beside it.
+  const c=payCurrentCtx||{};
+  const y=parseInt(c.year,10)||new Date().getFullYear();
+  const m=parseInt(c.month,10)||(new Date().getMonth()+1);
+  const quoted=feeCurAt(st,y,m), fee=feeAmountAt(st,y,m);
   const bits=[];
   if(fee!==null)bits.push(`Fee quoted ${money(fee,quoted)}`+(quoted!=='INR'?` ≈ ${inr(toINR(fee,quoted,y,m))}`:''));
   if(chosen!=='INR')bits.push(`Entering ${chosen} — converted at ₹${Math.round(fxFor(chosen,y,m)*100)/100} for reporting`);
@@ -3636,9 +3974,9 @@ const payRowCur=(rec)=>String((rec&&rec.Currency)||'INR').toUpperCase();
 const payRowINR=(rec,y,m)=>{const a=payAmt(rec&&rec.Amount);return a===null?null:toINR(a,payRowCur(rec),y,m);};
 function openDueForm(sid,type){
   const s=studentsData.find(x=>x.ID===sid);
-  payShowCurrency(sid);
   const year=$('payYear').value,month=$('payMonth').value;
-  payCurrentCtx={studentId:sid,year,month,type,mode:'due'};
+  payCurrentCtx={studentId:sid,year,month,type,mode:'due'};   // before payShowCurrency
+  payShowCurrency(sid);
   $('paymentModalTitle').textContent=type+' Due';
   // Nothing has been received here — this is what the kit or components will cost.
   $('pay_AmountLabel').textContent=type+' amount';
@@ -3821,7 +4159,6 @@ const JSPDF_SRC='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'
 /** Every billable line for a student-month, from all three sources. */
 function receiptLines(s,selY,selM){
   const sid=String(s.ID||'').trim();
-  const cur=studentCurrency(s);
   const lines=[];
   const push=(o)=>lines.push(o);
   // Fee — falls back to the quoted monthly fee when no row exists yet.
@@ -3829,8 +4166,8 @@ function receiptLines(s,selY,selM){
   const feeSt=fee?String(fee.Status||'').toLowerCase():'';
   if(feeSt!=='ignore'){
     const rec=fee&&payAmt(fee.Amount)!==null;
-    const amt=rec?payAmt(fee.Amount):payAmt(s['Monthly Fee']);
-    const c=rec?payRowCur(fee):cur;
+    const amt=rec?payAmt(fee.Amount):feeAmountAt(s,selY,selM);
+    const c=rec?payRowCur(fee):feeCurAt(s,selY,selM);
     if(amt!==null)push({label:'Monthly Fee — '+PAY_MONTHS[selM-1]+' '+selY,
       amount:amt,currency:c,paid:feeSt==='paid',when:(fee&&fee['Paid Date'])||'',
       how:(fee&&fee.Method)||''});
@@ -4142,7 +4479,7 @@ const FX_APIS=[
   {name:'er-api.com',url:'https://open.er-api.com/v6/latest/INR',
    pick:j=>(j&&j.result==='success'&&j.rates)||null, date:j=>(j&&j.time_last_update_utc)||''}
 ];
-let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,fxSource:'',fxError:''};
+let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,attStart:null,asgStart:null,fxSource:'',fxError:''};
 let frozenRates={};        // "2026_8" -> {rates:{...}, frozenAt, frozenBy}
 let settingsLoaded=false, fxLiveTried=false;
 
@@ -4155,6 +4492,9 @@ async function loadSettings(){
       appSettings.fx={...FX_DEFAULTS,...(d.fx||{})};
       appSettings.fxMode=d.fxMode||'live';
       appSettings.fxUpdatedAt=d.fxUpdatedAt||'';
+      const asStart=(v)=>{const m=String(v||'').match(/^(\d{4})-(\d{1,2})$/);return m?{y:+m[1],mo:+m[2]}:null;};
+      appSettings.attStart=asStart(d.attStart);
+      appSettings.asgStart=asStart(d.asgStart);
       if(d.dataStart&&/^\d{4}-\d{1,2}$/.test(d.dataStart)){
         const p=d.dataStart.split('-');appSettings.dataStart={y:+p[0],mo:+p[1]};
       }
@@ -4238,12 +4578,18 @@ window.renderSettings=async function(){
       <input type="text" inputmode="decimal" id="fx_${c}" value="${esc(String(Math.round((appSettings.fx[c]||0)*100)/100))}" onchange="onFxInput('${c}',this.value)">
     </div>`).join('');
   // Data start pickers
+  const nowY=new Date().getFullYear();
+  const fillStart=(mId,yId,v)=>{
+    const mSel=$(mId),ySel=$(yId);if(!mSel||!ySel)return;
+    mSel.innerHTML=PAY_MONTHS.map((m,i)=>`<option value="${i+1}"${i+1===v.mo?' selected':''}>${m}</option>`).join('');
+    let yy='';for(let y=nowY;y>=nowY-5;y--)yy+=`<option value="${y}"${y===v.y?' selected':''}>${y}</option>`;
+    ySel.innerHTML=yy;
+  };
   const ds=appSettings.dataStart||DATA_START;
-  const mSel=$('setDataMonth'),ySel=$('setDataYear');
-  mSel.innerHTML=PAY_MONTHS.map((m,i)=>`<option value="${i+1}"${i+1===ds.mo?' selected':''}>${m}</option>`).join('');
-  const nowY=new Date().getFullYear();let yy='';
-  for(let y=nowY;y>=nowY-5;y--)yy+=`<option value="${y}"${y===ds.y?' selected':''}>${y}</option>`;
-  ySel.innerHTML=yy;
+  fillStart('setDataMonth','setDataYear',ds);
+  // Unset module floors show the global Data Start, so the boxes always read truthfully.
+  fillStart('setAttMonth','setAttYear',appSettings.attStart||ds);
+  fillStart('setAsgMonth','setAsgYear',appSettings.asgStart||ds);
   renderFrozenList();
 };
 window.onFxInput=function(c,v){const n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(n>0)appSettings.fx[c]=n;};
@@ -4257,10 +4603,15 @@ window.fetchFxNow=async function(){
 window.saveSettings=async function(){
   const msg=$('setMsg');msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
   appSettings.dataStart={y:+$('setDataYear').value,mo:+$('setDataMonth').value};
+  const grab=(mId,yId)=>{const m=$(mId),y=$(yId);return (m&&y)?{y:+y.value,mo:+m.value}:null;};
+  appSettings.attStart=grab('setAttMonth','setAttYear');
+  appSettings.asgStart=grab('setAsgMonth','setAsgYear');
+  const asStr=(v)=>v?`${v.y}-${v.mo}`:'';
   try{
     await setDoc(doc(db,'settings','app'),{
       fx:appSettings.fx,fxMode:appSettings.fxMode,fxUpdatedAt:appSettings.fxUpdatedAt||'',
       dataStart:`${appSettings.dataStart.y}-${appSettings.dataStart.mo}`,
+      attStart:asStr(appSettings.attStart),asgStart:asStr(appSettings.asgStart),
       updatedAt:serverTimestamp(),updatedBy:(currentUser&&currentUser.email)||''
     },{merge:true});
     msg.textContent='Saved.';msg.className='msg ok';
@@ -4279,6 +4630,83 @@ function renderFrozenList(){
       return `<tr><td><strong>${esc(PAY_MONTHS[(+p[1])-1])} ${esc(p[0])}</strong></td><td>${r('USD')}</td><td>${r('CHF')}</td><td>${r('CAD')}</td><td>${r('GBP')}</td><td><span class="pay-sid2">${esc(when)}</span></td></tr>`;
     }).join('')}</tbody></table>`;
 }
+/* Seed feeHistory for students who have none.
+
+   Without an entry, feeAt() falls back to 'Monthly Fee' — which is correct today but
+   means the moment a fee is raised, every earlier month silently adopts the new rate.
+   One entry dated from the student's join month pins the current fee to the past, so a
+   later change only moves months from its own effective date onward.
+
+   Only students with NO history are touched; anyone who already has entries is left
+   exactly as they are, which makes re-running this a no-op. */
+window.repairFeeHistory=async function(dryRun){
+  if(!isAdmin())return;
+  const msg=$('fhMsg'),list=$('fhList');
+  msg.innerHTML='<span class="spinner"></span> Scanning\u2026';msg.className='msg busy';
+  let rows=[];
+  try{
+    const snap=await getDocs(collection(db,'students'));
+    rows=snap.docs.map(d=>({_id:d.id,...d.data()}));
+  }catch(e){console.error('fh scan',e);msg.textContent='Could not read students: '+(e.code||e.message);msg.className='msg err';return;}
+  const ds=(typeof appSettings!=='undefined'&&appSettings&&appSettings.dataStart)||DATA_START;
+  const have=[],noFee=[],todo=[];
+  rows.forEach(st=>{
+    if(feeEntries(st).length){have.push(st);return;}
+    const amt=payAmt(st['Monthly Fee']);
+    if(amt===null){noFee.push(st);return;}
+    // Billing starts when they joined; a student with no join date starts at Data Start.
+    const jm=parseJoinYM(st['Join Date']);
+    const from=jm?feeKey(jm.y,jm.mo):feeKey(ds.y,ds.mo);
+    todo.push({st,entry:{from,amount:amt,currency:studentCurrency(st),
+      level:String(st['Current Level']||''),by:(currentUser&&currentUser.email||'').toLowerCase(),
+      at:new Date().toISOString()},noJoin:!jm});
+  });
+  if(!rows.length){
+    list.innerHTML='<div class="stu-note"><span><strong>Read 0 student records.</strong> '
+      +'Nothing to report either way \u2014 open the Students tab and confirm it lists your students.</span></div>';
+    msg.textContent='Read no students.';msg.className='msg err';return;
+  }
+  let html=`<div class="set-note">Read <strong>${rows.length}</strong> student record(s). `
+    +`<strong>${have.length}</strong> already have fee history \u00b7 `
+    +`<strong>${todo.length}</strong> need seeding \u00b7 `
+    +`<strong>${noFee.length}</strong> have no fee set.</div>`;
+  if(todo.length){
+    const noJoin=todo.filter(t=>t.noJoin).length;
+    html+='<table class="pay-table"><thead><tr><th>ID</th><th>Name</th><th>Fee</th><th>Effective from</th></tr></thead><tbody>'
+      +todo.slice(0,50).map(t=>`<tr><td><strong>${esc(t.st.ID||t.st._id)}</strong></td><td>${esc(t.st.Name||'')}</td>`
+        +`<td>${esc(money(t.entry.amount,t.entry.currency))}</td>`
+        +`<td>${esc(feeMonthLabel(t.entry.from))}${t.noJoin?' <em>(no join date \u2014 Data Start)</em>':''}</td></tr>`).join('')
+      +'</tbody></table>'+(todo.length>50?`<div class="set-note">\u2026and ${todo.length-50} more.</div>`:'')
+      +(noJoin?`<div class="set-note">${noJoin} student(s) have no join date and start from the Data Start month.</div>`:'');
+  }else{
+    html+='<div class="pay-empty">Every student with a fee already has history. Nothing to seed.</div>';
+  }
+  if(noFee.length){
+    html+=`<div class="set-note"><strong>${noFee.length}</strong> student(s) have no Monthly Fee, so there is nothing to record for them: `
+      +esc(noFee.slice(0,12).map(x=>(x.ID||x._id)+(x.Name?' '+x.Name:'')).join(' \u00b7 '))
+      +(noFee.length>12?` \u00b7 \u2026and ${noFee.length-12} more`:'')+'.</div>';
+  }
+  list.innerHTML=html;
+  if(dryRun){
+    msg.textContent=todo.length?`${todo.length} student(s) would be seeded. Nothing written yet.`:'Nothing to seed.';
+    msg.className='msg ok';return;
+  }
+  if(!todo.length){msg.textContent='Nothing to seed.';msg.className='msg ok';return;}
+  msg.innerHTML='<span class="spinner"></span> Seeding '+todo.length+'\u2026';msg.className='msg busy';
+  let done=0,fail=0,wb=writeBatch(db),n=0;
+  for(const t of todo){
+    try{
+      wb.set(doc(db,'students',t.st._id),{feeHistory:[t.entry],feeHistorySeededAt:serverTimestamp()},{merge:true});
+      n++;done++;
+      if(n>=400){try{await wb.commit();}catch(ce){console.error(ce);fail+=n;done-=n;}wb=writeBatch(db);n=0;}
+    }catch(e){console.error('fh row',t.st._id,e);fail++;}
+  }
+  try{if(n>0)await wb.commit();}catch(e){console.error(e);fail+=n;done-=n;}
+  msg.textContent=`Seeded ${done} student(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
+  studentsLoaded=false;
+  toast('Fee history seeded \u2014 past months now keep the rate they were billed at.');
+};
+
 /* Rebuild parentEmails from the Email field.
 
    Parent sign-in is a server-side query: where('parentEmails','array-contains',<their
@@ -4608,13 +5036,15 @@ function revenueForMonth(year,month){
     const status=rec?String(rec.Status||'').toLowerCase():'';
     if(status==='ignore')return;                         // waived — not money we were owed
     bucket.students++;cRow.students++;
-    const fee=payAmt(s['Monthly Fee']);
-    if(fee!==null){const e=toINR(fee,cur,year,month);bucket.exp+=fee;bucket.expINR+=e;cRow.expINR+=e;}
+    // The fee IN FORCE for this month. Reading the student's current fee here meant a
+    // raise today silently rewrote every past month's expected revenue.
+    const fee=feeAmountAt(s,year,month), feeCur=feeCurAt(s,year,month);
+    if(fee!==null){const e=toINR(fee,feeCur,year,month);bucket.exp+=fee;bucket.expINR+=e;cRow.expINR+=e;}
     if(status==='paid'){
       // Each row converts from the currency it was actually recorded in.
       const rowCur=payRowCur(rec);
       const raw=payAmt(rec.Amount);
-      const amt=raw!==null?toINR(raw,rowCur,year,month):toINR(fee||0,cur,year,month);
+      const amt=raw!==null?toINR(raw,rowCur,year,month):toINR(fee||0,feeCur,year,month);
       bucket.rec+=amt;bucket.recINR+=amt;
       bucket.native[rowCur]=(bucket.native[rowCur]||0)+(raw!==null?raw:0);
       bucket.paidCount++;cRow.recINR+=amt;cRow.paidCount++;
