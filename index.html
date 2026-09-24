@@ -36,7 +36,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .header-brand-fallback{font-family:var(--font-body);font-weight:800;font-size:19px;color:var(--text);line-height:1}
 .header-brand-fallback b{color:var(--red)}
 .header-tagline{font-family:var(--font-mono);font-size:9px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase;text-indent:3px;display:flex;align-items:center}
-.env-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;background:#fff4d6;color:#9a7200;border:1px solid #f0d98a;border-radius:20px;padding:2px 8px;margin-left:8px;letter-spacing:1px}
 .header-right{display:flex;align-items:center;gap:10px}
 .account-menu{position:relative}
 .account-trigger{background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;border-radius:50%}
@@ -812,6 +811,35 @@ table.avail td.occ{border:1px solid transparent}
 .set-savebar-hint{font-family:var(--font-mono);font-size:10px;color:var(--text-light);line-height:1.45}
 .set-dirty{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--amber-dark,#8a6a00)}
 .set-savebar .btn-primary{flex:none}
+/* Fee band grid. Scrolls sideways rather than shrinking the inputs — five currencies
+   plus a level name does not fit a phone, and unreadable numbers are worse than a swipe. */
+.band-scroll{overflow-x:auto}
+table.band{border-collapse:separate;border-spacing:0 4px;min-width:560px;width:100%}
+table.band th{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:.5px;padding:0 6px 4px;text-align:center;white-space:nowrap}
+table.band th.band-lvl{text-align:left;padding-left:2px}
+table.band th small{display:block;font-size:9px;font-weight:600;color:var(--text-light);letter-spacing:0}
+table.band td{padding:0 4px}
+table.band td.band-lvl{font-family:var(--font-body);font-size:13px;color:var(--text);
+  padding-left:2px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+table.band input{width:100%;min-width:70px;box-sizing:border-box;font-family:var(--font-mono);font-size:12px;
+  padding:7px 8px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text);
+  text-align:right;outline:none}
+table.band input:focus{border-color:var(--accent)}
+/* Row tags on the Payments table: fee band standing, and level progress. Small and
+   muted — they sit under a name in a dense table and must not shout over the amounts. */
+.pay-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.pay-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.3px;
+  border-radius:20px;padding:2px 7px;white-space:nowrap;border:1px solid transparent}
+.pay-tag.band-at{background:#eaf5e0;color:#4b6b26;border-color:#cfe4bb}
+.pay-tag.band-under{background:var(--amber-light);color:#8a6a00;border-color:#f0d98a}
+.pay-tag.band-well{background:#fdeae4;color:#a33d1f;border-color:#f3c3b3}
+.pay-tag.tag-near{background:#e8f1fb;color:#2d5d8f;border-color:#c3d8ee}
+/* The second chip row wraps onto its own line under the status chips. */
+.pay-chip-row2{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;
+  padding-top:8px;border-top:1px dashed var(--border)}
+.pay-chip.pay-chip-near{background:#e8f1fb;color:#2d5d8f;border-color:#c3d8ee}
+.pay-chip.pay-chip-near.active{background:#2d5d8f;color:#fff;border-color:#2d5d8f}
 @media(max-width:600px){.set-savebar{padding:10px 12px;gap:8px}.set-savebar .btn-primary{width:100%}}
 /* The technical reason behind a failed sign-in. Small and muted — a parent can ignore it,
    an admin can act on it, and nobody has to open the console to see it. */
@@ -863,7 +891,7 @@ table.avail td.occ{border:1px solid transparent}
       <div class="header-logo"><img src="logo-on.png" alt="ElectroBotics" onerror="this.parentElement.innerHTML='🤖'"></div>
       <div class="header-text">
         <img src="ElectroBotics_No_Makerspace.png" alt="ElectroBotics" class="header-brand" onerror="this.outerHTML='<div class=&quot;header-brand-fallback&quot;>Electro<b>Botics</b></div>'">
-        <div class="header-tagline">Student Progress <span class="env-tag">FIREBASE</span></div>
+        <div class="header-tagline">Student Progress</div>
       </div>
     </div>
     <div class="header-right" id="headerRight"></div>
@@ -1136,6 +1164,27 @@ table.avail td.occ{border:1px solid transparent}
           <span class="msg" id="freezeMsg"></span>
         </div>
         <div id="frozenList"></div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Fee Bands by Level</span></div></div>
+      <div class="aa-sub">What a student at each level should be paying, in each currency. The Payments screen scores every student against the band for their <strong>current</strong> level and flags anyone priced below it — which is how a student halfway through Level 2 still on the Level 1 rate shows up. Leave a cell blank if you have no band for it; those students read “No band” rather than being scored against nothing.</div>
+      <div style="padding:4px 20px 20px;">
+        <div class="band-scroll"><div id="bandGrid"></div></div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Repair · Level Progress</span></div></div>
+      <div class="aa-sub">How far each student is through their current level, used on the Payments screen to flag who is close to a fee change. It is kept up to date automatically whenever a topic is marked or a profile is opened — at no extra reading cost, because that data is already loaded at those moments. This seeds it for students nobody has opened yet. <strong>Run it once; after that it looks after itself.</strong> It reads every student's progress, so it is the one expensive button here — there is no need to run it repeatedly.</div>
+      <div style="padding:4px 20px 20px;">
+        <div class="stu-mig-actions">
+          <button class="wa-btn wa-cancel" style="padding:7px 14px;font-size:12px;" onclick="repairLevelPct(true)">Check first</button>
+          <button class="btn-primary" onclick="repairLevelPct(false)">Compute level progress</button>
+          <span class="msg" id="lpMsg"></span>
+        </div>
+        <div id="lpList" style="margin-top:12px;"></div>
       </div>
     </div>
 
@@ -1602,7 +1651,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-09-22e';
+const BUILD='2026-09-24a';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -2319,6 +2368,9 @@ window.openProfile=async function(id){
     currentProgress=pr.docs.map(d=>({_id:d.id,...d.data()}));
     currentProjects=pj.docs.map(d=>({_id:d.id,...d.data()}));
     buildRoadmap();
+    // Same refresh, at the other moment progress is already loaded. Also what repairs a
+    // stale figure after a level change, without anyone running the Settings tool again.
+    saveLevelPct(id,s['Current Level'],currentProgress);
     loadProfileNotices(s);
     loadProfileGlance(s);
   }catch(e){console.error('load progress',e);$('roadmap').innerHTML='<div class="roadmap-error">Could not load progress. '+esc(e.code||e.message)+'</div>';}
@@ -2700,6 +2752,38 @@ function topicsForLevel(levelName){
   return prog.map(p=>({topic:String(p.Topic||'').trim(),description:'',status:String(p.Status||'not-started').trim(),notes:(p.Notes!==undefined?String(p.Notes):''),completionDate:p['Completion Date']||''}));
 }
 
+/* Percentage complete of one level, from a set of progress docs. Mirrors what the
+   roadmap card shows: "not applicable" topics are excluded from both sides, so a level
+   where everything is N/A is not counted as 0% — it has nothing to complete. */
+function levelPctFrom(levelName,progressDocs,topicsMaster){
+  const nLvl=normLevel(levelName);
+  if(!nLvl)return null;
+  const prog=(progressDocs||[]).filter(p=>normLevel(p['Level Name'])===nLvl);
+  const byTopic={};prog.forEach(p=>byTopic[normLevel(p.Topic)]=p);
+  const master=(topicsMaster||[]).filter(t=>normLevel(t['Level Name'])===nLvl);
+  const rows=master.length
+    ? master.map(m=>{const p=byTopic[normLevel(m.Topic)];return String((p&&p.Status)||'not-started').trim().toLowerCase();})
+    : prog.map(p=>String(p.Status||'not-started').trim().toLowerCase());
+  const counted=rows.filter(st=>st!=='not-applicable');
+  if(!counted.length)return null;
+  return Math.round(counted.filter(st=>st==='completed').length/counted.length*100);
+}
+/* Store the figure on the student document. Called only where the progress is ALREADY in
+   memory, so it costs a write and no reads. Skipped when nothing changed, to keep an
+   ordinary profile open from writing on every visit. */
+async function saveLevelPct(studentId,levelName,progressDocs){
+  try{
+    if(!studentId||!canEdit())return;
+    const pct=levelPctFrom(levelName,progressDocs,topicsData);
+    if(pct===null)return;
+    const s=studentsData.find(x=>String(x.ID)===String(studentId));
+    if(s&&Number(s.levelPct)===pct&&normLevel(s.levelPctName||'')===normLevel(levelName))return;
+    await setDoc(doc(db,'students',String(studentId)),
+      {levelPct:pct,levelPctName:String(levelName||''),levelPctAt:serverTimestamp()},{merge:true});
+    if(s){s.levelPct=pct;s.levelPctName=String(levelName||'');}
+  }catch(e){console.warn('saveLevelPct',e);}   // never block the page on a cache update
+}
+
 function buildRoadmap(){
   const roadmap=$('roadmap');
   let completedLevels=0,visibleLevels=0,totalPctSum=0;
@@ -2908,6 +2992,9 @@ window.saveProgress=async function(i){
     const pr=await getDocs(collection(db,'students',currentStudentId,'progress'));
     currentProgress=pr.docs.map(d=>({_id:d.id,...d.data()}));
     buildRoadmap();
+    // Refresh the cached percentage the Payments screen reads. Free — progress is in hand.
+    const cs=studentsData.find(x=>String(x.ID)===String(currentStudentId));
+    saveLevelPct(currentStudentId,cs&&cs['Current Level'],currentProgress);
     const m2=$('saveMsg'+i);if(m2){m2.textContent='Saved ✓';m2.className='topics-save-msg ok';}
   }catch(e){console.error('saveProgress',e);const m2=$('saveMsg'+i);if(m2){m2.textContent='Could not save: '+(e.code||e.message);m2.className='topics-save-msg err';}}
 };
@@ -3289,6 +3376,9 @@ window.saveStudent=async function(){
 
 // ═══════════ PAYMENTS ═══════════
 let paymentsData=[], paymentsLoaded=false, payStatusFilter='', payLoading=false, waTargetPhone='';
+/* The second chip row. Kept separate from payStatusFilter so the two combine: "pending"
+   AND "well under" is the list worth acting on first. */
+let payBandFilter='';
 let payVisibleRows=[];   // rows currently shown in the Payments table (filters + chip applied)
 const PAY_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 // Date chips always read "13 Sep". en-GB renders September as "Sept", which is a
@@ -3526,6 +3616,66 @@ function feePending(st){
   return feeEntries(st).find(e=>e.from>key)||null;
 }
 
+/* ═══════════ FEE BANDS ═══════════
+   What a student at a given level SHOULD be paying, so the Payments screen can show who
+   is priced below where they have got to. Keyed level × currency, not level × region:
+   "international" is not one number — a UK student is billed GBP and a US student USD,
+   and comparing either against the other is meaningless. The columns carry the region
+   names as labels so the card still reads the way the business talks about it.
+
+   Stored on settings/app as feeBands, so it is one document already being read, with no
+   new collection and no rules change.
+
+   Matched on the student's CURRENT level. A student halfway through Level 2 still paying
+   the Level 1 rate is exactly the case this is meant to surface. */
+const BAND_LABELS=[['INR','India'],['CHF','Switzerland'],['CAD','Canada'],['GBP','UK'],['USD','US']];
+const BAND_AT=1.00;      // at or above the band → at band
+const BAND_UNDER=0.80;   // 80% up to the band → under band; below that → well under
+function feeBandAmount(levelName,cur){
+  const bands=(typeof appSettings!=='undefined'&&appSettings&&appSettings.feeBands)||null;
+  if(!bands)return null;
+  const key=normLevel(levelName);
+  if(!key)return null;
+  const row=bands[key];if(!row)return null;
+  const v=payAmt(row[String(cur||'').toUpperCase()]);
+  return (v!==null&&v>0)?v:null;
+}
+/* One student's standing for a month. Returns tier 'at' | 'under' | 'well' | 'none'.
+   'none' covers both "no band configured for this level and currency" and "this student
+   has no fee", because in both cases there is nothing honest to compare. */
+function feeBandOf(s,y,m){
+  const cur=feeCurAt(s,y,m);
+  const actual=feeAmountAt(s,y,m);
+  const band=feeBandAmount(s&&s['Current Level'],cur);
+  if(band===null||actual===null)return {tier:'none',band,actual,cur,pct:null,gap:null};
+  const pct=actual/band;
+  const gap=actual-band;
+  const tier=pct>=BAND_AT?'at':(pct>=BAND_UNDER?'under':'well');
+  return {tier,band,actual,cur,pct,gap};
+}
+const BAND_TEXT={at:'At band',under:'Under band',well:'Well under',none:'No band'};
+
+/* ═══════════ LEVEL PROGRESS ═══════════
+   How far through their current level a student is, used to flag who is approaching a
+   fee change. Progress lives in a SUBCOLLECTION per student, so reading it for everyone
+   on the Payments screen would cost one query per student — a few thousand reads every
+   load, against a 50,000/day free-tier ceiling this project has already hit once.
+
+   So the figure is denormalised onto the student document as levelPct + levelPctName,
+   written at the two moments the progress is already in memory (saving a topic, opening
+   a profile) and therefore costing no extra reads at all. Settings has a one-off tool to
+   seed it for students nobody has opened since this shipped. */
+const NEAR_LEVEL_END=70;        // % of the current level at which a fee change is near
+function levelPctOf(s){
+  if(!s)return null;
+  const v=Number(s.levelPct);
+  if(!isFinite(v)||v<0)return null;
+  // Stale once they move up: the stored figure belongs to the level named beside it.
+  if(normLevel(s.levelPctName||'')!==normLevel(s['Current Level']||''))return null;
+  return Math.round(v);
+}
+const nearLevelEnd=(s)=>{const p=levelPctOf(s);return p!==null&&p>=NEAR_LEVEL_END;};
+
 const CURRENCIES=['INR','USD','CHF','CAD','GBP'];
 const CURRENCY_BY_COUNTRY=[
   [/india/i,'INR'],[/switzerland|swiss/i,'CHF'],
@@ -3678,9 +3828,10 @@ function payAfterChange(sid){
   if(sid)highlightStudentRow(sid,{rerender:false});
 }
 window.setPayStatus=function(key){if(payLoading)return;payStatusFilter=key;buildPayments();};
+window.setPayBand=function(key){if(payLoading)return;payBandFilter=key;buildPayments();};
 window.clearPayFilters=function(){
   ['payFilterCountry','payFilterLevel','payFilterTutor','payFilterBatch'].forEach(id=>{const e=$(id);if(e)e.value='';});
-  $('payFilterName').value='';payStatusFilter='';
+  $('payFilterName').value='';payStatusFilter='';payBandFilter='';
   // Back to the page default: this month, this year.
   const now=new Date(),mSel=$('payMonth'),ySel=$('payYear');
   if(mSel)mSel.value=String(now.getMonth()+1);
@@ -3722,14 +3873,34 @@ window.buildPayments=function(){
     const kitRec=payRecord(s.ID,year,month,'Kit');const kitSt=kitRec?String(kitRec.Status||'').toLowerCase():'';if(kitSt&&kitSt!=='paid')kitdue++;
     // Components now come from inv_sales, not from a payments row.
     const comp=salesRollup(s.ID,month);if(comp.unpaid)compdue++;
-    return {s,rec,st,kitRec,kitSt,comp};
+    // Where this student's fee sits against the band for their level, and how far
+    // through that level they are. Both come from data already in hand.
+    const band=feeBandOf(s,year,month);
+    const near=nearLevelEnd(s);
+    return {s,rec,st,kitRec,kitSt,comp,band,near};
   });
   const groupTotal=rows.length;const fStatus=payStatusFilter;
+  // Band counts are taken BEFORE the status filter, so the two chip rows read as
+  // independent questions rather than one silently shrinking the other.
+  const bandN={at:0,under:0,well:0,none:0},nearN=rows.filter(r=>r.near).length;
+  rows.forEach(r=>{bandN[r.band.tier]=(bandN[r.band.tier]||0)+1;});
   if(fStatus==='kitdue')rows=rows.filter(r=>r.kitSt&&r.kitSt!=='paid');
   else if(fStatus==='compdue')rows=rows.filter(r=>r.comp.unpaid>0);
   else if(fStatus)rows=rows.filter(r=>r.st===fStatus);
+  if(payBandFilter==='near')rows=rows.filter(r=>r.near);
+  else if(payBandFilter)rows=rows.filter(r=>r.band.tier===payBandFilter);
   const chip=(k,l,n)=>`<button class="pay-chip pay-chip-${k} ${payStatusFilter===k?'active':''}" onclick="setPayStatus('${k}')">${l} ${n}</button>`;
-  const chipsHtml=`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`+chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue);
+  const bchip=(k,l,n,cls)=>`<button class="pay-chip ${cls||''} ${payBandFilter===k?'active':''}" onclick="setPayBand('${k}')">${l} ${n}</button>`;
+  const chipsHtml=`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`+chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue)
+    +`<div class="pay-chip-row2">`
+    +bchip('','All','',
+       'pay-chip-all')
+    +bchip('at','At band',bandN.at,'pay-chip-paid')
+    +bchip('under','Under band',bandN.under,'pay-chip-kitdue')
+    +bchip('well','Well under',bandN.well,'pay-chip-pending')
+    +bchip('none','No band',bandN.none,'pay-chip-ignore')
+    +bchip('near','Nearing level end',nearN,'pay-chip-near')
+    +`</div>`;
   if(summary.innerHTML!==chipsHtml)summary.innerHTML=chipsHtml;
   payVisibleRows=rows;   // what the Excel download exports
   const phc=$('payHeadCount');if(phc)phc.textContent='('+rows.length+')';
@@ -3737,7 +3908,7 @@ window.buildPayments=function(){
   const waIco='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Student</th><th>Payment Ref</th><th>Status</th><th>Kit</th><th>Components</th><th>Classes</th><th>Pending</th><th>Action</th>
-    </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,comp})=>{
+    </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,comp,band,near})=>{
       // This table is scoped to one month, so the fee shown is that month's rate.
       const fee=(()=>{const v=feeAmountAt(s,selY,selM);return v===null?'':String(v);})();
       const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
@@ -3755,7 +3926,27 @@ window.buildPayments=function(){
       const sc=feeCurAt(s,selY,selM),fv=payAmt(fee);
       const feeTxt=fv===null?'':(sc==='INR'?inr(fv):`${money(fv,sc)} ≈ ${inr(toINR(fv,sc,selY,selM))}`);
       const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',feeTxt?esc(feeTxt):''].filter(Boolean).join(' · ');
-      return `<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}"><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
+      /* Two small tags under the name: where the fee sits against the band for this
+         student's level, and how far through that level they are. The band tag carries
+         the difference, because the shortfall is the thing you would act on — "under
+         band" alone does not tell you whether it is ₹50 or ₹500. */
+      const bandTag=(()=>{
+        const b=band;
+        if(b.tier==='none')return '';           // nothing to compare — stay quiet
+        const diff=Math.abs(Math.round(b.gap));
+        const money_=diff?money(diff,b.cur):'';
+        const extra=b.tier==='at'
+          ? (b.gap>0&&money_?` +${money_}`:'')
+          : (money_?` · ${money_} short`:'');
+        const title=`Band for ${s['Current Level']||'this level'}: ${money(b.band,b.cur)}`;
+        return `<span class="pay-tag band-${b.tier}" title="${esc(title)}">${esc(BAND_TEXT[b.tier]+extra)}</span>`;
+      })();
+      const lp=levelPctOf(s);
+      const nearTag=near
+        ? `<span class="pay-tag tag-near" title="${esc((s['Current Level']||'Current level')+' is '+lp+'% complete')}">Level ${lp}%</span>`
+        : '';
+      const tags=(bandTag||nearTag)?`<span class="pay-tags">${bandTag}${nearTag}</span>`:'';
+      return `<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}"><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span>${tags}<span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 function fillPaySelect(id,allLabel,items,current){
@@ -4507,7 +4698,7 @@ const FX_APIS=[
   {name:'er-api.com',url:'https://open.er-api.com/v6/latest/INR',
    pick:j=>(j&&j.result==='success'&&j.rates)||null, date:j=>(j&&j.time_last_update_utc)||''}
 ];
-let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,attStart:null,asgStart:null,fxSource:'',fxError:''};
+let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,attStart:null,asgStart:null,feeBands:null,fxSource:'',fxError:''};
 let frozenRates={};        // "2026_8" -> {rates:{...}, frozenAt, frozenBy}
 let settingsLoaded=false, fxLiveTried=false;
 
@@ -4523,6 +4714,7 @@ async function loadSettings(){
       const asStart=(v)=>{const m=String(v||'').match(/^(\d{4})-(\d{1,2})$/);return m?{y:+m[1],mo:+m[2]}:null;};
       appSettings.attStart=asStart(d.attStart);
       appSettings.asgStart=asStart(d.asgStart);
+      appSettings.feeBands=(d.feeBands&&typeof d.feeBands==='object')?d.feeBands:null;
       if(d.dataStart&&/^\d{4}-\d{1,2}$/.test(d.dataStart)){
         const p=d.dataStart.split('-');appSettings.dataStart={y:+p[0],mo:+p[1]};
       }
@@ -4587,6 +4779,8 @@ const isMonthComplete=(y,m)=>{const now=new Date();return y<now.getFullYear()||(
 window.setFxMode=function(mode){appSettings.fxMode=mode;renderSettings();setMarkDirty();};
 window.renderSettings=async function(){
   await loadSettings();
+  // The fee band grid has one row per level, so the roadmap must be in hand first.
+  try{ await loadRefData(); }catch(e){ console.warn('settings levels',e); }
   $('fxModeLive').classList.toggle('active',appSettings.fxMode==='live');
   $('fxModeManual').classList.toggle('active',appSettings.fxMode!=='live');
   $('fxFetchBtn').style.display=appSettings.fxMode==='live'?'':'none';
@@ -4618,9 +4812,46 @@ window.renderSettings=async function(){
   // Unset module floors show the global Data Start, so the boxes always read truthfully.
   fillStart('setAttMonth','setAttYear',appSettings.attStart||ds);
   fillStart('setAsgMonth','setAsgYear',appSettings.asgStart||ds);
+  renderFeeBands();
   wireSettingsDirty();
   renderFrozenList();
 };
+/* Draws the rate card from the levels collection, so adding a level adds a row without
+   anyone touching this. Values are held in appSettings.feeBands as they are typed and
+   written by the Save settings bar, like every other field it covers. */
+function renderFeeBands(){
+  const box=$('bandGrid');if(!box)return;
+  if(!levelsData.length){
+    box.innerHTML='<div class="pay-empty">No levels found. Levels come from the roadmap \u2014 add them first and the bands appear here.</div>';
+    return;
+  }
+  const bands=appSettings.feeBands||{};
+  const head='<tr><th class="band-lvl">Level</th>'
+    +BAND_LABELS.map(([c,label])=>`<th>${esc(label)}<small>${esc(c)}</small></th>`).join('')+'</tr>';
+  const rows=levelsData.map(l=>{
+    const key=normLevel(l.name);
+    const row=bands[key]||{};
+    return `<tr><td class="band-lvl" title="${esc(l.name)}">${esc(l.name)}</td>`
+      +BAND_LABELS.map(([c])=>{
+        const v=row[c];
+        return `<td><input type="text" inputmode="decimal" placeholder="\u2014"`
+          +` value="${v==null||v===''?'':esc(String(v))}"`
+          +` onchange="onBandInput('${jsq(key)}','${c}',this.value)"`
+          +` oninput="setMarkDirty()" aria-label="${esc(l.name)} ${c}"></td>`;
+      }).join('')+'</tr>';
+  }).join('');
+  box.innerHTML=`<table class="band"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+}
+window.onBandInput=function(levelKey,cur,val){
+  appSettings.feeBands=appSettings.feeBands||{};
+  const row=(appSettings.feeBands[levelKey]=appSettings.feeBands[levelKey]||{});
+  const n=payAmt(val);
+  if(n===null||n<=0)delete row[cur]; else row[cur]=n;
+  // An emptied row is removed entirely so the stored document does not fill with {}.
+  if(!Object.keys(row).length)delete appSettings.feeBands[levelKey];
+  setMarkDirty();
+};
+
 /* The save bar only helps if it says whether you still need to press it. Every control
    the bar is responsible for flips this on; saving clears it. */
 window.setMarkDirty=function(){
@@ -4656,6 +4887,7 @@ window.saveSettings=async function(){
       fx:appSettings.fx,fxMode:appSettings.fxMode,fxUpdatedAt:appSettings.fxUpdatedAt||'',
       dataStart:`${appSettings.dataStart.y}-${appSettings.dataStart.mo}`,
       attStart:asStr(appSettings.attStart),asgStart:asStr(appSettings.asgStart),
+      feeBands:appSettings.feeBands||{},
       updatedAt:serverTimestamp(),updatedBy:(currentUser&&currentUser.email)||''
     },{merge:true});
     msg.textContent='Saved.';msg.className='msg ok';setClearDirty();
@@ -4674,6 +4906,63 @@ function renderFrozenList(){
       return `<tr><td><strong>${esc(PAY_MONTHS[(+p[1])-1])} ${esc(p[0])}</strong></td><td>${r('USD')}</td><td>${r('CHF')}</td><td>${r('CAD')}</td><td>${r('GBP')}</td><td><span class="pay-sid2">${esc(when)}</span></td></tr>`;
     }).join('')}</tbody></table>`;
 }
+/* Seed levelPct for students nobody has opened since this shipped.
+
+   This is the one genuinely expensive tool here: it reads EVERY student's progress
+   subcollection, so its cost is roughly one query per student plus one read per topic
+   row. On a 50,000-reads-a-day free tier that is affordable once and wasteful repeated,
+   which is why the card says to run it once. After this, the figure refreshes for free
+   whenever a topic is saved or a profile is opened. */
+window.repairLevelPct=async function(dryRun){
+  if(!isAdmin())return;
+  const msg=$('lpMsg'),list=$('lpList');
+  msg.innerHTML='<span class="spinner"></span> Reading progress\u2026';msg.className='msg busy';
+  try{ await loadRefData(); }catch(e){}
+  let rows=[];
+  try{
+    const snap=await getDocs(collection(db,'students'));
+    rows=snap.docs.map(d=>({_id:d.id,...d.data()}));
+  }catch(e){console.error('lp scan',e);msg.textContent='Could not read students: '+(e.code||e.message);msg.className='msg err';return;}
+  const active=rows.filter(s=>(s.Status||'Active').toLowerCase()==='active');
+  if(!active.length){
+    list.innerHTML='<div class="stu-note"><span><strong>No active students found.</strong> Nothing to compute.</span></div>';
+    msg.textContent='Nothing to compute.';msg.className='msg err';return;
+  }
+  if(dryRun){
+    const fresh=active.filter(s=>levelPctOf(s)===null).length;
+    list.innerHTML=`<div class="set-note"><strong>${active.length}</strong> active student(s). `
+      +`<strong>${active.length-fresh}</strong> already have an up-to-date figure \u00b7 `
+      +`<strong>${fresh}</strong> do not.<br>`
+      +`Computing reads every student's progress \u2014 about ${active.length} queries plus their topic rows. `
+      +`Nothing has been read beyond the student list yet.</div>`;
+    msg.textContent=`${fresh} student(s) would be computed. Nothing read or written yet.`;msg.className='msg ok';return;
+  }
+  msg.innerHTML='<span class="spinner"></span> Computing '+active.length+'\u2026';msg.className='msg busy';
+  let done=0,skipped=0,fail=0,wb=writeBatch(db),n=0,reads=0;
+  for(const st of active){
+    try{
+      const pr=await getDocs(collection(db,'students',st._id,'progress'));
+      reads+=Math.max(1,pr.docs.length);
+      const prog=pr.docs.map(d=>d.data());
+      const pct=levelPctFrom(st['Current Level'],prog,topicsData);
+      if(pct===null){skipped++;continue;}          // no countable topics at that level
+      wb.set(doc(db,'students',st._id),
+        {levelPct:pct,levelPctName:String(st['Current Level']||''),levelPctAt:serverTimestamp()},{merge:true});
+      n++;done++;
+      if(n>=400){try{await wb.commit();}catch(ce){console.error(ce);fail+=n;done-=n;}wb=writeBatch(db);n=0;}
+    }catch(e){console.error('lp row',st._id,e);fail++;}
+  }
+  try{if(n>0)await wb.commit();}catch(e){console.error(e);fail+=n;done-=n;}
+  list.innerHTML=`<div class="set-note">Computed <strong>${done}</strong> \u00b7 `
+    +`<strong>${skipped}</strong> had no topics to count at their level`
+    +(fail?` \u00b7 <strong>${fail}</strong> failed`:'')
+    +`.<br>About ${reads} document read(s) used. This does not need running again \u2014 the figure now `
+    +`updates itself whenever a topic is marked or a profile is opened.</div>`;
+  msg.textContent=`Computed ${done} student(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
+  studentsLoaded=false;
+  toast('Level progress computed \u2014 the Payments chips can see it now.');
+};
+
 /* Seed feeHistory for students who have none.
 
    Without an entry, feeAt() falls back to 'Monthly Fee' — which is correct today but
