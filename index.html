@@ -1656,7 +1656,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-09-26a';
+const BUILD='2026-09-26b';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -3215,9 +3215,13 @@ window.openStudentForm=function(id,prefill){
     $('s_JoinDate').value=toDateInputValue(s['Join Date']);
     $('s_Email').value=s.Email||'';$('s_Contact').value=s.Contact||'';
     $('s_Address').value=s.Address||'';$('s_Fee').value=s['Monthly Fee']||'';
-    feeLoadForm(s);
     $('s_PayRef').value=s['Payment Ref']||'';$('s_Photo').value=s.Photo||'';
     setCurrencyValue(studentCurrency(s));
+    /* AFTER the currency dropdown is set. feeLoadForm draws the preview note, and that
+       note asks the dropdown which currency to price in — run first, it read whatever was
+       left there (INR on a fresh load, the previous student's currency otherwise) and a
+       CAD student's note said ₹60. Display only, but it looked like a data fault. */
+    feeLoadForm(s);
     const reason=s['Inactive Reason']||'';
     const presets=['Waiting for batch','Academics / higher grade','Lost interest','Re-location'];
     if(reason&&!presets.includes(reason)){$('s_InactiveReason').value='Other';$('s_InactiveReasonOther').value=reason;}
