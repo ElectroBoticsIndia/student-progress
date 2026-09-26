@@ -537,6 +537,11 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .rev-d-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:4px;line-height:1.5}
 .rev-d-note{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-bottom:8px}
 .rev-d-table{background:var(--surface);border-radius:10px;overflow:hidden}
+/* Section heading above each breakdown table, so Country and Tutor are told apart at a
+   glance now that two tables sit in one expanded month. */
+.rev-d-sect{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:.6px;margin:16px 0 6px}
+.rev-d-sect:first-of-type{margin-top:10px}
 .rev-d-table th{background:var(--surface);padding-top:10px}
 .rev-d-table td{padding:9px 10px}
 .rev-share{display:flex;align-items:center;gap:9px;min-width:130px}
@@ -1651,7 +1656,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-09-24a';
+const BUILD='2026-09-26a';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -5350,7 +5355,7 @@ const revBlank=()=>({exp:0,expINR:0,rec:0,recINR:0,native:{},students:0,paidCoun
 const revCountry=(c)=>{const v=String(c||'').trim();return /india/i.test(v)?'India':(v||'Unknown');};
 function revenueForMonth(year,month){
   if(!payIndex)buildPayIndex();
-  const india=revBlank(),intl=revBlank(),byCountry={};
+  const india=revBlank(),intl=revBlank(),byCountry={},byTutor={};
   const monthEnd=new Date(year,month,0,23,59,59);
   studentsData.forEach(s=>{
     const sid=String(s.ID||'').trim();if(!sid)return;
@@ -5365,14 +5370,21 @@ function revenueForMonth(year,month){
     const cur=studentCurrency(s);
     const cname=revCountry(s.Country);
     const cRow=(byCountry[cname]=byCountry[cname]||{name:cname,region:isIn?'india':'intl',cur,expINR:0,recINR:0,students:0,paidCount:0});
+    /* The same totals grouped by tutor. A tutor teaching both India and international
+       students has a row in each region, so the India/International toggle narrows this
+       table the way it narrows the country one — the region key is part of the grouping
+       key, not just a label. */
+    const tname=String(s.Tutor||'').trim()||'Unassigned';
+    const tKey=tname+'\u0000'+(isIn?'india':'intl');
+    const tRow=(byTutor[tKey]=byTutor[tKey]||{name:tname,region:isIn?'india':'intl',expINR:0,recINR:0,students:0,paidCount:0});
     const rec=payRecord(sid,year,month,'Fee');
     const status=rec?String(rec.Status||'').toLowerCase():'';
     if(status==='ignore')return;                         // waived — not money we were owed
-    bucket.students++;cRow.students++;
+    bucket.students++;cRow.students++;tRow.students++;
     // The fee IN FORCE for this month. Reading the student's current fee here meant a
     // raise today silently rewrote every past month's expected revenue.
     const fee=feeAmountAt(s,year,month), feeCur=feeCurAt(s,year,month);
-    if(fee!==null){const e=toINR(fee,feeCur,year,month);bucket.exp+=fee;bucket.expINR+=e;cRow.expINR+=e;}
+    if(fee!==null){const e=toINR(fee,feeCur,year,month);bucket.exp+=fee;bucket.expINR+=e;cRow.expINR+=e;tRow.expINR+=e;}
     if(status==='paid'){
       // Each row converts from the currency it was actually recorded in.
       const rowCur=payRowCur(rec);
@@ -5380,11 +5392,11 @@ function revenueForMonth(year,month){
       const amt=raw!==null?toINR(raw,rowCur,year,month):toINR(fee||0,feeCur,year,month);
       bucket.rec+=amt;bucket.recINR+=amt;
       bucket.native[rowCur]=(bucket.native[rowCur]||0)+(raw!==null?raw:0);
-      bucket.paidCount++;cRow.recINR+=amt;cRow.paidCount++;
+      bucket.paidCount++;cRow.recINR+=amt;cRow.paidCount++;tRow.recINR+=amt;tRow.paidCount++;
     }
   });
   const sum=(k)=>india[k]+intl[k];
-  return {year,month,india,intl,byCountry,
+  return {year,month,india,intl,byCountry,byTutor,
     expINR:sum('expINR'),recINR:sum('recINR'),students:sum('students'),paidCount:sum('paidCount'),
     frozen:!!frozenRates[fxKey(year,month)]};
 }
@@ -5487,10 +5499,41 @@ function revMonthDetail(r){
           <td><div class="rev-share"><span class="rev-share-pct">${share.toFixed(1)}%</span><span class="rev-share-bar"><span style="width:${Math.min(100,share)}%"></span></span></div></td>
         </tr>`;}).join('')}</tbody></table>`
     : '<div class="pay-empty">No students in this selection for this month.</div>';
+  /* The same month grouped by tutor. Same columns and the same share denominator as the
+     country table above, so the two read against each other directly. "Expected" is what
+     that tutor's students were billed — revenue attributable to them, not their pay. */
+  const tRows=Object.values(r.byTutor||{})
+    .filter(t=>t.students>0)
+    .filter(t=>revRegion==='both'||revRegion===t.region)
+    .sort((a,b)=>b.recINR-a.recINR||a.name.localeCompare(b.name));
+  // With no region filter a tutor who teaches both has two rows; merge them for display.
+  const tMerged=[];
+  tRows.forEach(t=>{
+    const hit=tMerged.find(x=>x.name===t.name);
+    if(hit){hit.students+=t.students;hit.expINR+=t.expINR;hit.recINR+=t.recINR;hit.paidCount+=t.paidCount;hit.regions.add(t.region);}
+    else tMerged.push({name:t.name,students:t.students,expINR:t.expINR,recINR:t.recINR,
+      paidCount:t.paidCount,regions:new Set([t.region])});
+  });
+  tMerged.sort((a,b)=>b.recINR-a.recINR||a.name.localeCompare(b.name));
+  const tutorHtml=tMerged.length?`<div class="rev-d-sect">Tutor</div><table class="pay-table rev-d-table"><thead><tr>
+      <th>Tutor</th><th>Students</th><th>Expected</th><th>Received</th><th>Share of revenue</th>
+      </tr></thead><tbody>${tMerged.map(t=>{
+        const share=totalRec>0?(t.recINR/totalRec*100):0;
+        const coll=t.expINR>0?Math.round(t.recINR/t.expINR*100):0;
+        const both=revRegion==='both'&&t.regions.size>1;
+        return `<tr>
+          <td><strong>${esc(t.name)}</strong>${both?' <span class="pay-sid2">India + international</span>':''}</td>
+          <td>${t.students}</td>
+          <td>${inr(t.expINR)}</td>
+          <td>${inr(t.recINR)}<br><span class="pay-sid2">${t.paidCount} paid \u00b7 ${coll}% collected</span></td>
+          <td><div class="rev-share"><span class="rev-share-pct">${share.toFixed(1)}%</span><span class="rev-share-bar"><span style="width:${Math.min(100,share)}%"></span></span></div></td>
+        </tr>`;}).join('')}</tbody></table>`
+    : '';
   return `<div class="rev-detail-wrap">
     <div class="rev-d-regs">${regHtml}</div>
     <div class="rev-d-note">Share is of ${inr(totalRec)} received in ${esc(PAY_MONTHS[r.month-1])}${revRegion==='both'?'':' ('+(revRegion==='india'?'India':'International')+' only)'}.</div>
-    ${countryHtml}
+    ${rows.length?'<div class="rev-d-sect">Country</div>':''}${countryHtml}
+    ${tutorHtml}
   </div>`;
 }
 
