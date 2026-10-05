@@ -845,6 +845,53 @@ table.band input:focus{border-color:var(--accent)}
   padding-top:8px;border-top:1px dashed var(--border)}
 .pay-chip.pay-chip-near{background:#e8f1fb;color:#2d5d8f;border-color:#c3d8ee}
 .pay-chip.pay-chip-near.active{background:#2d5d8f;color:#fff;border-color:#2d5d8f}
+/* ── Action items ── */
+.pay-chip.task-chip-prog.active{background:#e8f1fb;color:#2d5d8f;border-color:#c3d8ee}
+.tab-badge{display:inline-block;min-width:16px;margin-left:6px;padding:1px 5px;border-radius:10px;
+  background:#d76241;color:#fff;font-size:9px;font-weight:700;line-height:14px;text-align:center;vertical-align:1px}
+.task-done-toggle{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;
+  color:var(--text-dim);cursor:pointer;align-self:flex-end;padding-bottom:9px;white-space:nowrap}
+.task-row{cursor:pointer}
+.task-row td{vertical-align:top}
+/* The whole row tints, not just a badge — an overdue item should be visible from the
+   far side of the screen, which is the point of flagging it at all. */
+.task-row.overdue td{background:#fdf0eb}
+.task-row.overdue td:first-child{box-shadow:inset 3px 0 0 #d76241}
+.task-row.soon td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+.task-row.is-done td{opacity:.62}
+.task-title{font-weight:600;color:var(--text)}
+.task-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:3px;line-height:1.5}
+.task-pri{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  border-radius:4px;padding:2px 6px;white-space:nowrap}
+.task-pri.high{background:#fdeae4;color:#a33d1f}
+.task-pri.medium{background:var(--amber-light);color:#8a6a00}
+.task-pri.low{background:var(--surface-alt);color:var(--text-dim)}
+.task-st{font-family:var(--font-mono);font-size:10px;font-weight:700;border-radius:20px;padding:3px 9px;white-space:nowrap}
+.task-st.open{background:var(--surface-alt);color:var(--text-dim)}
+.task-st.in-progress{background:#e8f1fb;color:#2d5d8f}
+.task-st.blocked{background:#f3e8fb;color:#6a3d8f}
+.task-st.done{background:#eaf5e0;color:#4b6b26}
+.task-due{font-family:var(--font-mono);font-size:11px;white-space:nowrap}
+.task-due.overdue{color:#a33d1f;font-weight:700}
+.task-due.soon{color:#8a6a00;font-weight:700}
+.task-tag{font-family:var(--font-mono);font-size:10px;color:var(--accent-dark);background:var(--accent-light);
+  border-radius:4px;padding:1px 6px}
+.task-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media(max-width:560px){.task-grid{grid-template-columns:1fr}}
+.task-update{margin-top:4px;padding:12px 14px 2px;border-radius:9px;background:var(--surface-alt);border:1px solid var(--border)}
+.task-lock{margin-bottom:12px;padding:8px 11px;border-radius:7px;background:var(--surface-alt);
+  border:1px solid var(--border);font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim);line-height:1.5}
+.task-trail{margin-top:14px}
+.task-trail:empty{display:none}
+.task-trail-t{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:6px}
+.task-ev{padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.45}
+.task-ev:last-child{border-bottom:none}
+.task-ev-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-bottom:2px}
+.task-ev-change{font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim)}
+.btn-cancel.task-del{color:#a33d1f;border-color:#f3c3b3}
+.task-foot{flex-wrap:wrap}
+.tp-input{min-width:200px;font-family:var(--font-mono)}
 @media(max-width:600px){.set-savebar{padding:10px 12px;gap:8px}.set-savebar .btn-primary{width:100%}}
 /* The technical reason behind a failed sign-in. Small and muted — a parent can ignore it,
    an admin can act on it, and nobody has to open the console to see it. */
@@ -924,7 +971,7 @@ table.band input:focus{border-color:var(--accent)}
     <button class="dash-tab active" data-tab="summary" onclick="setTab('summary')">Summary</button>
     <button class="dash-tab" data-tab="students" onclick="setTab('students')">Students</button>
     <button class="dash-tab" data-tab="risk" onclick="setTab('risk')">At-Risk</button>
-    <button class="dash-tab" data-tab="tutor" onclick="setTab('tutor')">Tutor</button>
+    <button class="dash-tab" data-tab="tutor" onclick="setTab('tutor')">Tutor<span id="tutorTabBadge" class="tab-badge" style="display:none;"></span></button>
     <button class="dash-tab" data-tab="attendance" onclick="setTab('attendance')">Attendance</button>
     <button class="dash-tab" data-tab="assignments" onclick="setTab('assignments')">Assignments</button>
     <button class="dash-tab" data-tab="payments" onclick="setTab('payments')">Payments</button>
@@ -1181,6 +1228,12 @@ table.band input:focus{border-color:var(--accent)}
     </div>
 
     <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor WhatsApp Numbers</span></div></div>
+      <div class="aa-sub">Used by <strong>WhatsApp tutor</strong> on an action item, to open that tutor's chat directly. Include the country code, e.g. 91 98765 43210. Leave blank and WhatsApp opens for you to pick the contact instead.</div>
+      <div style="padding:4px 20px 20px;"><div id="tutorPhoneGrid"></div></div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Repair · Level Progress</span></div></div>
       <div class="aa-sub">How far each student is through their current level, used on the Payments screen to flag who is close to a fee change. It is kept up to date automatically whenever a topic is marked or a profile is opened — at no extra reading cost, because that data is already loaded at those moments. This seeds it for students nobody has opened yet. <strong>Run it once; after that it looks after itself.</strong> It reads every student's progress, so it is the one expensive button here — there is no need to run it repeatedly.</div>
       <div style="padding:4px 20px 20px;">
@@ -1275,7 +1328,7 @@ table.band input:focus{border-color:var(--accent)}
     <div class="set-savebar">
       <div class="set-savebar-txt">
         <span id="setDirty" class="set-dirty" style="display:none;">● Unsaved changes</span>
-        <span class="set-savebar-hint">Saves currency rates, data start and history months. The repair tools and frozen rates have their own buttons.</span>
+        <span class="set-savebar-hint">Saves currency rates, data start, history months, fee bands and tutor numbers. The repair tools and frozen rates have their own buttons.</span>
       </div>
       <span class="msg" id="setMsg"></span>
       <button class="btn-primary" onclick="saveSettings()">Save settings</button>
@@ -1290,6 +1343,33 @@ table.band input:focus{border-color:var(--accent)}
   <!-- ═══ TUTOR ═══ -->
   <div id="tutorScreen" style="display:none;">
     <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header">
+        <div class="stu-title-wrap">
+          <span class="table-title">Action Items <span id="taskHeadCount"></span></span>
+          <input type="text" id="taskSearch" class="stu-search" placeholder="Search items, notes…" oninput="renderTasks()">
+        </div>
+        <div class="stu-actions">
+          <button class="btn-add" onclick="openTaskForm()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add item
+          </button>
+        </div>
+      </div>
+      <div class="pay-summary" id="taskChips" style="padding:12px 20px 4px;"></div>
+      <div class="stu-filter-bar">
+        <div class="filter-group"><label>Tutor</label><select id="taskFTutor" onchange="renderTasks()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Priority</label><select id="taskFPriority" onchange="renderTasks()"><option value="">All</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+        <div class="filter-group"><label>Tag</label><select id="taskFTag" onchange="renderTasks()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Due</label><select id="taskFDue" onchange="renderTasks()">
+          <option value="">Any time</option><option value="overdue">Overdue</option><option value="today">Today</option>
+          <option value="week">Next 7 days</option><option value="month">Next 30 days</option><option value="none">No due date</option></select></div>
+        <label class="task-done-toggle"><input type="checkbox" id="taskShowOld" onchange="renderTasks()"> Show older completed</label>
+        <button class="filter-clear" onclick="clearTaskFilters()">Clear</button>
+      </div>
+      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="taskList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor Performance <span id="tutorStatsNote" class="trend-summary"></span></span></div></div>
       <div class="risk-criteria">Aggregated per tutor from the same rolling 4-week window as At-Risk. Click a note icon to log/view notes.</div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="tutorStatsTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
@@ -1298,6 +1378,48 @@ table.band input:focus{border-color:var(--accent)}
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor Availability by Day &amp; Time Slot</span></div></div>
       <div style="padding:14px 20px 8px;"><div id="availabilityLegend" class="avail-legend"></div></div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="availabilityGrid"></div></div>
+    </div>
+  </div>
+
+  <!-- Action item dialog -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal-card" style="max-width:560px;">
+      <div class="modal-head"><h3 id="taskModalTitle">Action item</h3><button class="modal-close" onclick="closeTaskForm()">&times;</button></div>
+      <div class="modal-body">
+        <div id="taskLockNote" class="task-lock" style="display:none;"></div>
+        <div class="form-row"><label>Title</label><input type="text" id="t_Title" maxlength="140" placeholder="What needs doing"></div>
+        <div class="form-row"><label>Details</label><textarea id="t_Details" rows="3" placeholder="Optional — context, links, what done looks like"></textarea></div>
+        <div class="task-grid">
+          <div class="form-row"><label>Assigned to</label><select id="t_Assignee"></select></div>
+          <div class="form-row"><label>Priority</label><select id="t_Priority"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+          <div class="form-row"><label>Tag</label>
+            <div class="combo" data-field="t_Tag">
+              <select class="combo-select" onchange="onComboSelect('t_Tag')"></select>
+              <input type="text" class="combo-new" id="t_Tag" placeholder="Type a new tag" style="display:none;">
+              <button type="button" class="combo-back" onclick="comboBack('t_Tag')" style="display:none;" title="Back to list">↩</button>
+            </div>
+          </div>
+          <div class="form-row"><label>Due date</label><input type="date" id="t_Due"></div>
+        </div>
+        <div class="task-update">
+          <div class="task-grid">
+            <div class="form-row"><label>Status</label><select id="t_Status"><option value="open">Open</option><option value="in-progress">In progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select></div>
+            <div class="form-row" id="t_ByRow"><label>Updating as</label><select id="t_By"></select></div>
+          </div>
+          <div class="form-row"><label id="t_NoteLabel">Add a note</label><textarea id="t_Note" rows="2" placeholder="Progress, a blocker, what changed…"></textarea></div>
+        </div>
+        <div id="taskTrail" class="task-trail"></div>
+      </div>
+      <div class="modal-msg" id="t_Msg"></div>
+      <!-- Outside the scrolling body, as in the student form, so Save is always in reach
+           however long an item's history grows. -->
+      <div class="modal-foot task-foot">
+        <button class="btn-cancel task-del" id="t_DelBtn" onclick="deleteTask()" style="display:none;">Delete</button>
+        <button class="btn-cancel" id="t_WaBtn" onclick="taskWhatsApp()" style="display:none;">WhatsApp tutor</button>
+        <span style="flex:1"></span>
+        <button class="btn-cancel" onclick="closeTaskForm()">Cancel</button>
+        <button class="btn-save" id="t_SaveBtn" onclick="saveTask()">Save</button>
+      </div>
     </div>
   </div>
 
@@ -1656,7 +1778,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-09-26b';
+const BUILD='2026-10-05a';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -1782,6 +1904,7 @@ function enterApp(){
   applyRoleUi();
   setTab('summary');
   if(isAdmin())subscribeLeads();
+  loadTasks();          // for the overdue badge on the Tutor tab — not awaited
 }
 let activeTab='summary';
 window.setTab=function(tab){
@@ -4707,7 +4830,7 @@ const FX_APIS=[
   {name:'er-api.com',url:'https://open.er-api.com/v6/latest/INR',
    pick:j=>(j&&j.result==='success'&&j.rates)||null, date:j=>(j&&j.time_last_update_utc)||''}
 ];
-let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,attStart:null,asgStart:null,feeBands:null,fxSource:'',fxError:''};
+let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,attStart:null,asgStart:null,feeBands:null,tutorPhones:null,fxSource:'',fxError:''};
 let frozenRates={};        // "2026_8" -> {rates:{...}, frozenAt, frozenBy}
 let settingsLoaded=false, fxLiveTried=false;
 
@@ -4724,6 +4847,7 @@ async function loadSettings(){
       appSettings.attStart=asStart(d.attStart);
       appSettings.asgStart=asStart(d.asgStart);
       appSettings.feeBands=(d.feeBands&&typeof d.feeBands==='object')?d.feeBands:null;
+      appSettings.tutorPhones=(d.tutorPhones&&typeof d.tutorPhones==='object')?d.tutorPhones:null;
       if(d.dataStart&&/^\d{4}-\d{1,2}$/.test(d.dataStart)){
         const p=d.dataStart.split('-');appSettings.dataStart={y:+p[0],mo:+p[1]};
       }
@@ -4790,6 +4914,8 @@ window.renderSettings=async function(){
   await loadSettings();
   // The fee band grid has one row per level, so the roadmap must be in hand first.
   try{ await loadRefData(); }catch(e){ console.warn('settings levels',e); }
+  // Tutor names for the WhatsApp numbers card. Normally already loaded at sign-in.
+  try{ await ensureStudents(); }catch(e){ console.warn('settings students',e); }
   $('fxModeLive').classList.toggle('active',appSettings.fxMode==='live');
   $('fxModeManual').classList.toggle('active',appSettings.fxMode!=='live');
   $('fxFetchBtn').style.display=appSettings.fxMode==='live'?'':'none';
@@ -4822,6 +4948,7 @@ window.renderSettings=async function(){
   fillStart('setAttMonth','setAttYear',appSettings.attStart||ds);
   fillStart('setAsgMonth','setAsgYear',appSettings.asgStart||ds);
   renderFeeBands();
+  renderTutorPhones();
   wireSettingsDirty();
   renderFrozenList();
 };
@@ -4851,6 +4978,24 @@ function renderFeeBands(){
   }).join('');
   box.innerHTML=`<table class="band"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
 }
+/* One row per tutor name on the student records. Saved by the Settings save bar. */
+function renderTutorPhones(){
+  const box=$('tutorPhoneGrid');if(!box)return;
+  const names=[...new Set(studentsData.map(s=>String(s.Tutor||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  if(!names.length){box.innerHTML='<div class="pay-empty">No tutors found on student records yet.</div>';return;}
+  const ph=appSettings.tutorPhones||{};
+  box.innerHTML=names.map(n=>`<div class="set-row">
+      <label class="set-label">${esc(n)}</label>
+      <input type="text" class="pay-mini tp-input" inputmode="tel" placeholder="91 98765 43210" value="${esc(ph[n]||'')}"
+        onchange="onTutorPhone('${jsq(n)}',this.value)" oninput="setMarkDirty()">
+    </div>`).join('');
+}
+window.onTutorPhone=function(name,val){
+  appSettings.tutorPhones=appSettings.tutorPhones||{};
+  const v=String(val||'').trim();
+  if(v)appSettings.tutorPhones[name]=v; else delete appSettings.tutorPhones[name];
+  setMarkDirty();
+};
 window.onBandInput=function(levelKey,cur,val){
   appSettings.feeBands=appSettings.feeBands||{};
   const row=(appSettings.feeBands[levelKey]=appSettings.feeBands[levelKey]||{});
@@ -4897,6 +5042,7 @@ window.saveSettings=async function(){
       dataStart:`${appSettings.dataStart.y}-${appSettings.dataStart.mo}`,
       attStart:asStr(appSettings.attStart),asgStart:asStr(appSettings.asgStart),
       feeBands:appSettings.feeBands||{},
+      tutorPhones:appSettings.tutorPhones||{},
       updatedAt:serverTimestamp(),updatedBy:(currentUser&&currentUser.email)||''
     },{merge:true});
     msg.textContent='Saved.';msg.className='msg ok';setClearDirty();
@@ -5633,7 +5779,352 @@ window.downloadRiskExcel=function(){
 
 // ═══════════ TUTOR ═══════════
 let tutorNotesData=[], tutorNotesLoaded=false, tutorNotesCtx={tutor:'',category:''};
+/* ═══════════ ACTION ITEMS ═══════════
+   Work assigned to tutors (or raised by them for the admin), with a due date and a trail
+   of every status change and note.
+
+   Tutors share ONE login, so the app cannot tell Mani from Ravi by who is signed in.
+   Two consequences shape everything below:
+     • Items are assigned by NAME, from the tutor names on student records, plus "Admin".
+     • Every change records an "Updating as" name chosen in the form, otherwise the trail
+       would read "team.electrobotics" on every line and say nothing.
+   Permissions are enforced HERE, not in the rules (which are plain isStaff): the admin can
+   do anything; the tutor login can raise items and update the status and notes of any
+   item, but cannot edit or delete one the admin raised. Because tutors share an identity,
+   any tutor can edit any tutor-raised item — there is no per-tutor protection to give. */
+let tasksData=[], tasksLoaded=false, tasksLoadErr=null, taskStatusFilter='', editingTaskId=null;
+const TASK_STATUS={open:'Open','in-progress':'In progress',blocked:'Blocked',done:'Done'};
+const TASK_PRI={high:'High',medium:'Medium',low:'Low'};
+const TASK_PRI_RANK={high:0,medium:1,low:2};
+const TASK_SOON_DAYS=2;          // due within this many days → amber
+const TASK_DONE_HIDE_DAYS=30;    // finished longer ago than this hides unless asked for
+const TASK_ADMIN='Admin';
+const TASK_STARTER_TAGS=['Parent follow-up','Fees','Kit','Batch','Content'];
+
+const taskToday=()=>{const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+// b − a in whole days, both 'YYYY-MM-DD'. Built from local midnights so a change of clocks
+// never turns "tomorrow" into "0 days".
+function taskDays(a,b){
+  const x=new Date(a+'T00:00:00'),y=new Date(b+'T00:00:00');
+  return Math.round((y-x)/86400000);
+}
+const taskDay=(k)=>{
+  if(!k)return '';
+  const d=new Date(k+'T00:00:00');if(isNaN(d))return String(k);
+  return chipDate(k)+(d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():'');
+};
+/* Where an item stands against its due date. 'done' also reports whether it finished late,
+   so a closed item still tells you it slipped. */
+function taskState(t){
+  const st=t.status||'open';
+  if(st==='done'){
+    const late=!!(t.due&&t.doneOn&&t.doneOn>t.due);
+    return {kind:'done',late,days:late?taskDays(t.due,t.doneOn):0};
+  }
+  if(!t.due)return {kind:'nodue'};
+  const d=taskDays(taskToday(),t.due);
+  if(d<0)return {kind:'overdue',days:-d};
+  if(d<=TASK_SOON_DAYS)return {kind:'soon',days:d};
+  return {kind:'later',days:d};
+}
+function taskDueText(t,s){
+  if(s.kind==='done')return s.late?`Finished ${s.days}d late`:(t.doneOn?'Done '+taskDay(t.doneOn):'');
+  if(s.kind==='overdue')return `Overdue · ${s.days}d`;
+  if(s.kind==='soon')return s.days===0?'Due today':(s.days===1?'Due tomorrow':`In ${s.days}d`);
+  return '';
+}
+// Everyone an item can be assigned to: tutors on student records, plus any name already
+// used on an item (so a tutor who has since left still shows on their old items).
+function taskPeople(){
+  const n=new Set(studentsData.map(s=>String(s.Tutor||'').trim()).filter(Boolean));
+  tasksData.forEach(t=>{const a=String(t.assignee||'').trim();if(a)n.add(a);});
+  n.delete(TASK_ADMIN);
+  return [...n].sort((a,b)=>a.localeCompare(b));
+}
+// Can the signed-in login change this item's title, assignee, priority, tag and due date?
+const taskCanEditFields=(t)=>!t||isAdmin()||t.createdRole!=='admin';
+
+async function loadTasks(force){
+  if(tasksLoaded&&!force)return;
+  try{
+    const snap=await getDocs(collection(db,'tasks'));
+    tasksData=snap.docs.map(d=>({_id:d.id,...d.data()}));
+    tasksLoaded=true;tasksLoadErr=null;
+  }catch(e){console.warn('loadTasks',e);tasksLoadErr=e;}
+  updateTaskBadge();
+}
+/* The nearest thing a web page has to a notification: a red count on the Tutor tab,
+   visible from every screen. Which is why items load at sign-in, not on first visit. */
+function updateTaskBadge(){
+  const b=$('tutorTabBadge');if(!b)return;
+  const n=tasksData.filter(t=>taskState(t).kind==='overdue').length;
+  b.textContent=String(n);
+  b.style.display=n?'':'none';
+  b.title=`${n} overdue action item${n===1?'':'s'}`;
+}
+
+window.clearTaskFilters=function(){
+  ['taskFTutor','taskFPriority','taskFTag','taskFDue'].forEach(id=>{const e=$(id);if(e)e.value='';});
+  const q=$('taskSearch');if(q)q.value='';
+  const o=$('taskShowOld');if(o)o.checked=false;
+  taskStatusFilter='';
+  renderTasks();
+};
+window.setTaskStatus=function(k){taskStatusFilter=k;renderTasks();};
+
+window.renderTasks=function(){
+  const list=$('taskList');if(!list)return;
+  if(tasksLoadErr){
+    const code=String(tasksLoadErr.code||tasksLoadErr.message||'');
+    list.innerHTML=`<div class="stu-note"><span><strong>Could not load action items</strong> (${esc(code)}).`
+      +(/permission/i.test(code)
+        ?' Firestore refused the <code>tasks</code> collection — the updated rules file, which adds it, has not been published yet.'
+        :' Try again in a moment.')+'</span></div>';
+    $('taskChips').innerHTML='';return;
+  }
+  const keep=(id,vals,all)=>{const el=$(id);if(!el)return '';const cur=el.value;
+    el.innerHTML=`<option value="">${all}</option>`+vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    if([...el.options].some(o=>o.value===cur))el.value=cur;return el.value;};
+  const fTutor=keep('taskFTutor',[TASK_ADMIN,...taskPeople()],'All');
+  const fTag=keep('taskFTag',[...new Set(tasksData.map(t=>String(t.tag||'').trim()).filter(Boolean))].sort(),'All');
+  const fPri=($('taskFPriority')||{}).value||'';
+  const fDue=($('taskFDue')||{}).value||'';
+  const q=(($('taskSearch')||{}).value||'').trim().toLowerCase();
+  const showOld=!!(($('taskShowOld')||{}).checked);
+  const today=taskToday();
+
+  let rows=tasksData.map(t=>({t,s:taskState(t)})).filter(({t,s})=>{
+    if(fTutor&&String(t.assignee||'')!==fTutor)return false;
+    if(fPri&&(t.priority||'medium')!==fPri)return false;
+    if(fTag&&String(t.tag||'').trim()!==fTag)return false;
+    if(fDue){
+      if(fDue==='none'){if(t.due)return false;}
+      else if(fDue==='overdue'){if(s.kind!=='overdue')return false;}
+      else{
+        if(!t.due||t.due<today)return false;
+        const d=taskDays(today,t.due);
+        if(fDue==='today'&&d!==0)return false;
+        if(fDue==='week'&&d>7)return false;
+        if(fDue==='month'&&d>30)return false;
+      }
+    }
+    // Long-finished items fall away so the list stays readable a year from now.
+    if(s.kind==='done'&&!showOld&&t.doneOn&&taskDays(t.doneOn,today)>TASK_DONE_HIDE_DAYS)return false;
+    if(q){
+      const hay=[t.title,t.details,t.tag,t.assignee,t.createdBy]
+        .concat((t.log||[]).map(e=>e&&e.note)).join(' ').toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    return true;
+  });
+  // Chip counts come from the filtered set BEFORE the status chip, so they answer
+  // "within what I'm looking at, how many of each".
+  const n={all:rows.length,open:0,'in-progress':0,blocked:0,overdue:0,done:0};
+  rows.forEach(({t,s})=>{n[t.status||'open']=(n[t.status||'open']||0)+1;if(s.kind==='overdue')n.overdue++;});
+  const chip=(k,l,cls)=>`<button class="pay-chip ${cls} ${taskStatusFilter===k?'active':''}" onclick="setTaskStatus('${k}')">${l} ${n[k===''?'all':k]}</button>`;
+  $('taskChips').innerHTML=chip('','All','pay-chip-all')+chip('open','Open','pay-chip-ignore')
+    +chip('in-progress','In progress','task-chip-prog')+chip('blocked','Blocked','pay-chip-kitdue')
+    +chip('overdue','Overdue','pay-chip-pending')+chip('done','Done','pay-chip-paid');
+  if(taskStatusFilter==='overdue')rows=rows.filter(r=>r.s.kind==='overdue');
+  else if(taskStatusFilter)rows=rows.filter(r=>(r.t.status||'open')===taskStatusFilter);
+
+  // Overdue first, then everything still open, then finished. Within each: priority,
+  // then the nearest due date, undated last.
+  const grp=(r)=>r.s.kind==='overdue'?0:(r.s.kind==='done'?2:1);
+  rows.sort((a,b)=>grp(a)-grp(b)
+    ||(grp(a)===2?String(b.t.doneOn||'').localeCompare(String(a.t.doneOn||'')):0)
+    ||(TASK_PRI_RANK[a.t.priority||'medium']-TASK_PRI_RANK[b.t.priority||'medium'])
+    ||String(a.t.due||'9999').localeCompare(String(b.t.due||'9999'))
+    ||String(a.t.title||'').localeCompare(String(b.t.title||'')));
+
+  const hc=$('taskHeadCount');if(hc)hc.textContent='('+rows.length+')';
+  if(!tasksData.length){list.innerHTML='<div class="pay-empty">No action items yet. Use <strong>Add item</strong> to raise the first one.</div>';return;}
+  if(!rows.length){list.innerHTML='<div class="pay-empty">No items match the current filters.</div>';return;}
+  list.innerHTML=`<table class="pay-table"><thead><tr>
+    <th>Item</th><th>Assigned to</th><th>Priority</th><th>Due</th><th>Status</th></tr></thead><tbody>${rows.map(({t,s})=>{
+      const st=t.status||'open',pri=t.priority||'medium';
+      const cls=s.kind==='overdue'?'overdue':(s.kind==='soon'?'soon':(s.kind==='done'?'is-done':''));
+      const last=(t.log||[]).slice(-1)[0];
+      const bits=[`Raised by ${esc(t.createdBy||'—')}${t.createdOn?' · '+esc(taskDay(t.createdOn)):''}`];
+      if((t.dueMoves||0)>0)bits.push(`Due date moved ${t.dueMoves}×`);
+      if(last&&last.note)bits.push(`Last: “${esc(String(last.note).slice(0,70))}${String(last.note).length>70?'…':''}” — ${esc(last.by||'')}`);
+      const dueTxt=taskDueText(t,s);
+      return `<tr class="task-row ${cls}" onclick="openTaskForm('${jsq(t._id)}')">
+        <td><div class="task-title">${esc(t.title||'(untitled)')}</div>
+          <div class="task-sub">${t.tag?`<span class="task-tag">${esc(t.tag)}</span> `:''}${bits.join(' · ')}</div></td>
+        <td>${esc(t.assignee||'—')}</td>
+        <td><span class="task-pri ${pri}">${TASK_PRI[pri]||pri}</span></td>
+        <td><div class="task-due">${t.due?esc(taskDay(t.due)):'—'}</div>
+          ${dueTxt?`<div class="task-due ${s.kind==='done'?(s.late?'overdue':''):s.kind}">${esc(dueTxt)}</div>`:''}</td>
+        <td><span class="task-st ${st}">${TASK_STATUS[st]||st}</span></td>
+      </tr>`;}).join('')}</tbody></table>`;
+};
+
+window.openTaskForm=async function(id){
+  await ensureStudents();
+  editingTaskId=id||null;
+  const t=id?tasksData.find(x=>x._id===id):null;
+  if(id&&!t)return;
+  const people=taskPeople();
+  $('taskModalTitle').textContent=t?'Action item':'New action item';
+  $('t_Assignee').innerHTML=[TASK_ADMIN,...people].map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  fillCombo('t_Tag',tasksData.map(x=>x.tag).concat(TASK_STARTER_TAGS));
+  $('t_Title').value=t?(t.title||''):'';
+  $('t_Details').value=t?(t.details||''):'';
+  $('t_Assignee').value=t?(t.assignee||TASK_ADMIN):(isAdmin()?(people[0]||TASK_ADMIN):TASK_ADMIN);
+  $('t_Priority').value=t?(t.priority||'medium'):'medium';
+  setComboValue('t_Tag',t?(t.tag||''):'');
+  $('t_Due').value=t?(t.due||''):'';
+  $('t_Status').value=t?(t.status||'open'):'open';
+  $('t_Note').value='';
+  $('t_NoteLabel').textContent=t?'Add a note':'Note (optional)';
+  // "Updating as" — only meaningful on the shared tutor login. Pre-filled with the
+  // assignee, because nine times out of ten that is who is updating it.
+  const byRow=$('t_ByRow');
+  if(isAdmin()){byRow.style.display='none';}
+  else{
+    byRow.style.display='';
+    $('t_By').innerHTML='<option value="">— Your name —</option>'+people.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    const guess=t&&t.assignee&&t.assignee!==TASK_ADMIN?t.assignee:'';
+    $('t_By').value=people.includes(guess)?guess:'';
+  }
+  const canF=taskCanEditFields(t);
+  ['t_Title','t_Details','t_Assignee','t_Priority','t_Due'].forEach(fid=>{$(fid).disabled=!canF;});
+  const combo=$('t_Tag').closest('.combo');
+  combo.querySelectorAll('select,input,button').forEach(el=>{el.disabled=!canF;});
+  const lock=$('taskLockNote');
+  if(!canF){
+    lock.textContent='Raised by the admin — you can update the status and add notes. The title, assignee, priority, tag and due date can only be changed by the admin.';
+    lock.style.display='';
+  }else lock.style.display='none';
+  $('t_DelBtn').style.display=(t&&canF)?'':'none';
+  $('t_WaBtn').style.display=(t&&t.assignee&&t.assignee!==TASK_ADMIN)?'':'none';
+  renderTaskTrail(t);
+  $('t_Msg').textContent='';$('t_Msg').className='modal-msg';$('t_SaveBtn').disabled=false;
+  showModal('taskModal');
+};
+window.closeTaskForm=function(){$('taskModal').classList.remove('open');};
+
+function renderTaskTrail(t){
+  const box=$('taskTrail');if(!box)return;
+  const log=(t&&Array.isArray(t.log))?t.log.slice().reverse():[];
+  if(!log.length){box.innerHTML='';return;}
+  box.innerHTML='<div class="task-trail-t">History</div>'+log.map(e=>{
+    const when=e.at?new Date(e.at):null;
+    const whenTxt=when&&!isNaN(when)?when.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    const lines=[];
+    if(e.kind==='created')lines.push(`Raised${e.to?' as '+(TASK_STATUS[e.to]||e.to):''}`);
+    if(e.from&&e.to&&e.kind!=='created')lines.push(`${TASK_STATUS[e.from]||e.from} → ${TASK_STATUS[e.to]||e.to}`);
+    (e.changes||[]).forEach(c=>lines.push(c));
+    return `<div class="task-ev">
+      <div class="task-ev-meta">${esc(e.by||'')}${whenTxt?' · '+esc(whenTxt):''}</div>
+      ${lines.length?`<div class="task-ev-change">${lines.map(esc).join(' · ')}</div>`:''}
+      ${e.note?`<div>${esc(e.note)}</div>`:''}
+    </div>`;}).join('');
+}
+
+window.saveTask=async function(){
+  const msg=$('t_Msg'),btn=$('t_SaveBtn');
+  const fail=(m)=>{msg.textContent=m;msg.className='modal-msg err';};
+  const t=editingTaskId?tasksData.find(x=>x._id===editingTaskId):null;
+  const canF=taskCanEditFields(t);
+  const who=isAdmin()?TASK_ADMIN:String($('t_By').value||'').trim();
+  if(!who)return fail('Choose your name under “Updating as”, so the history says who made this change.');
+  const fields=canF?{
+    title:$('t_Title').value.trim(),
+    details:$('t_Details').value.trim(),
+    assignee:$('t_Assignee').value||TASK_ADMIN,
+    priority:$('t_Priority').value||'medium',
+    tag:String($('t_Tag').value||'').trim(),
+    due:$('t_Due').value||''
+  }:null;
+  if(fields&&!fields.title)return fail('Give the item a title.');
+  const status=$('t_Status').value||'open';
+  const note=$('t_Note').value.trim();
+  const today=taskToday();
+  const email=String((currentUser&&currentUser.email)||'').toLowerCase();
+  const ev={at:new Date().toISOString(),by:who,email};
+  btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='modal-msg';
+  try{
+    if(!t){
+      await addDoc(collection(db,'tasks'),{...fields,status,
+        createdBy:who,createdEmail:email,createdRole:isAdmin()?'admin':'tutor',
+        createdOn:today,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),
+        dueMoves:0,doneOn:status==='done'?today:'',
+        log:[{...ev,kind:'created',to:status,note}]});
+    }else{
+      const patch={},changes=[];
+      if(fields){
+        Object.keys(fields).forEach(k=>{if(String(t[k]||'')!==String(fields[k]||''))patch[k]=fields[k];});
+        if('due' in patch){
+          // Setting a date for the first time is not a slip; moving one is.
+          if(t.due){patch.dueMoves=(t.dueMoves||0)+1;
+            changes.push(`Due ${taskDay(t.due)} → ${patch.due?taskDay(patch.due):'none'}`);}
+          else changes.push(`Due set to ${taskDay(patch.due)}`);
+        }
+        if('assignee' in patch)changes.push(`Reassigned ${t.assignee||'—'} → ${patch.assignee}`);
+        if('priority' in patch)changes.push(`Priority ${TASK_PRI[t.priority]||t.priority||'—'} → ${TASK_PRI[patch.priority]}`);
+        if('tag' in patch)changes.push(`Tag ${t.tag||'none'} → ${patch.tag||'none'}`);
+        if('title' in patch||'details' in patch)changes.push('Wording edited');
+      }
+      const was=t.status||'open';
+      if(status!==was){
+        patch.status=status;ev.from=was;ev.to=status;
+        if(status==='done')patch.doneOn=today;
+        else if(was==='done')patch.doneOn='';
+      }
+      if(!Object.keys(patch).length&&!note){btn.disabled=false;msg.textContent='Nothing changed.';msg.className='modal-msg';return;}
+      const log=Array.isArray(t.log)?t.log.slice():[];
+      log.push({...ev,kind:'update',note,changes});
+      patch.log=log;patch.updatedAt=serverTimestamp();
+      await setDoc(doc(db,'tasks',t._id),patch,{merge:true});
+    }
+    await loadTasks(true);
+    renderTasks();
+    closeTaskForm();
+    toast(t?'Action item updated':'Action item added');
+  }catch(e){
+    console.error('saveTask',e);btn.disabled=false;
+    fail('Could not save: '+(e.code||e.message)
+      +(/permission/i.test(String(e.code||e.message))?' — the rules file adding `tasks` may not be published yet.':''));
+  }
+};
+
+window.deleteTask=async function(){
+  const t=editingTaskId?tasksData.find(x=>x._id===editingTaskId):null;
+  if(!t||!taskCanEditFields(t))return;
+  if(!confirm(`Delete “${t.title||'this item'}” and its history? This cannot be undone.`))return;
+  try{
+    await deleteDoc(doc(db,'tasks',t._id));
+    await loadTasks(true);renderTasks();closeTaskForm();toast('Action item deleted');
+  }catch(e){console.error('deleteTask',e);const m=$('t_Msg');m.textContent='Could not delete: '+(e.code||e.message);m.className='modal-msg err';}
+};
+
+/* A nudge to the assigned tutor. Their number comes from Settings → Tutor WhatsApp numbers;
+   with none set, WhatsApp opens and you pick the contact, as it does for a student with no
+   number. Closes the item dialog first, because the WhatsApp dialog sits beneath it. */
+window.taskWhatsApp=async function(){
+  const t=editingTaskId?tasksData.find(x=>x._id===editingTaskId):null;if(!t)return;
+  try{await loadSettings();}catch(e){}
+  const phones=(appSettings&&appSettings.tutorPhones)||{};
+  const s=taskState(t);
+  const dueLine=t.due?`${taskDay(t.due)}${s.kind==='overdue'?` (overdue by ${s.days} day${s.days===1?'':'s'})`:''}`:'No due date';
+  const msg=`*Action item* — ${t.title||''}\n`
+    +`Priority: ${TASK_PRI[t.priority]||'Medium'}\nDue: ${dueLine}\nStatus: ${TASK_STATUS[t.status||'open']}\n`
+    +(t.details?`\n${t.details}\n`:'')
+    +`\nPlease update it in the ElectroBotics app when you can.\n— Team ElectroBotics`;
+  closeTaskForm();
+  waTargetPhone=String(phones[t.assignee]||'').replace(/[^0-9+]/g,'');
+  $('waModalTitle').textContent='WhatsApp · '+t.assignee;
+  $('wa_Msg').value=msg;
+  showModal('waModal');
+};
+
 async function loadTutor(){
+  // Action items first, and reloaded on every visit — a few dozen small documents, and a
+  // stale list would hide what someone else just changed.
+  loadTasks(true).then(()=>renderTasks());
   // needs risk data (for performance) + students (for availability) + notes
   if(!riskData){await loadRisk();}
   if(!tutorNotesLoaded){try{const snap=await getDocs(collection(db,'tutorNotes'));tutorNotesData=snap.docs.map(d=>d.data());tutorNotesLoaded=true;}catch(e){tutorNotesData=[];}}
