@@ -891,6 +891,46 @@ table.band input:focus{border-color:var(--accent)}
 .task-ev-change{font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim)}
 .btn-cancel.task-del{color:#a33d1f;border-color:#f3c3b3}
 .task-foot{flex-wrap:wrap}
+/* ── Today's list ── */
+.task-pin{border:none;background:none;cursor:pointer;font-size:15px;line-height:1;padding:0 6px 0 0;color:#b9c9cb;vertical-align:-1px}
+.task-pin:hover{color:var(--amber)}
+.task-pin.on{color:var(--amber)}
+.task-pin.static{cursor:default}
+.pay-chip.task-chip-today.active{background:var(--amber-light);color:#8a6a00;border-color:var(--amber)}
+.tt-panel{margin:12px 20px 4px;padding:12px 14px 10px;border:1px solid var(--amber-bg);border-radius:10px;background:#fffcf3}
+.tt-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tt-title{font-weight:700;font-size:14px;color:var(--text)}
+.tt-title .tt-star{color:var(--amber)}
+.tt-date{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
+.tt-prog{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim)}
+.tt-bar{width:110px;height:6px;border-radius:4px;background:var(--surface-alt);overflow:hidden}
+.tt-bar span{display:block;height:100%;background:var(--green);border-radius:4px}
+.tt-live{font-family:var(--font-mono);font-size:10px;color:#5a7a00}
+.tt-live::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:5px;vertical-align:1px}
+.tt-share{margin-left:auto;font-family:var(--font-mono);font-size:11px;font-weight:700;padding:5px 11px;border-radius:7px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text-dim);cursor:pointer}
+.tt-share:hover{border-color:var(--accent);color:var(--accent-dark)}
+.tt-none{font-size:13px;color:var(--text-light);padding:8px 0 2px}
+.tt-grp{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-dim);text-transform:uppercase;
+  letter-spacing:.5px;margin:12px 0 2px}
+.tt-row{display:flex;align-items:flex-start;gap:8px;padding:7px 4px;border-bottom:1px dashed var(--border);cursor:pointer;border-radius:6px}
+.tt-row:last-child{border-bottom:none}
+.tt-row:hover{background:var(--surface)}
+.tt-row .task-st{margin-top:1px}
+.tt-main{flex:1;min-width:0}
+.tt-t{font-weight:600;font-size:13px;color:var(--text)}
+.tt-row.is-done .tt-t{text-decoration:line-through;color:var(--text-light)}
+.tt-u{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:2px;line-height:1.5}
+.tt-u .tt-stale{color:#8a6a00}
+.tt-slip{color:#a33d1f;font-weight:700}
+.tt-carry{margin:0 0 10px;padding:10px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border)}
+.tt-carry-h{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.tt-carry-i{display:flex;align-items:center;gap:7px;font-size:13px;padding:3px 0;cursor:pointer}
+.tt-carry-i .tt-who{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.tt-carry-btns{display:flex;gap:8px;margin-top:8px}
+.tt-carry-btns button{padding:6px 12px;font-size:12px}
+.task-pin-row{display:flex;align-items:center;gap:8px;margin:2px 0 12px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer}
+.task-pin-row .tt-star{color:var(--amber)}
 .tp-input{min-width:200px;font-family:var(--font-mono)}
 @media(max-width:600px){.set-savebar{padding:10px 12px;gap:8px}.set-savebar .btn-primary{width:100%}}
 /* The technical reason behind a failed sign-in. Small and muted — a parent can ignore it,
@@ -1355,6 +1395,7 @@ table.band input:focus{border-color:var(--accent)}
           </button>
         </div>
       </div>
+      <div id="taskTodayPanel"></div>
       <div class="pay-summary" id="taskChips" style="padding:12px 20px 4px;"></div>
       <div class="stu-filter-bar">
         <div class="filter-group"><label>Tutor</label><select id="taskFTutor" onchange="renderTasks()"><option value="">All</option></select></div>
@@ -1401,6 +1442,7 @@ table.band input:focus{border-color:var(--accent)}
           </div>
           <div class="form-row"><label>Due date</label><input type="date" id="t_Due"></div>
         </div>
+        <label class="task-pin-row" id="t_PinRow" style="display:none;"><input type="checkbox" id="t_Pin"> <span class="tt-star">★</span> Track on today's list</label>
         <div class="task-update">
           <div class="task-grid">
             <div class="form-row"><label>Status</label><select id="t_Status"><option value="open">Open</option><option value="in-progress">In progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select></div>
@@ -1778,7 +1820,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-06a';
+const BUILD='2026-10-06b';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -1910,6 +1952,7 @@ let activeTab='summary';
 window.setTab=function(tab){
   if(!allowedTab(tab))tab='summary';     // hard guard, not just a hidden button
   activeTab=tab;
+  if(tab!=='tutor')stopTaskLive();
   ALL_TABS.forEach(t=>{
     const s=$(t+'Screen');if(s)s.style.display=(t===tab)?'':'none';
   });
@@ -5870,6 +5913,196 @@ function taskPeople(){
 // Can the signed-in login change this item's title, assignee, priority, tag and due date?
 const taskCanEditFields=(t)=>!t||isAdmin()||t.createdRole!=='admin';
 
+/* ── Today's list ──
+   The admin pins items to track today. A pin is the DATE, kept in todayDates, rather than a
+   yes/no flag. So the list empties itself at midnight with nothing to clear; yesterday's
+   list stays on record, which is what the carry-forward offer reads; and the number of days
+   an item has spent on the list falls out of the same array. Only the admin pins (enforced
+   here — the rules are plain isStaff); everyone sees the list. */
+let taskLiveUnsub=null,taskLiveDay='',taskCarryHidden=null;
+const TASK_PIN_ADD='Added to Today',TASK_PIN_DEL='Removed from Today';
+const TASK_CARRY_DAYS=7;          // offer to carry forward a list at most this old
+const taskKeyOf=(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const taskPinDates=(t)=>Array.isArray(t&&t.todayDates)?t.todayDates.filter(Boolean):[];
+const taskPinnedOn=(t,day)=>taskPinDates(t).includes(day);
+const taskPinnedToday=(t)=>taskPinnedOn(t,taskToday());
+// The last real update — pinning and unpinning are the admin's bookkeeping, not progress.
+function taskLastUpdate(t){
+  const log=(Array.isArray(t.log)?t.log:[]).filter(e=>e&&!e.pin);
+  return log.length?log[log.length-1]:null;
+}
+const taskTimeOf=(iso)=>{const d=new Date(iso);return isNaN(d)?'':d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}).toLowerCase();};
+const taskDayOfIso=(iso)=>{const d=new Date(iso);return isNaN(d)?'':taskKeyOf(d);};
+
+/* One write per item, batched: the new todayDates and a history line. The history line is
+   marked pin:true so "last update" on the Today list skips it. */
+async function taskWritePins(items){
+  const email=String((currentUser&&currentUser.email)||'').toLowerCase();
+  const at=new Date().toISOString();
+  const wb=writeBatch(db);
+  const next=items.map(({t,dates,change})=>{
+    const log=(Array.isArray(t.log)?t.log.slice():[]);
+    log.push({at,by:TASK_ADMIN,email,kind:'update',pin:true,note:'',changes:[change]});
+    wb.set(doc(db,'tasks',t._id),{todayDates:dates,log,updatedAt:serverTimestamp()},{merge:true});
+    return {t,dates,log};
+  });
+  await wb.commit();
+  next.forEach(({t,dates,log})=>{t.todayDates=dates;t.log=log;});
+}
+window.taskTogglePin=async function(id,ev){
+  if(ev)ev.stopPropagation();
+  if(!isAdmin())return;
+  const t=tasksData.find(x=>x._id===id);if(!t)return;
+  const today=taskToday(),on=taskPinnedOn(t,today);
+  const dates=on?taskPinDates(t).filter(d=>d!==today):taskPinDates(t).concat(today);
+  try{
+    await taskWritePins([{t,dates,change:on?TASK_PIN_DEL:TASK_PIN_ADD}]);
+    renderTasks();toast(on?'Removed from today’s list':'Added to today’s list');
+  }catch(e){console.error('taskTogglePin',e);toast('Could not update: '+(e.code||e.message));}
+};
+
+/* The most recent earlier list, within a week, and whatever on it is still unfinished and
+   not already on today's. Offered, never moved silently. */
+function taskCarryInfo(){
+  const today=taskToday();let prev='';
+  tasksData.forEach(t=>taskPinDates(t).forEach(d=>{if(d<today&&d>prev)prev=d;}));
+  if(!prev||taskDays(prev,today)>TASK_CARRY_DAYS)return null;
+  const items=tasksData.filter(t=>taskPinnedOn(t,prev)&&!taskPinnedOn(t,today)&&(t.status||'open')!=='done')
+    .sort((a,b)=>String(a.assignee||'').localeCompare(String(b.assignee||''))||String(a.title||'').localeCompare(String(b.title||'')));
+  return items.length?{day:prev,items}:null;
+}
+function taskCarryHiddenKey(){
+  if(taskCarryHidden===null){try{taskCarryHidden=localStorage.getItem('eb_taskCarryHidden')||'';}catch(e){taskCarryHidden='';}}
+  return taskCarryHidden;
+}
+window.taskCarryHide=function(day){
+  taskCarryHidden=taskToday()+'|'+day;
+  try{localStorage.setItem('eb_taskCarryHidden',taskCarryHidden);}catch(e){}
+  renderTaskToday();
+};
+window.taskCarryAdd=async function(){
+  const ci=taskCarryInfo();if(!ci||!isAdmin())return;
+  const ids=new Set([...document.querySelectorAll('#taskTodayPanel .tt-carry-cb')].filter(c=>c.checked).map(c=>c.value));
+  const pick=ci.items.filter(t=>ids.has(t._id));
+  if(!pick.length){toast('Tick at least one item, or choose Not now.');return;}
+  const today=taskToday();
+  try{
+    await taskWritePins(pick.map(t=>({t,dates:taskPinDates(t).concat(today),change:`Carried over to Today from ${taskDay(ci.day)}`})));
+    renderTasks();toast(`${pick.length} item${pick.length===1?'':'s'} added to today’s list`);
+  }catch(e){console.error('taskCarryAdd',e);toast('Could not update: '+(e.code||e.message));}
+};
+
+// Today's items grouped by assignee (Admin last); unfinished first within a group.
+function taskTodayGroups(){
+  const items=tasksData.filter(taskPinnedToday);
+  const g={};items.forEach(t=>{const a=t.assignee||TASK_ADMIN;(g[a]=g[a]||[]).push(t);});
+  const names=Object.keys(g).sort((a,b)=>(a===TASK_ADMIN)-(b===TASK_ADMIN)||a.localeCompare(b));
+  const isDone=(t)=>(t.status||'open')==='done'?1:0;
+  names.forEach(n=>g[n].sort((a,b)=>isDone(a)-isDone(b)
+    ||(TASK_PRI_RANK[a.priority||'medium']-TASK_PRI_RANK[b.priority||'medium'])
+    ||String(a.title||'').localeCompare(String(b.title||''))));
+  return {items,names,g};
+}
+
+function renderTaskToday(){
+  const box=$('taskTodayPanel');if(!box)return;
+  if(tasksLoadErr||!tasksLoaded){box.innerHTML='';return;}
+  const today=taskToday(),admin=isAdmin();
+  if(taskLiveDay&&taskLiveDay!==today&&activeTab==='tutor')startTaskLive();   // crossed midnight
+  const {items,names,g}=taskTodayGroups();
+  const done=items.filter(t=>(t.status||'open')==='done').length;
+  const dateTxt=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  const live=taskLiveUnsub?'<span class="tt-live" title="Updates appear here as soon as anyone saves them">Live</span>':'';
+
+  let carry='';
+  const ci=admin?taskCarryInfo():null;
+  if(ci&&taskCarryHiddenKey()!==today+'|'+ci.day){
+    const n=ci.items.length;
+    carry=`<div class="tt-carry"><div class="tt-carry-h">${n} item${n===1?'':'s'} from ${esc(taskDay(ci.day))} ${n===1?'wasn’t':'weren’t'} finished. Add to today?</div>
+      ${ci.items.map(t=>`<label class="tt-carry-i"><input type="checkbox" class="tt-carry-cb" value="${esc(t._id)}" checked>
+        <span>${esc(t.title||'(untitled)')}</span><span class="tt-who">${esc(t.assignee||TASK_ADMIN)} · ${esc(TASK_STATUS[t.status||'open']||'')}</span></label>`).join('')}
+      <div class="tt-carry-btns"><button class="btn-save" onclick="taskCarryAdd()">Add selected</button>
+        <button class="btn-cancel" onclick="taskCarryHide('${jsq(ci.day)}')">Not now</button></div></div>`;
+  }
+  const head=`<div class="tt-head"><span class="tt-title"><span class="tt-star">★</span> Today</span>
+    <span class="tt-date">${esc(dateTxt)}</span>
+    ${items.length?`<span class="tt-prog">${done} of ${items.length} done<span class="tt-bar"><span style="width:${Math.round(done/items.length*100)}%"></span></span></span>`:''}
+    ${live}
+    ${items.length?'<button class="tt-share" onclick="taskShareToday()">Share today</button>':''}</div>`;
+  if(!items.length){
+    box.innerHTML=`<div class="tt-panel">${carry}${head}<div class="tt-none">${admin
+      ?'Nothing on today’s list yet. Tap ☆ on any item below to track it today.'
+      :'Nothing on today’s list yet.'}</div></div>`;
+    return;
+  }
+  const row=(t)=>{
+    const st=t.status||'open';
+    const last=taskLastUpdate(t);
+    let upd;
+    if(last&&taskDayOfIso(last.at)===today){
+      upd=`${esc(last.by||'')} · ${esc(TASK_STATUS[st]||st)} · ${esc(taskTimeOf(last.at))}`;
+      if(last.note)upd+=` — “${esc(String(last.note).slice(0,60))}${String(last.note).length>60?'…':''}”`;
+    }else{
+      upd=`<span class="tt-stale">No update today${last?' · last '+esc(taskDay(taskDayOfIso(last.at))):''}</span>`;
+    }
+    const days=taskPinDates(t).length;
+    if(days>1)upd+=` · <span class="${days>=3?'tt-slip':''}">on Today’s list ${days} days</span>`;
+    return `<div class="tt-row ${st==='done'?'is-done':''}" onclick="openTaskForm('${jsq(t._id)}')">
+      ${admin?`<button class="task-pin on" title="Remove from today’s list" onclick="taskTogglePin('${jsq(t._id)}',event)">★</button>`:''}
+      <span class="task-st ${st}">${TASK_STATUS[st]||st}</span>
+      <div class="tt-main"><div class="tt-t">${esc(t.title||'(untitled)')}</div><div class="tt-u">${upd}</div></div>
+    </div>`;
+  };
+  box.innerHTML=`<div class="tt-panel">${carry}${head}${names.map(n=>{
+    const d=g[n].filter(t=>(t.status||'open')==='done').length;
+    return `<div class="tt-grp">${esc(n)} · ${d}/${g[n].length}</div>${g[n].map(row).join('')}`;}).join('')}</div>`;
+}
+
+// Text only (wa.me cannot carry anything else); you pick the chat or group in WhatsApp.
+window.taskShareToday=function(){
+  const {items,names,g}=taskTodayGroups();
+  if(!items.length){toast('Nothing on today’s list.');return;}
+  const ICON={open:'⬜','in-progress':'🔄',blocked:'⛔',done:'✅'};
+  const done=items.filter(t=>(t.status||'open')==='done').length;
+  const lines=[`*Today's action items — ${new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}*`,
+    `${done} of ${items.length} done`];
+  names.forEach(n=>{
+    lines.push('',`*${n}*`);
+    g[n].forEach(t=>{const st=t.status||'open';
+      lines.push(`${ICON[st]||'⬜'} ${t.title||'(untitled)'} — ${TASK_STATUS[st]||st}`);});
+  });
+  lines.push('','— Team ElectroBotics');
+  waTargetPhone='';
+  $('waModalTitle').textContent='WhatsApp · Today’s list';
+  $('wa_Msg').value=lines.join('\n');
+  showModal('waModal');
+};
+
+/* While the Tutor tab is open, today's items are watched live, so a status a tutor saves
+   shows on the admin's screen without a refresh. Only today's pinned items are watched —
+   a handful of documents, so a handful of reads per change. Stopped on leaving the tab. */
+function startTaskLive(){
+  const today=taskToday();
+  if(taskLiveUnsub&&taskLiveDay===today)return;
+  stopTaskLive();taskLiveDay=today;
+  try{
+    const un=onSnapshot(query(collection(db,'tasks'),where('todayDates','array-contains',today)),snap=>{
+      const seen=new Set();
+      snap.docs.forEach(d=>{seen.add(d.id);const x={_id:d.id,...d.data()};
+        const i=tasksData.findIndex(t=>t._id===d.id);if(i>=0)tasksData[i]=x;else tasksData.push(x);});
+      // An item unpinned or deleted elsewhere just leaves the query; reload to learn which.
+      if(tasksLoaded&&tasksData.some(t=>taskPinnedOn(t,today)&&!seen.has(t._id))){
+        loadTasks(true).then(()=>{if(activeTab==='tutor')renderTasks();});return;}
+      updateTaskBadge();
+      if(activeTab==='tutor')renderTasks();
+    },err=>{console.warn('task live',err);taskLiveUnsub=null;renderTaskToday();});
+    taskLiveUnsub=un;
+    renderTaskToday();   // the first snapshot can land before un is set; show the Live mark now
+  }catch(e){console.warn('task live',e);taskLiveUnsub=null;}
+}
+function stopTaskLive(){if(taskLiveUnsub){try{taskLiveUnsub();}catch(e){}}taskLiveUnsub=null;taskLiveDay='';}
+setInterval(()=>{if(activeTab==='tutor'&&taskLiveDay&&taskLiveDay!==taskToday()){startTaskLive();renderTasks();}},60000);
+
 async function loadTasks(force){
   if(tasksLoaded&&!force)return;
   try{
@@ -5906,7 +6139,7 @@ window.renderTasks=function(){
       +(/permission/i.test(code)
         ?' Firestore refused the <code>tasks</code> collection — the updated rules file, which adds it, has not been published yet.'
         :' Try again in a moment.')+'</span></div>';
-    $('taskChips').innerHTML='';return;
+    $('taskChips').innerHTML='';renderTaskToday();return;
   }
   const keep=(id,vals,all)=>{const el=$(id);if(!el)return '';const cur=el.value;
     el.innerHTML=`<option value="">${all}</option>`+vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
@@ -5945,13 +6178,15 @@ window.renderTasks=function(){
   });
   // Chip counts come from the filtered set BEFORE the status chip, so they answer
   // "within what I'm looking at, how many of each".
-  const n={all:rows.length,open:0,'in-progress':0,blocked:0,overdue:0,done:0};
-  rows.forEach(({t,s})=>{n[t.status||'open']=(n[t.status||'open']||0)+1;if(s.kind==='overdue')n.overdue++;});
+  const n={all:rows.length,today:0,open:0,'in-progress':0,blocked:0,overdue:0,done:0};
+  rows.forEach(({t,s})=>{n[t.status||'open']=(n[t.status||'open']||0)+1;if(s.kind==='overdue')n.overdue++;if(taskPinnedOn(t,today))n.today++;});
   const chip=(k,l,cls)=>`<button class="pay-chip ${cls} ${taskStatusFilter===k?'active':''}" onclick="setTaskStatus('${k}')">${l} ${n[k===''?'all':k]}</button>`;
-  $('taskChips').innerHTML=chip('','All','pay-chip-all')+chip('open','Open','pay-chip-ignore')
+  $('taskChips').innerHTML=chip('','All','pay-chip-all')+chip('today','★ Today','task-chip-today')+chip('open','Open','pay-chip-ignore')
     +chip('in-progress','In progress','task-chip-prog')+chip('blocked','Blocked','pay-chip-kitdue')
     +chip('overdue','Overdue','pay-chip-pending')+chip('done','Done','pay-chip-paid');
+  renderTaskToday();
   if(taskStatusFilter==='overdue')rows=rows.filter(r=>r.s.kind==='overdue');
+  else if(taskStatusFilter==='today')rows=rows.filter(r=>taskPinnedOn(r.t,today));
   else if(taskStatusFilter)rows=rows.filter(r=>(r.t.status||'open')===taskStatusFilter);
 
   // Overdue first, then everything still open, then finished. Within each: priority,
@@ -5973,10 +6208,15 @@ window.renderTasks=function(){
       const last=(t.log||[]).slice(-1)[0];
       const bits=[`Raised by ${esc(t.createdBy||'—')}${t.createdOn?' · '+esc(taskDay(t.createdOn)):''}`];
       if((t.dueMoves||0)>0)bits.push(`Due date moved ${t.dueMoves}×`);
+      const pinned=taskPinnedOn(t,today),pinDays=taskPinDates(t).length;
+      if(pinned&&pinDays>1)bits.push(`On Today\u2019s list ${pinDays} days`);
+      const pinBtn=isAdmin()
+        ?`<button class="task-pin ${pinned?'on':''}" title="${pinned?'Remove from today\u2019s list':'Track on today\u2019s list'}" onclick="taskTogglePin('${jsq(t._id)}',event)">${pinned?'★':'☆'}</button>`
+        :(pinned?'<span class="task-pin on static" title="On today\u2019s list">★</span>':'');
       if(last&&last.note)bits.push(`Last: “${esc(String(last.note).slice(0,70))}${String(last.note).length>70?'…':''}” — ${esc(last.by||'')}`);
       const dueTxt=taskDueText(t,s);
       return `<tr class="task-row ${cls}" onclick="openTaskForm('${jsq(t._id)}')">
-        <td><div class="task-title">${esc(t.title||'(untitled)')}</div>
+        <td><div class="task-title">${pinBtn}${esc(t.title||'(untitled)')}</div>
           <div class="task-sub">${t.tag?`<span class="task-tag">${esc(t.tag)}</span> `:''}${bits.join(' · ')}</div></td>
         <td>${esc(t.assignee||'—')}</td>
         <td><span class="task-pri ${pri}">${TASK_PRI[pri]||pri}</span></td>
@@ -6003,6 +6243,8 @@ window.openTaskForm=async function(id){
   $('t_Due').value=t?(t.due||''):'';
   $('t_Status').value=t?(t.status||'open'):'open';
   $('t_Note').value='';
+  $('t_PinRow').style.display=isAdmin()?'':'none';
+  $('t_Pin').checked=!!(t&&taskPinnedToday(t));
   $('t_NoteLabel').textContent=t?'Add a note':'Note (optional)';
   // "Updating as" — only meaningful on the shared tutor login. Pre-filled with the
   // assignee, because nine times out of ten that is who is updating it.
@@ -6068,6 +6310,7 @@ window.saveTask=async function(){
   const status=$('t_Status').value||'open';
   const note=$('t_Note').value.trim();
   const today=taskToday();
+  const pinWant=isAdmin()&&$('t_Pin').checked;
   const email=String((currentUser&&currentUser.email)||'').toLowerCase();
   const ev={at:new Date().toISOString(),by:who,email};
   btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='modal-msg';
@@ -6076,8 +6319,8 @@ window.saveTask=async function(){
       await addDoc(collection(db,'tasks'),{...fields,status,
         createdBy:who,createdEmail:email,createdRole:isAdmin()?'admin':'tutor',
         createdOn:today,createdAt:serverTimestamp(),updatedAt:serverTimestamp(),
-        dueMoves:0,doneOn:status==='done'?today:'',
-        log:[{...ev,kind:'created',to:status,note}]});
+        dueMoves:0,doneOn:status==='done'?today:'',todayDates:pinWant?[today]:[],
+        log:[{...ev,kind:'created',to:status,note,changes:pinWant?[TASK_PIN_ADD]:[]}]});
     }else{
       const patch={},changes=[];
       if(fields){
@@ -6093,6 +6336,10 @@ window.saveTask=async function(){
         if('tag' in patch)changes.push(`Tag ${t.tag||'none'} → ${patch.tag||'none'}`);
         if('title' in patch||'details' in patch)changes.push('Wording edited');
       }
+      if(isAdmin()&&pinWant!==taskPinnedOn(t,today)){
+        patch.todayDates=pinWant?taskPinDates(t).concat(today):taskPinDates(t).filter(d=>d!==today);
+        changes.push(pinWant?TASK_PIN_ADD:TASK_PIN_DEL);
+      }
       const was=t.status||'open';
       if(status!==was){
         patch.status=status;ev.from=was;ev.to=status;
@@ -6101,7 +6348,9 @@ window.saveTask=async function(){
       }
       if(!Object.keys(patch).length&&!note){btn.disabled=false;msg.textContent='Nothing changed.';msg.className='modal-msg';return;}
       const log=Array.isArray(t.log)?t.log.slice():[];
-      log.push({...ev,kind:'update',note,changes});
+      // A save that only pinned or unpinned is bookkeeping, not progress (see taskLastUpdate).
+      const onlyPin=Object.keys(patch).length===1&&('todayDates' in patch)&&!note;
+      log.push({...ev,kind:'update',note,changes,...(onlyPin?{pin:true}:{})});
       patch.log=log;patch.updatedAt=serverTimestamp();
       await setDoc(doc(db,'tasks',t._id),patch,{merge:true});
     }
@@ -6149,7 +6398,7 @@ window.taskWhatsApp=async function(){
 async function loadTutor(){
   // Action items first, and reloaded on every visit — a few dozen small documents, and a
   // stale list would hide what someone else just changed.
-  loadTasks(true).then(()=>renderTasks());
+  loadTasks(true).then(()=>{renderTasks();if(activeTab==='tutor')startTaskLive();});
   // needs risk data (for performance) + students (for availability) + notes
   if(!riskData){await loadRisk();}
   if(!tutorNotesLoaded){try{const snap=await getDocs(collection(db,'tutorNotes'));tutorNotesData=snap.docs.map(d=>d.data());tutorNotesLoaded=true;}catch(e){tutorNotesData=[];}}
