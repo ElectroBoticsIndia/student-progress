@@ -1371,7 +1371,7 @@ table.band input:focus{border-color:var(--accent)}
 
     <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor Performance <span id="tutorStatsNote" class="trend-summary"></span></span></div></div>
-      <div class="risk-criteria">Aggregated per tutor from the same rolling 4-week window as At-Risk. Click a note icon to log/view notes.</div>
+      <div class="risk-criteria">Classes attended (and demos submitted) ÷ classes expected over the last 4 weeks, across each tutor's students — the same numbers as At-Risk. Hover a % for the counts. Click a note icon to log/view notes.</div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="tutorStatsTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
     <div class="chart-card" style="padding:0;overflow:hidden;">
@@ -1450,7 +1450,7 @@ table.band input:focus{border-color:var(--accent)}
         <button class="filter-clear" onclick="clearRiskFilters()">Clear</button>
       </div>
       <div class="pay-summary" id="riskSummary" style="padding:12px 20px 10px;"></div>
-      <div class="risk-criteria">Risk = attendance &lt; 50% or submissions &lt; 40% · Watch = attendance 50–60% or submissions 40–50% · On track = above both · No data = nothing recorded (rolling 4 weeks).</div>
+      <div class="risk-criteria">Risk = attendance &lt; 50% or submissions &lt; 40% · Watch = attendance 50–60% or submissions 40–50% · On track = above both · No data = joined too recently to rate. Both are measured against the classes expected in the last 4 weeks (max 4), so an unmarked missed class counts as missed.</div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="riskTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
   </div>
@@ -1778,7 +1778,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-05a';
+const BUILD='2026-10-06a';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -5700,34 +5700,59 @@ async function loadRisk(){
   if(!assignmentsLoaded){try{const snap=await getDocs(collection(db,'assignments'));assignmentsData=snap.docs.map(d=>d.data());assignmentsLoaded=true;}catch(e){assignmentsData=[];}}
   computeRisk();renderRisk();
 }
-/* A student can only be judged on classes they could actually have had, so the rolling
-   window is clipped at their join date. Below RISK_MIN_SESSIONS they aren't rated at
-   all: the at-risk list is a queue of people to call, and someone in their first fortnight
-   who has missed one thing does not belong at the top of it. */
+/* Attendance and submissions are both judged against the classes a student SHOULD have
+   had — the same rule the Attendance/Assignments trends and the student detail page use.
+   Until 6 Oct 2026 attendance here was present ÷ (present + absent entries saved), so a
+   missed class that was left unmarked instead of marked Absent never counted, and a tutor
+   who only ever marks presents read 100%.
+
+   The window is the last 28 days, which holds exactly four of any weekday. It ends today
+   only if the student already has an entry for today; otherwise it ends yesterday, so a
+   class that has not happened yet (or not been marked yet) is not counted as missed.
+   It is clipped at the join date, and below RISK_MIN_SESSIONS the student isn't rated:
+   the at-risk list is a queue of people to call, and someone in their first fortnight
+   who has missed one thing does not belong at the top of it. Each rate is capped at 100%
+   so compensation classes cannot hide a missed one elsewhere. */
 const RISK_MIN_SESSIONS=2;
-function riskExpectedFor(s,cutoff,today){
-  const jd=parseD(s&&s['Join Date']);
-  let from=cutoff;
-  if(jd&&jd>from)from=jd;
-  if(today<from)return 0;
-  const n=sessionsBetween(s,from,today)*EXPECTED_PER_WEEK;
-  return n<RISK_MIN_SESSIONS?0:n;
+const riskIso=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function riskWindowFor(s,todayIso,hasToday){
+  const t=new Date();const end=new Date(t.getFullYear(),t.getMonth(),t.getDate());
+  if(!hasToday)end.setDate(end.getDate()-1);
+  const startW=new Date(end);startW.setDate(startW.getDate()-(RISK_WINDOW_WEEKS*7-1));
+  let from=startW;
+  const jIso=aaNormDate(s&&s['Join Date'],'auto');
+  if(jIso){const [y,m,d]=jIso.split('-').map(Number);const jd=new Date(y,m-1,d);if(jd>from)from=jd;}
+  let n=end<from?0:sessionsBetween(s,from,end)*EXPECTED_PER_WEEK;
+  n=Math.min(n,RISK_WINDOW_WEEKS*EXPECTED_PER_WEEK);
+  return {fromIso:riskIso(startW),endIso:riskIso(end),expected:n<RISK_MIN_SESSIONS?0:n};
 }
 function computeRisk(){
-  const today=new Date();
-  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-RISK_WINDOW_WEEKS*7);
+  const todayIso=riskIso(new Date());
+  const early=new Date();early.setDate(early.getDate()-RISK_WINDOW_WEEKS*7-1);const earlyIso=riskIso(early);
+  // Bucket each student's recent rows once; the per-student window is applied below.
+  const recs=(arr,keep)=>{const out={};arr.forEach(r=>{
+    const d=aaNormDate(r.Date,'auto');if(!d||d<earlyIso||d>todayIso)return;
+    const id=String(r.StudentID||'').trim();if(!id)return;
+    const st=String(r.Status||'').toLowerCase();
+    let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;
+    (out[id]=out[id]||[]).push({d,pos:st===keep,c});
+  });return out;};
+  const att=recs(attendanceData,'present'),sub=recs(assignmentsData,'submitted');
   const active=studentsData.filter(s=>{const st=String(s.Status||'Active').toLowerCase();return st==='active'||st==='';});
-  const att={};
-  attendanceData.forEach(r=>{const d=parseD(r.Date);if(!d||d<cutoff)return;const id=String(r.StudentID||'').trim();if(!id)return;let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;const st=String(r.Status||'').toLowerCase();if(!att[id])att[id]={present:0,total:0};att[id].total+=c;if(st==='present')att[id].present+=c;});
-  const sub={};
-  assignmentsData.forEach(r=>{const d=parseD(r.Date);if(!d||d<cutoff)return;const id=String(r.StudentID||'').trim();if(!id)return;if(String(r.Status||'').toLowerCase()!=='submitted')return;let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;sub[id]=(sub[id]||0)+c;});
   let rows=active.map(s=>{
-    const id=String(s.ID||'').trim();const a=att[id]||{present:0,total:0};
-    const expected=riskExpectedFor(s,cutoff,today);
+    const id=String(s.ID||'').trim();
+    const a=att[id]||[],b=sub[id]||[];
+    const hasToday=a.some(r=>r.d===todayIso)||b.some(r=>r.d===todayIso);
+    const w=riskWindowFor(s,todayIso,hasToday);
+    const inW=(r)=>r.d>=w.fromIso&&r.d<=w.endIso;
+    const sumPos=(arr)=>arr.filter(r=>r.pos&&inW(r)).reduce((t,r)=>t+r.c,0);
+    const expected=w.expected;
+    const attended=Math.min(sumPos(a),expected),submitted=Math.min(sumPos(b),expected);
     // Too new to rate: neither rate is meaningful yet, so both read "no data".
-    const attRate=(expected>0&&a.total>0)?a.present/a.total:null;
-    let subRate=expected>0?(sub[id]||0)/expected:null;if(subRate!==null&&subRate>1)subRate=1;
-    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',batch:s.Batch||'',country:s.Country||'',level:s['Current Level']||'',expected,att_rate:attRate,sub_rate:subRate,risk:riskBand(attRate,subRate)};
+    const attRate=expected>0?attended/expected:null;
+    const subRate=expected>0?submitted/expected:null;
+    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',batch:s.Batch||'',country:s.Country||'',level:s['Current Level']||'',
+      expected,attended,submitted,att_rate:attRate,sub_rate:subRate,risk:riskBand(attRate,subRate)};
   });
   const order={red:0,yellow:1,green:2,nodata:3};
   const comb=r=>(r.att_rate===null?1:r.att_rate)+(r.sub_rate===null?1:r.sub_rate);
@@ -5764,8 +5789,8 @@ window.renderRisk=function(){
     </thead><tbody>${rows.map(s=>`<tr data-sid="${esc(s.id)}" class="${String(s.id)===String(selectedStudentId)?'row-selected':''}">
       <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
       <td>${esc(s.tutor||'—')}</td><td>${esc(s.country||'—')}</td><td>${esc(s.batch||'—')}</td>
-      <td><span class="rate-pct ${rateCls(s.att_rate)}">${rateLabel(s.att_rate)}</span></td>
-      <td><span class="rate-pct ${rateCls(s.sub_rate)}">${rateLabel(s.sub_rate)}</span></td>
+      <td><span class="rate-pct ${rateCls(s.att_rate)}"${s.expected?` title="${s.attended} of ${s.expected} classes attended"`:''}>${rateLabel(s.att_rate)}</span></td>
+      <td><span class="rate-pct ${rateCls(s.sub_rate)}"${s.expected?` title="${s.submitted} of ${s.expected} submitted"`:''}>${rateLabel(s.sub_rate)}</span></td>
       <td><span class="risk-badge ${s.risk}"><span class="risk-dot ${s.risk}"></span>${bandLabel[s.risk]}</span></td>
     </tr>`).join('')}</tbody></table>`;
 };
@@ -6142,19 +6167,19 @@ window.renderTutorStats=function(){
   $('tutorStatsNote').textContent='· rolling 4 weeks';
   const map={};
   riskData.students.forEach(s=>{
-    const t=s.tutor||'Unassigned';if(!map[t])map[t]={total:0,attSum:0,attN:0,subSum:0,subN:0,green:0,yellow:0,red:0,nodata:0};
+    const t=s.tutor||'Unassigned';if(!map[t])map[t]={total:0,att:0,sub:0,exp:0,rated:0,green:0,yellow:0,red:0,nodata:0};
     const g=map[t];g.total++;
-    if(s.att_rate!==null&&s.att_rate!==undefined){g.attSum+=s.att_rate;g.attN++;}
-    if(s.sub_rate!==null&&s.sub_rate!==undefined){g.subSum+=s.sub_rate;g.subN++;}
+    // Pooled over the tutor's rated students: classes attended ÷ classes expected.
+    if(s.expected>0){g.att+=s.attended;g.sub+=s.submitted;g.exp+=s.expected;g.rated++;}
     if(s.risk==='green')g.green++;else if(s.risk==='yellow')g.yellow++;else if(s.risk==='red')g.red++;else g.nodata++;
   });
   const tutors=Object.keys(map).sort();
   if(!tutors.length){el.innerHTML='<div class="pay-empty">No tutor data.</div>';return;}
-  const pctBadge=(v,n)=>{if(!n)return '<span class="ts-pct ts-na">—</span>';const p=Math.round((v/n)*100);const cls=p>=60?'ts-good':p>=50?'ts-watch':'ts-bad';return `<span class="ts-pct ${cls}">${p}%</span>`;};
+  const pctBadge=(v,n,tip)=>{if(!n)return '<span class="ts-pct ts-na">—</span>';const p=Math.round((v/n)*100);const cls=p>=60?'ts-good':p>=50?'ts-watch':'ts-bad';return `<span class="ts-pct ${cls}" title="${esc(tip)}">${p}%</span>`;};
   el.innerHTML=`<table class="pay-table ts-table"><thead><tr><th>Tutor</th><th>Students</th><th>Attendance</th><th>Submissions</th><th>On track</th><th>Watch</th><th>At risk</th><th>No data</th></tr></thead><tbody>${tutors.map(t=>{
     const g=map[t];
     const noteBtn=(cat)=>{const latest=latestTutorNote(t,cat);const tip=latest?`${latest.Author||'Note'} (${noteWhen(latest)}):\n${latest.Note||''}`:`${cat} notes — none yet`;return `<button class="ts-note-btn" title="${esc(tip)}" onclick="openTutorNotes('${jsq(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;};
-    return `<tr><td><strong>${esc(t)}</strong></td><td>${g.total}</td><td><span class="ts-cell">${pctBadge(g.attSum,g.attN)}${noteBtn('Attendance')}</span></td><td><span class="ts-cell">${pctBadge(g.subSum,g.subN)}${noteBtn('Submission')}</span></td><td><span class="ts-count ts-green">${g.green}</span></td><td><span class="ts-count ts-yellow">${g.yellow}</span></td><td><span class="ts-count ts-red">${g.red}</span></td><td><span class="ts-count ts-nodata">${g.nodata}</span></td></tr>`;
+    return `<tr><td><strong>${esc(t)}</strong></td><td>${g.total}</td><td><span class="ts-cell">${pctBadge(g.att,g.exp,`${g.att} of ${g.exp} classes attended · ${g.rated} student${g.rated===1?'':'s'} rated`)}${noteBtn('Attendance')}</span></td><td><span class="ts-cell">${pctBadge(g.sub,g.exp,`${g.sub} of ${g.exp} submitted · ${g.rated} student${g.rated===1?'':'s'} rated`)}${noteBtn('Submission')}</span></td><td><span class="ts-count ts-green">${g.green}</span></td><td><span class="ts-count ts-yellow">${g.yellow}</span></td><td><span class="ts-count ts-red">${g.red}</span></td><td><span class="ts-count ts-nodata">${g.nodata}</span></td></tr>`;
   }).join('')}</tbody></table>`;
 };
 window.openTutorNotes=function(tutor,category){
