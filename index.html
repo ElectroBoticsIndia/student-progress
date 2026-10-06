@@ -753,6 +753,10 @@ label.set-check input[type="checkbox"]{width:17px;min-width:17px;height:17px;fle
 .ts-count{font-family:var(--font-mono);font-weight:700;font-size:12px;display:inline-block;min-width:22px}
 .ts-count.ts-green{color:#5a7a00}.ts-count.ts-yellow{color:#9a7200}.ts-count.ts-red{color:#c0472a}.ts-count.ts-nodata{color:var(--text-light)}
 .ts-cell{display:inline-flex;align-items:center;gap:6px}
+.ts-link{border:none;background:none;cursor:pointer;padding:2px 6px;border-radius:6px;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.ts-link:hover{background:var(--surface-alt)}
+.ts-name-link{border:none;background:none;cursor:pointer;padding:0;font:inherit;font-weight:700;color:var(--accent-dark)}
+.ts-name-link:hover{text-decoration:underline}
 .ts-note-btn{display:inline-flex;align-items:center;justify-content:center;padding:3px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
 .ts-note-btn:hover{border-color:var(--accent);color:var(--accent)}
 .avail-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
@@ -932,6 +936,15 @@ table.band input:focus{border-color:var(--accent)}
 .task-pin-row{display:flex;align-items:center;gap:8px;margin:2px 0 12px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer}
 .task-pin-row .tt-star{color:var(--amber)}
 .tp-input{min-width:200px;font-family:var(--font-mono)}
+.tpp-table{margin-bottom:10px}
+.tpp-table td{vertical-align:middle}
+.tpp-in{width:100%;min-width:120px;cursor:text}
+.tpp-del{border:1px solid var(--border);background:#fff;color:var(--text-light);border-radius:6px;padding:4px 8px;cursor:pointer}
+.tpp-del:hover{border-color:#d76241;color:#d76241}
+.tpp-add{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:7px 12px;border-radius:8px;border:1px dashed var(--accent);background:var(--accent-light);color:var(--accent-dark);cursor:pointer}
+.t-addp{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;padding:10px;border-radius:8px;background:var(--surface-alt);border:1px solid var(--border)}
+.t-addp input{flex:1;min-width:110px}
+.t-addp .modal-msg{flex-basis:100%;margin:0;padding:0}
 @media(max-width:600px){.set-savebar{padding:10px 12px;gap:8px}.set-savebar .btn-primary{width:100%}}
 /* The technical reason behind a failed sign-in. Small and muted — a parent can ignore it,
    an admin can act on it, and nobody has to open the console to see it. */
@@ -1274,6 +1287,12 @@ table.band input:focus{border-color:var(--accent)}
     </div>
 
     <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Action Item People</span></div></div>
+      <div class="aa-sub">Interns and anyone else who gets action items but doesn't teach students. They appear only in <strong>Tutor › Action Items</strong> — Assigned to, the Tutor filter, Today's list and “Updating as” — and nowhere else in the app. Removing someone keeps the items already assigned to them. The WhatsApp number is used by <strong>WhatsApp tutor</strong> on their items.</div>
+      <div style="padding:4px 20px 20px;"><div id="taskPeopleGrid"></div></div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Repair · Level Progress</span></div></div>
       <div class="aa-sub">How far each student is through their current level, used on the Payments screen to flag who is close to a fee change. It is kept up to date automatically whenever a topic is marked or a profile is opened — at no extra reading cost, because that data is already loaded at those moments. This seeds it for students nobody has opened yet. <strong>Run it once; after that it looks after itself.</strong> It reads every student's progress, so it is the one expensive button here — there is no need to run it repeatedly.</div>
       <div style="padding:4px 20px 20px;">
@@ -1431,7 +1450,7 @@ table.band input:focus{border-color:var(--accent)}
         <div class="form-row"><label>Title</label><input type="text" id="t_Title" maxlength="140" placeholder="What needs doing"></div>
         <div class="form-row"><label>Details</label><textarea id="t_Details" rows="3" placeholder="Optional — context, links, what done looks like"></textarea></div>
         <div class="task-grid">
-          <div class="form-row"><label>Assigned to</label><select id="t_Assignee"></select></div>
+          <div class="form-row"><label>Assigned to</label><select id="t_Assignee" onchange="onTaskAssignee()"></select></div>
           <div class="form-row"><label>Priority</label><select id="t_Priority"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
           <div class="form-row"><label>Tag</label>
             <div class="combo" data-field="t_Tag">
@@ -1441,6 +1460,13 @@ table.band input:focus{border-color:var(--accent)}
             </div>
           </div>
           <div class="form-row"><label>Due date</label><input type="date" id="t_Due"></div>
+        </div>
+        <div class="t-addp" id="t_AddPerson" style="display:none;">
+          <input type="text" id="t_NP_Name" class="pay-mini" maxlength="40" placeholder="Name, e.g. Priya" style="cursor:text">
+          <input type="text" id="t_NP_Label" class="pay-mini" maxlength="30" placeholder="Label, e.g. Intern (optional)" style="cursor:text">
+          <button class="btn-save" id="t_NP_Btn" onclick="saveTaskPerson()">Add</button>
+          <button class="btn-cancel" onclick="cancelTaskPerson()">Cancel</button>
+          <div class="modal-msg" id="t_NP_Msg"></div>
         </div>
         <label class="task-pin-row" id="t_PinRow" style="display:none;"><input type="checkbox" id="t_Pin"> <span class="tt-star">★</span> Track on today's list</label>
         <div class="task-update">
@@ -1820,7 +1846,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-06b';
+const BUILD='2026-10-06c';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -4873,7 +4899,7 @@ const FX_APIS=[
   {name:'er-api.com',url:'https://open.er-api.com/v6/latest/INR',
    pick:j=>(j&&j.result==='success'&&j.rates)||null, date:j=>(j&&j.time_last_update_utc)||''}
 ];
-let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,attStart:null,asgStart:null,feeBands:null,tutorPhones:null,fxSource:'',fxError:''};
+let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,attStart:null,asgStart:null,feeBands:null,tutorPhones:null,taskPeople:null,fxSource:'',fxError:''};
 let frozenRates={};        // "2026_8" -> {rates:{...}, frozenAt, frozenBy}
 let settingsLoaded=false, fxLiveTried=false;
 
@@ -4891,6 +4917,9 @@ async function loadSettings(){
       appSettings.asgStart=asStart(d.asgStart);
       appSettings.feeBands=(d.feeBands&&typeof d.feeBands==='object')?d.feeBands:null;
       appSettings.tutorPhones=(d.tutorPhones&&typeof d.tutorPhones==='object')?d.tutorPhones:null;
+      appSettings.taskPeople=Array.isArray(d.taskPeople)
+        ?d.taskPeople.filter(x=>x&&String(x.name||'').trim()).map(x=>({name:String(x.name).trim(),label:String(x.label||'').trim(),phone:String(x.phone||'').trim()}))
+        :null;
       if(d.dataStart&&/^\d{4}-\d{1,2}$/.test(d.dataStart)){
         const p=d.dataStart.split('-');appSettings.dataStart={y:+p[0],mo:+p[1]};
       }
@@ -4992,6 +5021,7 @@ window.renderSettings=async function(){
   fillStart('setAsgMonth','setAsgYear',appSettings.asgStart||ds);
   renderFeeBands();
   renderTutorPhones();
+  renderTaskPeopleSet();
   wireSettingsDirty();
   renderFrozenList();
 };
@@ -5033,6 +5063,60 @@ function renderTutorPhones(){
         onchange="onTutorPhone('${jsq(n)}',this.value)" oninput="setMarkDirty()">
     </div>`).join('');
 }
+/* ── Action item people: interns and others who get tasks but teach no students. They live
+   in settings/app (admin-write), so only the admin adds them, and they appear ONLY in
+   Action Items — never in the Students form, availability, performance, payments or
+   At-Risk, which all read tutor names from student records. */
+const tutorNamesFromStudents=()=>[...new Set(studentsData.map(s=>String(s.Tutor||'').trim()).filter(Boolean))];
+function taskPeopleProblem(list,extra){
+  const tutors=new Set(tutorNamesFromStudents().map(n=>n.toLowerCase()));
+  const seen=new Set();
+  for(const p of list.concat(extra?[extra]:[])){
+    const n=String(p.name||'').trim();if(!n)continue;
+    const k=n.toLowerCase();
+    if(k===TASK_ADMIN.toLowerCase())return `“${n}” is reserved for the admin.`;
+    if(tutors.has(k))return `“${n}” is already a tutor on student records — no need to add them.`;
+    if(seen.has(k))return `“${n}” is listed twice.`;
+    seen.add(k);
+  }
+  return '';
+}
+function renderTaskPeopleSet(){
+  const box=$('taskPeopleGrid');if(!box)return;
+  const list=appSettings.taskPeople||[];
+  box.innerHTML=(list.length?`<table class="pay-table tpp-table"><thead><tr><th>Name</th><th>Label</th><th>WhatsApp</th><th></th></tr></thead><tbody>${
+    list.map((p,i)=>`<tr>
+      <td>${p._new?`<input type="text" class="pay-mini tpp-in" placeholder="Name" value="${esc(p.name)}" oninput="onTaskPerson(${i},'name',this.value)">`:`<strong>${esc(p.name)}</strong>`}</td>
+      <td><input type="text" class="pay-mini tpp-in" placeholder="e.g. Intern" value="${esc(p.label||'')}" oninput="onTaskPerson(${i},'label',this.value)"></td>
+      <td><input type="text" class="pay-mini tpp-in" inputmode="tel" placeholder="91 98765 43210" value="${esc(p.phone||'')}" oninput="onTaskPerson(${i},'phone',this.value)"></td>
+      <td><button class="tpp-del" title="Remove ${esc(p.name||'this row')}" onclick="removeTaskPerson(${i})">✕</button></td>
+    </tr>`).join('')}</tbody></table>`:'<div class="pay-empty" style="text-align:left;padding:6px 0 10px;">Nobody added yet.</div>')
+    +'<button class="tpp-add" onclick="addTaskPersonRow()">+ Add person</button>';
+}
+window.addTaskPersonRow=function(){
+  appSettings.taskPeople=(appSettings.taskPeople||[]).concat({name:'',label:'',phone:'',_new:true});
+  renderTaskPeopleSet();setMarkDirty();
+  const ins=document.querySelectorAll('#taskPeopleGrid .tpp-in');
+  const first=[...ins].filter(e=>e.placeholder==='Name').pop();if(first)first.focus();
+};
+window.onTaskPerson=function(i,k,v){
+  const p=(appSettings.taskPeople||[])[i];if(!p)return;
+  p[k]=k==='name'?String(v).replace(/\s+/g,' ').trimStart():String(v);setMarkDirty();
+};
+window.removeTaskPerson=function(i){
+  const list=appSettings.taskPeople||[];const p=list[i];if(!p)return;
+  const n=String(p.name||'').trim();
+  const open=n?tasksData.filter(t=>t.assignee===n&&(t.status||'open')!=='done').length:0;
+  if(n&&!confirm(`Remove ${n} from the list?`+(open?`\n\n${open} unfinished item${open===1?' is':'s are'} still assigned to ${n}. They keep the name and history; ${n} just stops appearing for new items.`:'')))return;
+  list.splice(i,1);renderTaskPeopleSet();setMarkDirty();
+};
+// Phone for an assignee: tutor numbers first, then the action-item list.
+function taskPhoneOf(name){
+  const ph=(appSettings.tutorPhones||{})[name];if(ph)return ph;
+  const p=(appSettings.taskPeople||[]).find(x=>x.name===name);return p?p.phone||'':'';
+}
+const taskLabelOf=(name)=>{const p=(appSettings.taskPeople||[]).find(x=>x.name===name);return p&&p.label?p.label:'';};
+
 window.onTutorPhone=function(name,val){
   appSettings.tutorPhones=appSettings.tutorPhones||{};
   const v=String(val||'').trim();
@@ -5073,7 +5157,13 @@ window.fetchFxNow=async function(){
             :'Could not fetch live rates — manual values are in use');
 };
 window.saveSettings=async function(){
-  const msg=$('setMsg');msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+  const msg=$('setMsg');
+  const bad=taskPeopleProblem(appSettings.taskPeople||[]);
+  if(bad){msg.textContent=bad;msg.className='msg err';return;}
+  appSettings.taskPeople=(appSettings.taskPeople||[]).filter(x=>String(x.name||'').trim())
+    .map(x=>({name:String(x.name).trim(),label:String(x.label||'').trim(),phone:String(x.phone||'').trim()}));
+  renderTaskPeopleSet();
+  msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
   appSettings.dataStart={y:+$('setDataYear').value,mo:+$('setDataMonth').value};
   const grab=(mId,yId)=>{const m=$(mId),y=$(yId);return (m&&y)?{y:+y.value,mo:+m.value}:null;};
   appSettings.attStart=grab('setAttMonth','setAttYear');
@@ -5086,6 +5176,7 @@ window.saveSettings=async function(){
       attStart:asStr(appSettings.attStart),asgStart:asStr(appSettings.asgStart),
       feeBands:appSettings.feeBands||{},
       tutorPhones:appSettings.tutorPhones||{},
+      taskPeople:appSettings.taskPeople||[],
       updatedAt:serverTimestamp(),updatedBy:(currentUser&&currentUser.email)||''
     },{merge:true});
     msg.textContent='Saved.';msg.className='msg ok';setClearDirty();
@@ -5736,6 +5827,12 @@ let riskCol={country:'',tutor:'',batch:'',risk:'',att:'',sub:''};
 const ATT_RED=0.50,ATT_YELLOW=0.60,SUB_RED=0.40,SUB_YELLOW=0.50,RISK_WINDOW_WEEKS=4,EXPECTED_PER_WEEK=1;
 function riskBand(a,s){if(a===null&&s===null)return 'nodata';const aa=a===null?1:a,ss=s===null?1:s;if(aa<ATT_RED||ss<SUB_RED)return 'red';if(aa<ATT_YELLOW||ss<SUB_YELLOW)return 'yellow';return 'green';}
 window.setRiskCol=function(k,v){riskCol[k]=v;renderRisk();};
+/* From Tutor Performance. Every other At-Risk filter is cleared, so the list is exactly the
+   number that was clicked; both numbers come from the same riskData. */
+window.riskDrill=function(tutor,band){
+  riskCol={country:'',tutor:tutor||'',batch:'',risk:band||'',att:'',sub:''};
+  setTab('risk');window.scrollTo({top:0,behavior:'smooth'});
+};
 async function loadRisk(){
   const t=$('riskTable');t.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
   if(!studentsLoaded){try{const snap=await getDocs(collection(db,'students'));studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;}catch(e){}}
@@ -5805,7 +5902,12 @@ function computeRisk(){
 const rateLabel=(r)=>(r===null||r===undefined)?'No data':Math.round(r*100)+'%';
 function rateCls(r){if(r===null||r===undefined)return 'rate-na';const p=r*100;return p>=60?'rate-good':p>=50?'rate-watch':'rate-bad';}
 window.renderRisk=function(){
-  if(!riskData)return;const c=riskData.counts;
+  if(!riskData)return;
+  // Band counts follow the Country / Tutor / Batch filters, so after a drill from Tutor
+  // Performance "2 at risk" on the button matches the 2 rows below it.
+  const inScope=riskData.students.filter(s=>(!riskCol.country||(s.country||'')===riskCol.country)
+    &&(!riskCol.tutor||(s.tutor||'')===riskCol.tutor)&&(!riskCol.batch||(s.batch||'')===riskCol.batch));
+  const c={red:0,yellow:0,green:0,nodata:0};inScope.forEach(s=>{c[s.risk]=(c[s.risk]||0)+1;});
   $('riskWindow').textContent='· rolling 4 weeks · shortened for recent joiners';
   const rc=(band,label,n)=>`<button class="risk-stat-btn${riskCol.risk===band?' active':''}" onclick="setRiskCol('risk','${band}')"><span class="risk-dot ${band}"></span>${n} ${label}</button>`;
   $('riskSummary').innerHTML=`<button class="risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${c.red+c.yellow+c.green+c.nodata}</button>`+rc('red','at risk',c.red)+rc('yellow','watch',c.yellow)+rc('green','on track',c.green)+rc('nodata','no data',c.nodata);
@@ -5907,6 +6009,16 @@ function taskDueText(t,s){
 function taskPeople(){
   const n=new Set(studentsData.map(s=>String(s.Tutor||'').trim()).filter(Boolean));
   tasksData.forEach(t=>{const a=String(t.assignee||'').trim();if(a)n.add(a);});
+  (appSettings.taskPeople||[]).forEach(p=>{const a=String(p.name||'').trim();if(a&&!p._new)n.add(a);});
+  n.delete(TASK_ADMIN);
+  return [...n].sort((a,b)=>a.localeCompare(b));
+}
+// Who can be given NEW work, or pick themselves under "Updating as": tutors on student
+// records plus the Action Item People list. Names that only survive on old items (a removed
+// intern, a tutor who left) are left out here but kept by taskPeople() for the filter.
+function taskPeopleActive(){
+  const n=new Set(tutorNamesFromStudents());
+  (appSettings.taskPeople||[]).forEach(p=>{const a=String(p.name||'').trim();if(a&&!p._new)n.add(a);});
   n.delete(TASK_ADMIN);
   return [...n].sort((a,b)=>a.localeCompare(b));
 }
@@ -6226,18 +6338,63 @@ window.renderTasks=function(){
       </tr>`;}).join('')}</tbody></table>`;
 };
 
+function fillTaskAssignee(sel,current){
+  const people=taskPeopleActive();
+  // An existing item keeps its assignee as a choice even if they're no longer active.
+  if(current&&current!==TASK_ADMIN&&!people.includes(current))people.push(current);
+  const opt=(n)=>{const l=taskLabelOf(n);return `<option value="${esc(n)}">${esc(n)}${l?' ('+esc(l)+')':''}</option>`;};
+  $('t_Assignee').innerHTML=[TASK_ADMIN,...people].map(opt).join('')
+    +(isAdmin()?'<option value="__add__">+ Add person…</option>':'');
+  if(sel!==undefined)$('t_Assignee').value=sel;
+  $('t_Assignee').dataset.prev=$('t_Assignee').value;
+}
+window.onTaskAssignee=function(){
+  const sel=$('t_Assignee');
+  if(sel.value!=='__add__'){sel.dataset.prev=sel.value;return;}
+  sel.value=sel.dataset.prev||TASK_ADMIN;
+  $('t_AddPerson').style.display='';$('t_NP_Name').value='';$('t_NP_Label').value='';$('t_NP_Msg').textContent='';
+  $('t_NP_Name').focus();
+};
+window.cancelTaskPerson=function(){$('t_AddPerson').style.display='none';};
+/* Saves straight to settings/app (only the taskPeople field, merged), so the person exists
+   the moment they are assigned — not only when someone later presses Save settings. */
+window.saveTaskPerson=async function(){
+  if(!isAdmin())return;
+  const msg=$('t_NP_Msg');const name=$('t_NP_Name').value.replace(/\s+/g,' ').trim();const label=$('t_NP_Label').value.trim();
+  if(!name){msg.textContent='Type a name.';msg.className='modal-msg err';return;}
+  // Already someone the list knows (a tutor, the admin, an earlier addition)? Select them.
+  const hit=[TASK_ADMIN,...taskPeople(),...tutorNamesFromStudents()].find(n=>n.toLowerCase()===name.toLowerCase());
+  if(hit){$('t_Assignee').value=hit;$('t_Assignee').dataset.prev=hit;cancelTaskPerson();toast(`${hit} is already on the list — selected`);return;}
+  const saved=(appSettings.taskPeople||[]).filter(p=>!p._new);
+  const btn=$('t_NP_Btn');btn.disabled=true;
+  try{
+    const next=saved.concat({name,label,phone:''});
+    await setDoc(doc(db,'settings','app'),{taskPeople:next.map(({name,label,phone})=>({name,label,phone})),
+      updatedAt:serverTimestamp(),updatedBy:(currentUser&&currentUser.email)||''},{merge:true});
+    // Keep any unsaved rows being typed on the Settings screen.
+    appSettings.taskPeople=next.concat((appSettings.taskPeople||[]).filter(p=>p._new));
+    fillTaskAssignee(name,name);cancelTaskPerson();renderTaskPeopleSet();
+    renderTasks();
+    toast(`${name} added — assign away`);
+  }catch(e){console.error('saveTaskPerson',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='modal-msg err';}
+  btn.disabled=false;
+};
+
 window.openTaskForm=async function(id){
   await ensureStudents();
+  try{await loadSettings();}catch(e){}
   editingTaskId=id||null;
   const t=id?tasksData.find(x=>x._id===id):null;
   if(id&&!t)return;
-  const people=taskPeople();
+  const people=taskPeopleActive();
   $('taskModalTitle').textContent=t?'Action item':'New action item';
-  $('t_Assignee').innerHTML=[TASK_ADMIN,...people].map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  fillTaskAssignee(undefined,t&&t.assignee);
+  $('t_AddPerson').style.display='none';
   fillCombo('t_Tag',tasksData.map(x=>x.tag).concat(TASK_STARTER_TAGS));
   $('t_Title').value=t?(t.title||''):'';
   $('t_Details').value=t?(t.details||''):'';
   $('t_Assignee').value=t?(t.assignee||TASK_ADMIN):(isAdmin()?(people[0]||TASK_ADMIN):TASK_ADMIN);
+  $('t_Assignee').dataset.prev=$('t_Assignee').value;
   $('t_Priority').value=t?(t.priority||'medium'):'medium';
   setComboValue('t_Tag',t?(t.tag||''):'');
   $('t_Due').value=t?(t.due||''):'';
@@ -6252,7 +6409,7 @@ window.openTaskForm=async function(id){
   if(isAdmin()){byRow.style.display='none';}
   else{
     byRow.style.display='';
-    $('t_By').innerHTML='<option value="">— Your name —</option>'+people.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    $('t_By').innerHTML='<option value="">— Your name —</option>'+people.map(n=>{const l=taskLabelOf(n);return `<option value="${esc(n)}">${esc(n)}${l?' ('+esc(l)+')':''}</option>`;}).join('');
     const guess=t&&t.assignee&&t.assignee!==TASK_ADMIN?t.assignee:'';
     $('t_By').value=people.includes(guess)?guess:'';
   }
@@ -6381,7 +6538,6 @@ window.deleteTask=async function(){
 window.taskWhatsApp=async function(){
   const t=editingTaskId?tasksData.find(x=>x._id===editingTaskId):null;if(!t)return;
   try{await loadSettings();}catch(e){}
-  const phones=(appSettings&&appSettings.tutorPhones)||{};
   const s=taskState(t);
   const dueLine=t.due?`${taskDay(t.due)}${s.kind==='overdue'?` (overdue by ${s.days} day${s.days===1?'':'s'})`:''}`:'No due date';
   const msg=`*Action item* — ${t.title||''}\n`
@@ -6389,7 +6545,7 @@ window.taskWhatsApp=async function(){
     +(t.details?`\n${t.details}\n`:'')
     +`\nPlease update it in the ElectroBotics app when you can.\n— Team ElectroBotics`;
   closeTaskForm();
-  waTargetPhone=String(phones[t.assignee]||'').replace(/[^0-9+]/g,'');
+  waTargetPhone=String(taskPhoneOf(t.assignee)||'').replace(/[^0-9+]/g,'');
   $('waModalTitle').textContent='WhatsApp · '+t.assignee;
   $('wa_Msg').value=msg;
   showModal('waModal');
@@ -6398,7 +6554,7 @@ window.taskWhatsApp=async function(){
 async function loadTutor(){
   // Action items first, and reloaded on every visit — a few dozen small documents, and a
   // stale list would hide what someone else just changed.
-  loadTasks(true).then(()=>{renderTasks();if(activeTab==='tutor')startTaskLive();});
+  Promise.all([loadTasks(true),loadSettings().catch(()=>{})]).then(()=>{renderTasks();if(activeTab==='tutor')startTaskLive();});
   // needs risk data (for performance) + students (for availability) + notes
   if(!riskData){await loadRisk();}
   if(!tutorNotesLoaded){try{const snap=await getDocs(collection(db,'tutorNotes'));tutorNotesData=snap.docs.map(d=>d.data());tutorNotesLoaded=true;}catch(e){tutorNotesData=[];}}
@@ -6428,7 +6584,14 @@ window.renderTutorStats=function(){
   el.innerHTML=`<table class="pay-table ts-table"><thead><tr><th>Tutor</th><th>Students</th><th>Attendance</th><th>Submissions</th><th>On track</th><th>Watch</th><th>At risk</th><th>No data</th></tr></thead><tbody>${tutors.map(t=>{
     const g=map[t];
     const noteBtn=(cat)=>{const latest=latestTutorNote(t,cat);const tip=latest?`${latest.Author||'Note'} (${noteWhen(latest)}):\n${latest.Note||''}`:`${cat} notes — none yet`;return `<button class="ts-note-btn" title="${esc(tip)}" onclick="openTutorNotes('${jsq(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;};
-    return `<tr><td><strong>${esc(t)}</strong></td><td>${g.total}</td><td><span class="ts-cell">${pctBadge(g.att,g.exp,`${g.att} of ${g.exp} classes attended · ${g.rated} student${g.rated===1?'':'s'} rated`)}${noteBtn('Attendance')}</span></td><td><span class="ts-cell">${pctBadge(g.sub,g.exp,`${g.sub} of ${g.exp} submitted · ${g.rated} student${g.rated===1?'':'s'} rated`)}${noteBtn('Submission')}</span></td><td><span class="ts-count ts-green">${g.green}</span></td><td><span class="ts-count ts-yellow">${g.yellow}</span></td><td><span class="ts-count ts-red">${g.red}</span></td><td><span class="ts-count ts-nodata">${g.nodata}</span></td></tr>`;
+    // Counts open At-Risk filtered to this tutor + band. "Unassigned" has no tutor value
+    // the At-Risk filter could select, and a zero has nothing to show — both stay plain.
+    const can=t!=='Unassigned';
+    const cnt=(n,cls,band)=>(can&&n)
+      ?`<button class="ts-count ${cls} ts-link" title="Open At-Risk: ${esc(t)} · ${({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[band]}" onclick="riskDrill('${jsq(t)}','${band}')">${n}</button>`
+      :`<span class="ts-count ${cls}">${n}</span>`;
+    const nameCell=can?`<button class="ts-name-link" title="Open At-Risk for all of ${esc(t)}'s students" onclick="riskDrill('${jsq(t)}','')">${esc(t)}</button>`:`<strong>${esc(t)}</strong>`;
+    return `<tr><td>${nameCell}</td><td>${g.total}</td><td><span class="ts-cell">${pctBadge(g.att,g.exp,`${g.att} of ${g.exp} classes attended · ${g.rated} student${g.rated===1?'':'s'} rated`)}${noteBtn('Attendance')}</span></td><td><span class="ts-cell">${pctBadge(g.sub,g.exp,`${g.sub} of ${g.exp} submitted · ${g.rated} student${g.rated===1?'':'s'} rated`)}${noteBtn('Submission')}</span></td><td>${cnt(g.green,'ts-green','green')}</td><td>${cnt(g.yellow,'ts-yellow','yellow')}</td><td>${cnt(g.red,'ts-red','red')}</td><td>${cnt(g.nodata,'ts-nodata','nodata')}</td></tr>`;
   }).join('')}</tbody></table>`;
 };
 window.openTutorNotes=function(tutor,category){
