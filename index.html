@@ -1515,6 +1515,8 @@ table.band input:focus{border-color:var(--accent)}
         <div class="filter-group"><label>Country</label><select id="riskFilterCountry" onchange="setRiskCol('country',this.value)"><option value="">All</option></select></div>
         <div class="filter-group"><label>Tutor</label><select id="riskFilterTutor" onchange="setRiskCol('tutor',this.value)"><option value="">All</option></select></div>
         <div class="filter-group"><label>Batch</label><select id="riskFilterBatch" onchange="setRiskCol('batch',this.value)"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Attendance</label><select id="riskFilterAtt" onchange="setRiskCol('att',this.value)"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Submissions</label><select id="riskFilterSub" onchange="setRiskCol('sub',this.value)"><option value="">All</option></select></div>
         <button class="filter-clear" onclick="clearRiskFilters()">Clear</button>
       </div>
       <div class="pay-summary" id="riskSummary" style="padding:12px 20px 10px;"></div>
@@ -1846,7 +1848,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-12a';
+const BUILD='2026-10-12b';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -5932,29 +5934,42 @@ const rateLabel=(r)=>(r===null||r===undefined)?'No data':Math.round(r*100)+'%';
 function rateCls(r){if(r===null||r===undefined)return 'rate-na';const p=r*100;return p>=60?'rate-good':p>=50?'rate-watch':'rate-bad';}
 window.renderRisk=function(){
   if(!riskData)return;
-  // Band counts follow the Country / Tutor / Batch filters, so after a drill from Tutor
-  // Performance "2 at risk" on the button matches the 2 rows below it.
-  const inScope=riskData.students.filter(s=>(!riskCol.country||(s.country||'')===riskCol.country)
-    &&(!riskCol.tutor||(s.tutor||'')===riskCol.tutor)&&(!riskCol.batch||(s.batch||'')===riskCol.batch));
+  /* Five dropdowns — Country, Tutor, Batch, Attendance, Submissions — narrowed the same way
+     as Students/Attendance: each lists only values found among the students matching the
+     OTHER dropdowns and the chosen band, and a choice that stops fitting resets to All (the
+     pass repeats, since one reset can widen the rest). Attendance/Submissions list the exact
+     % values shown in the table, with how many students have each. */
+  const all=riskData.students;
+  const F=[{k:'country',id:'riskFilterCountry',get:s=>s.country||''},
+           {k:'tutor',id:'riskFilterTutor',get:s=>s.tutor||''},
+           {k:'batch',id:'riskFilterBatch',get:s=>s.batch||''},
+           {k:'att',id:'riskFilterAtt',get:s=>rateLabel(s.att_rate),pct:true},
+           {k:'sub',id:'riskFilterSub',get:s=>rateLabel(s.sub_rate),pct:true}];
+  const bandOk=(s)=>!riskCol.risk||s.risk===riskCol.risk;
+  const fits=(s,skip)=>F.every(o=>o===skip||!riskCol[o.k]||o.get(s)===riskCol[o.k]);
+  let opts={};
+  for(let pass=0;pass<=F.length;pass++){
+    opts={};
+    F.forEach(f=>{const cnt={};all.forEach(s=>{if(bandOk(s)&&fits(s,f)){const v=f.get(s);if(v)cnt[v]=(cnt[v]||0)+1;}});opts[f.k]=cnt;});
+    let changed=false;
+    F.forEach(f=>{if(riskCol[f.k]&&!(riskCol[f.k] in opts[f.k])){riskCol[f.k]='';changed=true;}});
+    if(!changed)break;
+  }
+  const pctOrder=(v)=>v==='No data'?1e9:parseFloat(v);
+  F.forEach(f=>{
+    const sel=$(f.id);if(!sel)return;
+    const vals=Object.keys(opts[f.k]).sort(f.pct?((x,y)=>pctOrder(x)-pctOrder(y)):undefined);
+    sel.innerHTML='<option value="">All</option>'+vals.map(v=>`<option value="${esc(v)}">${esc(v)}${f.pct?` (${opts[f.k][v]})`:''}</option>`).join('');
+    sel.value=riskCol[f.k]||'';
+  });
+  // Band buttons count within every dropdown, so each number matches the rows it opens.
+  const inScope=all.filter(s=>fits(s,null));
   const c={red:0,yellow:0,green:0,nodata:0};inScope.forEach(s=>{c[s.risk]=(c[s.risk]||0)+1;});
   $('riskWindow').textContent='· rolling 4 weeks · shortened for recent joiners';
   const rc=(band,label,n)=>`<button class="risk-stat-btn${riskCol.risk===band?' active':''}" onclick="setRiskCol('risk','${band}')"><span class="risk-dot ${band}"></span>${n} ${label}</button>`;
   $('riskSummary').innerHTML=`<button class="risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${c.red+c.yellow+c.green+c.nodata}</button>`+rc('red','at risk',c.red)+rc('yellow','watch',c.yellow)+rc('green','on track',c.green)+rc('nodata','no data',c.nodata);
-  const all=riskData.students;
-  let rows=all.slice();
-  if(riskCol.country)rows=rows.filter(s=>(s.country||'')===riskCol.country);
-  if(riskCol.tutor)rows=rows.filter(s=>(s.tutor||'')===riskCol.tutor);
-  if(riskCol.batch)rows=rows.filter(s=>(s.batch||'')===riskCol.batch);
-  if(riskCol.risk)rows=rows.filter(s=>s.risk===riskCol.risk);
-  if(riskCol.att)rows=rows.filter(s=>rateLabel(s.att_rate)===riskCol.att);
-  if(riskCol.sub)rows=rows.filter(s=>rateLabel(s.sub_rate)===riskCol.sub);
+  const rows=inScope.filter(bandOk);
   window.riskVisibleRows=rows;
-  const matchR=(s,skip)=>{if(skip!=='country'&&riskCol.country&&(s.country||'')!==riskCol.country)return false;if(skip!=='tutor'&&riskCol.tutor&&(s.tutor||'')!==riskCol.tutor)return false;if(skip!=='batch'&&riskCol.batch&&(s.batch||'')!==riskCol.batch)return false;if(skip!=='risk'&&riskCol.risk&&s.risk!==riskCol.risk)return false;return true;};
-  const uniqR=(skip,key)=>[...new Set(all.filter(s=>matchR(s,skip)).map(s=>s[key]).filter(Boolean))].sort();
-  const fillSel=(id,vals,cur)=>{const sel=$(id);if(!sel)return;let html='<option value="">All</option>'+vals.map(v=>`<option value="${esc(v)}"${cur===v?' selected':''}>${esc(v)}</option>`).join('');if(cur&&!vals.includes(cur))html+=`<option value="${esc(cur)}" selected>${esc(cur)}</option>`;if(sel.innerHTML!==html)sel.innerHTML=html;sel.value=cur;};
-  fillSel('riskFilterCountry',uniqR('country','country'),riskCol.country);
-  fillSel('riskFilterTutor',uniqR('tutor','tutor'),riskCol.tutor);
-  fillSel('riskFilterBatch',uniqR('batch','batch'),riskCol.batch);
   const bandLabel={red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'};
   const t=$('riskTable');
   if(!rows.length){t.innerHTML='<div class="pay-empty">No students match. (If everything is empty, import Attendance & Assignments first.)</div>';return;}
