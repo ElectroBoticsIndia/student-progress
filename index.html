@@ -705,6 +705,65 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .aa-pct.green{background:var(--green-bg);color:#5a7a00}
 .aa-pct.amber{background:var(--amber-bg);color:#8a6a00}
 .aa-pct.red{background:var(--red-light);color:#c0472a}
+/* ── Attendance / Submission trends (month on month) ── */
+.tr-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 20px 0;font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
+.tr-crumbs:empty{display:none}
+.tr-crumb{border:none;background:none;padding:2px 4px;font:inherit;font-weight:700;color:var(--accent-dark);cursor:pointer;border-radius:4px}
+.tr-crumb:hover{background:var(--surface-alt)}
+.tr-crumb.cur{color:var(--text);cursor:default;background:none}
+.tr-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;padding:14px 20px 4px}
+.tr-tile{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface)}
+.tr-tile-l{font-family:var(--font-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim)}
+.tr-tile-v{font-size:26px;font-weight:700;color:var(--text);margin:4px 0 2px;line-height:1.1}
+.tr-tile-s{font-family:var(--font-mono);font-size:10.5px;color:var(--text-light);line-height:1.5}
+.tr-up{color:#5a7a00;font-weight:700}.tr-down{color:#c0472a;font-weight:700}.tr-flat{color:var(--text-light)}
+.tr-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px 4px;flex-wrap:wrap}
+.tr-h{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px}
+.tr-compare{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);cursor:pointer}
+.tr-compare.off{opacity:.45;cursor:default}
+.tr-chart-wrap{position:relative;height:260px;padding:0 20px 6px}
+.tr-table-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 20px 10px}
+.tr-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.tr-seg button{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 12px;border:none;border-right:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer}
+.tr-seg button:last-child{border-right:none}
+.tr-seg button.on{background:var(--accent);color:#fff}
+.tr-hint{font-family:var(--font-mono);font-size:10.5px;color:var(--text-light)}
+.tr-table th,.tr-table td{text-align:center;white-space:nowrap}
+.tr-table th:first-child,.tr-table td:first-child{text-align:left}
+.tr-table .tr-sticky{position:sticky;left:0;background:var(--surface);z-index:1;min-width:150px;box-shadow:1px 0 0 var(--border)}
+.tr-table thead .tr-sticky{background:var(--surface);z-index:3}   /* above the other sticky headers (z 2) */
+/* The pinned column starts at the scroller's own left edge (no left padding there), so
+   cells scrolled under it are hidden rather than peeking out through the padding. */
+.tr-scroll{padding-left:0!important}
+.tr-table .tr-sticky{padding-left:20px}
+.tr-mh{cursor:pointer;user-select:none}
+.tr-mh:hover{color:var(--accent-dark)}
+.tr-mh.on{background:var(--accent-light);color:var(--accent-dark)}
+.tr-table td.on{background:#f3fafb}
+.tr-name{border:none;background:none;padding:0;font:inherit;font-weight:700;color:var(--accent-dark);cursor:pointer;text-align:left}
+.tr-name:hover{text-decoration:underline}
+.tr-name.plain{color:var(--text);cursor:default;text-decoration:none}
+.tr-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:2px}
+.tr-frac{font-family:var(--font-mono);font-size:9.5px;color:var(--text-light);margin-top:2px}
+.tr-na{font-family:var(--font-mono);font-size:11px;color:#c3d3d5}
+.tr-tot td{font-weight:700;background:var(--surface-alt)}
+.tr-tot .tr-sticky{background:var(--surface-alt)}
+.tr-panels{display:grid;grid-template-columns:3fr 2fr;gap:16px;padding:4px 20px 20px}
+@media(max-width:820px){.tr-panels{grid-template-columns:1fr}}
+.tr-panel{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface)}
+.tr-panel-h{font-weight:700;font-size:13.5px;color:var(--text);margin-bottom:2px}
+.tr-panel-s{font-family:var(--font-mono);font-size:10.5px;color:var(--text-light);margin-bottom:8px;line-height:1.5}
+.tr-li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--border)}
+.tr-li:last-child{border-bottom:none}
+.tr-li-n{font-weight:600;font-size:13px}
+.tr-li-n button{border:none;background:none;padding:0;font:inherit;color:var(--text);cursor:pointer;text-align:left}
+.tr-li-n button:hover{color:var(--accent-dark);text-decoration:underline}
+.tr-li-m{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.tr-li-v{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text);text-align:right}
+.tr-bar{grid-column:1/-1;height:4px;border-radius:3px;background:var(--surface-alt);overflow:hidden}
+.tr-bar span{display:block;height:100%;background:#c0472a;border-radius:3px}
+.tr-more{margin-top:8px;font-family:var(--font-mono);font-size:11px;font-weight:700;border:none;background:none;color:var(--accent-dark);cursor:pointer;padding:0}
+.tr-none{font-size:12.5px;color:var(--text-light);padding:6px 0}
 .aa-pct.none{background:var(--surface-alt);color:var(--text-light)}
 /* Health band chips on the trend views — same vocabulary as At-Risk. */
 .aa-hchip .aa-hdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
@@ -1848,7 +1907,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-12b';
+const BUILD='2026-10-12c';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -6900,17 +6959,17 @@ const AA={
     markHeading:'Mark attendance',trendHeading:'Attendance trends',
     markSub:"Every active student is listed. Narrow with the filters or the search box, then set status only for the students you need \u2014 unmarked students aren't saved.",
     saveBtn:'Save attendance',daysLabel:'Days attended',datesLabel:'Attended dates',
-    unit:'classes',verb:'attended',shareOne:'Attendance update',shareAll:'Attendance summary'},
+    unit:'classes',verb:'attended',trWord:'attendance',shareOne:'Attendance update',shareAll:'Attendance summary'},
   assignments:{p:'asg',col:'assignments',
     pos:'submitted',neg:'not submitted',posLbl:'Submitted',negLbl:'Not submitted',posShort:'Sub.',negShort:'Not sub.',
     markHeading:'Demo submissions',trendHeading:'Submission trends',
     markSub:"Every active student is listed. Narrow with the filters or the search box, then set submission status only for the students you need \u2014 unmarked students aren't saved.",
     saveBtn:'Save submissions',daysLabel:'Days submitted',datesLabel:'Submitted dates',
-    unit:'submissions',verb:'submitted',shareOne:'Demo submission update',shareAll:'Demo submission summary'}
+    unit:'submissions',verb:'submitted',trWord:'submissions',shareOne:'Demo submission update',shareAll:'Demo submission summary'}
 };
 const aaState={
-  attendance:{built:false,view:'mark',roster:[],mark:{},summary:[],prefillKey:null,prefill:{},health:''},
-  assignments:{built:false,view:'mark',roster:[],mark:{},summary:[],prefillKey:null,prefill:{},health:''}
+  attendance:{built:false,view:'mark',roster:[],mark:{},prefillKey:null,prefill:{},groupBy:'tutor',compare:false,focus:'',showAll:false,chart:null,rows:[],months:[],pool:[]},
+  assignments:{built:false,view:'mark',roster:[],mark:{},prefillKey:null,prefill:{},groupBy:'tutor',compare:false,focus:'',showAll:false,chart:null,rows:[],months:[],pool:[]}
 };
 const AA_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const AA_MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -6980,21 +7039,34 @@ function buildAaScreen(mod){
           <span class="table-title">${esc(c.trendHeading)} <span id="${p}_tMeta" class="trend-summary"></span></span>
           <input type="text" id="${p}_tSearch" class="stu-search" placeholder="Search name, ID, tutor, batch…" oninput="aaRenderTrend('${mod}')">
         </div>
-        <div class="stu-actions"><button class="aa-head-btn" onclick="aaShareAll('${mod}')">${aaWaIcon()} Share list</button></div>
+        <div class="stu-actions">
+          <button class="aa-head-btn" onclick="aaShareAll('${mod}')">${aaWaIcon()} Share</button>
+          <button class="btn-download" onclick="trDownload('${mod}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Excel</button>
+        </div>
       </div>
-      <div class="aa-sub">Defaults to this month. Widen the filters (e.g. Month = All) for a longer trend. Expected is each student\u2019s own class days, from their join date.</div>
       <div class="stu-filter-bar">
         <div class="filter-group"><label>Country</label><select id="${p}_tCountry" onchange="aaTrendFilter('${mod}')"><option value="">All countries</option></select></div>
-        <div class="filter-group"><label>Batch</label><select id="${p}_tBatch" onchange="aaTrendFilter('${mod}')"><option value="">All batches</option></select></div>
         <div class="filter-group"><label>Tutor</label><select id="${p}_tTutor" onchange="aaTrendFilter('${mod}')"><option value="">All tutors</option></select></div>
-        <div class="filter-group"><label>Student</label><select id="${p}_tStudent" onchange="aaRenderTrend('${mod}')"><option value="">All students</option></select></div>
-        <div class="filter-group"><label>Year</label><select id="${p}_tYear" onchange="aaPeriodChange('${mod}')"><option value="">All years</option>${years}</select></div>
-        <div class="filter-group"><label>Month</label><select id="${p}_tMonth" onchange="aaPeriodChange('${mod}')">${months}</select></div>
+        <div class="filter-group"><label>Batch</label><select id="${p}_tBatch" onchange="aaTrendFilter('${mod}')"><option value="">All batches</option></select></div>
+        <div class="filter-group"><label>Student</label><select id="${p}_tStudent" onchange="aaTrendFilter('${mod}')"><option value="">All students</option></select></div>
+        <div class="filter-group"><label>Period</label><select id="${p}_tPeriod" onchange="aaPeriodChange('${mod}')">
+          <option value="year" selected>This year</option><option value="3">Last 3 months</option><option value="6">Last 6 months</option><option value="12">Last 12 months</option></select></div>
         <button class="filter-clear" onclick="aaClearTrendFilters('${mod}')">Clear</button>
       </div>
-      <div class="risk-criteria">Health: 🟢 75%+ · 🟡 50–74% · 🔴 below 50%. A student with no sessions expected yet is not rated.</div>
-      <div class="pay-summary" id="${p}_tChips" style="padding:4px 20px 12px;"></div>
-      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="${p}_trendTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="tr-crumbs" id="${p}_tCrumbs"></div>
+      <div class="tr-tiles" id="${p}_tTiles"></div>
+      <div class="tr-chart-head">
+        <span class="tr-h">Month on month</span>
+        <label class="tr-compare"><input type="checkbox" id="${p}_tCompare" onchange="trSetCompare('${mod}',this.checked)"> <span id="${p}_tCompareLbl">Compare</span></label>
+      </div>
+      <div class="tr-chart-wrap"><canvas id="${p}_tChart"></canvas></div>
+      <div class="risk-criteria">${c.trWord==='submissions'?'Submitted':'Attended'} ÷ expected, per month: each student's own class day from their join date, at most 4 a month, the current month up to today. Each student counts at most 100% a month, so a makeup class cannot hide a missed one. 🟢 75%+ · 🟡 50–74% · 🔴 below 50%. Click a month heading (or a point on the chart) to see who missed that month.</div>
+      <div class="tr-table-head">
+        <div class="tr-seg" id="${p}_tGroup"></div>
+        <span class="tr-hint" id="${p}_tHint"></span>
+      </div>
+      <div class="avail-scroll tr-scroll" style="padding:0 20px 16px;"><div id="${p}_trendTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="tr-panels" id="${p}_tPanels"></div>
     </div>
   </div>
 `;
@@ -7058,14 +7130,8 @@ function aaJoinedBy(s,isoDate){
   const j=aaNormDate(s['Join Date'],'auto');
   return !j||j<=isoDate;
 }
-// Last day of the selected Year/Month span — the cut-off the trend list joins by.
-function aaSpanEnd(mod){
-  const yr=aEl(mod,'tYear').value,mo=aEl(mod,'tMonth').value;
-  if(!yr)return '';                                   // all years → no cut-off
-  if(!mo)return yr+'-12-31';
-  const last=new Date(+yr,+mo,0).getDate();
-  return `${yr}-${String(mo).padStart(2,'0')}-${String(last).padStart(2,'0')}`;
-}
+// The trend period always runs to the current month, so "joined by the end of it" is today.
+function aaSpanEnd(mod){return aaToday();}
 // Smart narrowing (shared with Students): see narrowFilterSelects().
 function aaNarrow(mod,prefix){
   const id=(k)=>AA[mod].p+'_'+prefix+k;
@@ -7317,23 +7383,150 @@ function aaPatchCache(mod,date,records,removedIds){
   riskData=null;   // force At-Risk/Tutor to recompute from the patched cache
 }
 
-/* ── TRENDS view ── */
-window.aaTrendFilter=function(mod){aaNarrow(mod,'t');aaFillTrendStudents(mod);aaRenderTrend(mod);};
-// Year/Month move the join-date cut-off, so the student dropdown is rebuilt too.
-window.aaPeriodChange=function(mod){aaFillTrendStudents(mod);aaRenderTrend(mod);};
-// Tapping the active band clears it, like every other chip row in the app.
-window.aaSetHealth=function(mod,band){
+/* ── TRENDS view — month on month (rebuilt 12 Oct 2026) ──
+   Replaces the old single-period list. One engine for Attendance and Submissions.
+
+   % = attended (or submitted) ÷ expected, per student per month, with expected from
+   glExpected(): the student's own class day, from their join date, at most 4 a month,
+   the current month only up to today — the same rule as the student detail page and
+   At-Risk. Each student's month is capped at 100% before anything is added up, so a
+   makeup class in one place cannot hide a missed one in another. Group figures pool
+   attended and expected over everyone in the group.
+
+   The period never starts before the module's own start month in Settings (assignments
+   began Sep 2026), so months nobody recorded are not read as months everybody missed.
+
+   Filters and drill-down are the same thing: clicking a tutor row sets the Tutor filter
+   and groups by batch; a batch row sets the Batch filter and groups by student; a student
+   row opens the profile. The breadcrumb walks back up. */
+const TR_COLORS=['#008fa0','#c77d00','#7048a8','#2e8b57','#3a6ea5','#b03060']; // CVD-checked order
+const TR_MAX_LINES=TR_COLORS.length;
+const TR_DROP=25;            // a fall of this many points month-on-month is "dropping"
+const TR_TOP=10;             // rows shown in the missed list before "Show all"
+const trKey=(y,m)=>y+'-'+String(m).padStart(2,'0');
+const trPct=(a,e)=>e?Math.round(a/e*100):null;
+const trTierOf=(p)=>p===null?'none':aaTier(p);
+// "74 of 96 classes attended" / "32 of 36 submitted"; "1 class missed" / "4 not submitted".
+const trOf=(mod,a,e)=>AA[mod].trWord==='submissions'?`${a} of ${e} submitted`:`${a} of ${e} class${e===1?'':'es'} attended`;
+const trMissN=(mod,n)=>AA[mod].trWord==='submissions'?`${n} not submitted`:`${n} class${n===1?'':'es'} missed`;
+
+function trMonths(mod){
+  const per=(aEl(mod,'tPeriod')||{}).value||'year';
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth()+1;
+  let out=[];
+  if(per==='year'){for(let i=1;i<=m;i++)out.push({y,m:i});}
+  else{const n=parseInt(per,10)||6;for(let i=n-1;i>=0;i--){const d=new Date(y,m-1-i,1);out.push({y:d.getFullYear(),m:d.getMonth()+1});}}
+  const fs=moduleStart(AA[mod].p);
+  out=out.filter(x=>x.y>fs.y||(x.y===fs.y&&x.m>=fs.mo));
+  const multiYear=new Set(out.map(x=>x.y)).size>1;
+  return out.map(x=>({...x,k:trKey(x.y,x.m),
+    lbl:AA_MONTHS[x.m-1]+(multiYear?' ’'+String(x.y).slice(2):''),
+    long:AA_MONTHS_FULL[x.m-1]+' '+x.y}));
+}
+function trPeriodLabel(mod,months){
+  months=months||trMonths(mod);
+  if(!months.length)return 'no months yet';
+  const a=months[0],b=months[months.length-1];
+  if(a.k===b.k)return a.long;
+  return (a.y===b.y)?`${AA_MONTHS[a.m-1]}–${AA_MONTHS[b.m-1]} ${b.y}`:`${AA_MONTHS[a.m-1]} ${a.y} – ${AA_MONTHS[b.m-1]} ${b.y}`;
+}
+// Positive records only, bucketed by student and month.
+function trIndex(mod){
+  const c=AA[mod],recs=mod==='attendance'?attendanceData:assignmentsData,idx={};
+  recs.forEach(r=>{
+    if(String(r.Status||'').toLowerCase()!==c.pos)return;
+    const d=aaNormDate(r.Date,'auto');if(!d)return;
+    const id=String(r.StudentID||'').trim();if(!id)return;
+    let n=parseFloat(r.Count);if(isNaN(n)||n<=0)n=1;
+    const by=(idx[id]=idx[id]||{});const o=(by[d.slice(0,7)]=by[d.slice(0,7)]||{n:0,dates:[]});
+    o.n+=n;o.dates.push({date:d,count:n});
+  });
+  return idx;
+}
+function trStudent(s,months,idx){
+  const id=String(s.ID),per={};let A=0,E=0;
+  months.forEach(({y,m,k})=>{
+    const e=glExpected(y,m,s);const rec=(idx[id]||{})[k];
+    const raw=rec?rec.n:0,a=Math.min(raw,e);
+    per[k]={a,e,raw,dates:rec?rec.dates.slice().sort((x,z)=>x.date.localeCompare(z.date)):[]};A+=a;E+=e;
+  });
+  return {s,id,per,A,E};
+}
+function trTrend(per,months){
+  const ks=months.map(x=>x.k).filter(k=>per[k]&&per[k].e>0);
+  if(ks.length<2)return null;
+  const a=per[ks[ks.length-2]],b=per[ks[ks.length-1]];
+  return trPct(b.a,b.e)-trPct(a.a,a.e);
+}
+const trArrow=(d)=>d===null?'<span class="tr-flat">·</span>'
+  :(d>=5?`<span class="tr-up" title="Up ${d} pts on the month before">▲ ${d}</span>`
+  :(d<=-5?`<span class="tr-down" title="Down ${-d} pts on the month before">▼ ${-d}</span>`:`<span class="tr-flat" title="Within 5 pts of the month before">● ${d>0?'+':''}${d}</span>`));
+
+// Students the filters leave (search included), each with their month-by-month figures.
+function trPool(mod,months){
+  const cv=aEl(mod,'tCountry').value,bv=aEl(mod,'tBatch').value,tv=aEl(mod,'tTutor').value,sv=aEl(mod,'tStudent').value;
+  const q=aaQuery(mod,'tSearch'),idx=trIndex(mod);
+  return aaActive().filter(s=>{
+    if(cv&&(s.Country||'')!==cv)return false;
+    if(bv&&(s.Batch||'')!==bv)return false;
+    if(tv&&(s.Tutor||'')!==tv)return false;
+    if(sv&&String(s.ID)!==sv)return false;
+    return aaSearchHit(s,q);
+  }).map(s=>trStudent(s,months,idx)).filter(r=>r.E>0||Object.values(r.per).some(p=>p.raw>0));
+}
+function trGroups(mod,pool,months,by){
+  if(by==='student')return pool.map(r=>({key:r.id,label:r.s.Name||r.id,
+    sub:[r.id,r.s.Tutor,r.s.Batch].filter(Boolean).join(' · '),per:r.per,A:r.A,E:r.E,n:1,stu:r}));
+  const g={};
+  pool.forEach(r=>{
+    const raw=by==='tutor'?(r.s.Tutor||''):(r.s.Batch||'');
+    const o=(g[raw]=g[raw]||{key:raw,label:raw||(by==='tutor'?'(No tutor)':'(No batch)'),per:{},A:0,E:0,n:0,tutors:new Set()});
+    o.n++;o.A+=r.A;o.E+=r.E;if(r.s.Tutor)o.tutors.add(r.s.Tutor);
+    months.forEach(({k})=>{const p=o.per[k]=o.per[k]||{a:0,e:0};p.a+=r.per[k].a;p.e+=r.per[k].e;});
+  });
+  return Object.values(g).map(o=>({...o,sub:by==='batch'
+    ?`${[...o.tutors].join(', ')||'No tutor'} · ${o.n} student${o.n===1?'':'s'}`
+    :`${o.n} student${o.n===1?'':'s'}`}));
+}
+const trSortRows=(rows)=>rows.sort((x,y)=>{const a=trPct(x.A,x.E),b=trPct(y.A,y.E);
+  if(a===null&&b!==null)return 1;if(b===null&&a!==null)return -1;
+  return (a-b)||String(x.label).localeCompare(String(y.label));});
+
+window.aaTrendFilter=function(mod){
   const st=aaState[mod];
-  st.health=(st.health===band)?'':band;
+  aaNarrow(mod,'t');aaFillTrendStudents(mod);
+  // A narrower filter moves the table one level down, as a drill would.
+  if(aEl(mod,'tStudent').value||aEl(mod,'tBatch').value)st.groupBy='student';
+  else if(aEl(mod,'tTutor').value&&st.groupBy==='tutor')st.groupBy='batch';
   aaRenderTrend(mod);
 };
+window.aaPeriodChange=function(mod){aaState[mod].focus='';aaFillTrendStudents(mod);aaRenderTrend(mod);};
+window.trSetGroup=function(mod,g){aaState[mod].groupBy=g;aaRenderTrend(mod);};
+window.trSetCompare=function(mod,on){aaState[mod].compare=!!on;aaRenderTrend(mod);};
+window.trFocus=function(mod,k){const st=aaState[mod];st.focus=(st.focus===k)?'':k;st.showAll=false;aaRenderTrend(mod);};
+window.trToggleAll=function(mod){aaState[mod].showAll=!aaState[mod].showAll;aaRenderTrend(mod);};
+window.trDrill=function(mod,by,key){
+  const st=aaState[mod];
+  if(by==='student'){openProfile(key);return;}
+  if(!key)return;
+  const sel=aEl(mod,by==='tutor'?'tTutor':'tBatch');
+  sel.value=key;st.groupBy=by==='tutor'?'batch':'student';st.focus='';
+  aaNarrow(mod,'t');aaFillTrendStudents(mod);aaRenderTrend(mod);
+  const card=aEl(mod,'trendView');if(card)card.scrollIntoView({behavior:'smooth',block:'start'});
+};
+// Breadcrumb: 'all' clears tutor/batch/student; 'tutor' keeps the tutor; 'batch' keeps the batch.
+window.trCrumb=function(mod,level){
+  const st=aaState[mod];
+  if(level==='all'){aEl(mod,'tTutor').value='';aEl(mod,'tBatch').value='';aEl(mod,'tStudent').value='';st.groupBy='tutor';}
+  if(level==='tutor'){aEl(mod,'tBatch').value='';aEl(mod,'tStudent').value='';st.groupBy='batch';}
+  if(level==='batch'){aEl(mod,'tStudent').value='';st.groupBy='student';}
+  st.focus='';aaNarrow(mod,'t');aaFillTrendStudents(mod);aaRenderTrend(mod);
+};
 window.aaClearTrendFilters=function(mod){
-  const p=AA[mod].p;
+  const p=AA[mod].p,st=aaState[mod];
   ['tCountry','tBatch','tTutor','tStudent','tSearch'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
-  aaState[mod].health='';                                 // Clear means clear, chips included
-  const now=new Date();                                   // back to this month, this year
-  const y=$(p+'_tYear');if(y)y.value=String(now.getFullYear());
-  const m=$(p+'_tMonth');if(m)m.value=String(now.getMonth()+1);
+  const per=$(p+'_tPeriod');if(per)per.value='year';
+  st.groupBy='tutor';st.focus='';st.compare=false;st.showAll=false;
   aaNarrow(mod,'t');aaFillTrendStudents(mod);aaRenderTrend(mod);
 };
 function aaFillTrendStudents(mod){
@@ -7346,13 +7539,13 @@ function aaFillTrendStudents(mod){
     if(tv&&(s.Tutor||'')!==tv)return false;
     if(!aaJoinedBy(s,end))return false;
     return true;
-  }).sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
+  }).sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||'')));
   sel.innerHTML='<option value="">All students</option>'+list.map(s=>`<option value="${esc(s.ID)}">${esc(s.Name)} (${esc(s.ID)})</option>`).join('');
   sel.value=list.some(s=>String(s.ID)===cur)?cur:'';
 }
 async function aaLoadTrend(mod){
-  const c=AA[mod];
   aEl(mod,'trendTable').innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
+  try{await loadSettings();}catch(e){}          // the module's start month lives in Settings
   if(mod==='attendance'&&!attendanceLoaded){
     try{const snap=await getDocs(collection(db,'attendance'));attendanceData=snap.docs.map(d=>d.data());attendanceLoaded=true;}
     catch(e){console.error('aa load attendance',e);attendanceData=[];}
@@ -7365,123 +7558,219 @@ async function aaLoadTrend(mod){
 }
 const aaTier=(p)=>p>=75?'green':(p>=50?'amber':'red');
 const aaEmoji=(p)=>{const t=aaTier(p);return t==='green'?'🟢':(t==='amber'?'🟡':'🔴');};
-/* Expected sessions for ONE student across the selected span. Summing the per-month
-   figure — which glExpected already clips to their join date, to the data-start month
-   and to today — replaces a flat 4-per-month. That flat number both punished anyone who
-   joined mid-month and made a whole-year view expect 48 sessions in September. */
-function aaExpectedFor(mod,s){
-  const yr=aEl(mod,'tYear').value,mo=aEl(mod,'tMonth').value;
-  const ds=(typeof appSettings!=='undefined'&&appSettings&&appSettings.dataStart)?appSettings.dataStart:DATA_START;
-  const thisY=new Date().getFullYear();
-  const years=[];
-  if(yr)years.push(parseInt(yr,10));
-  else for(let y=ds.y;y<=thisY;y++)years.push(y);
-  const first=mo?parseInt(mo,10):1,last=mo?parseInt(mo,10):12;
-  let total=0;
-  years.forEach(y=>{
-    for(let m=first;m<=last;m++){
-      if(y<ds.y||(y===ds.y&&m<ds.mo))continue;   // before we have any data
-      total+=glExpected(y,m,s);
-    }
-  });
-  return total;
-}
-function aaPeriodLabel(mod){
-  const m=aEl(mod,'tMonth').value,y=aEl(mod,'tYear').value;
-  const mName=m?AA_MONTHS_FULL[parseInt(m,10)-1]:'';
-  if(mName&&y)return `${mName} ${y}`;
-  if(!mName&&y)return `${y} (all months)`;
-  if(mName&&!y)return `${mName} (all years)`;
-  return 'All time';
-}
+
 window.aaRenderTrend=function(mod){
-  const c=AA[mod],st=aaState[mod],card=aEl(mod,'trendTable');
-  const cv=aEl(mod,'tCountry').value,bv=aEl(mod,'tBatch').value,tv=aEl(mod,'tTutor').value;
-  const sv=aEl(mod,'tStudent').value,yr=aEl(mod,'tYear').value,mo=aEl(mod,'tMonth').value;
-  const end=aaSpanEnd(mod);
-  let list=aaActive().filter(s=>{
-    if(cv&&(s.Country||'')!==cv)return false;
-    if(bv&&(s.Batch||'')!==bv)return false;
-    if(tv&&(s.Tutor||'')!==tv)return false;
-    if(sv&&String(s.ID)!==sv)return false;
-    if(!aaJoinedBy(s,end))return false;   // hadn't joined by the end of this period
-    if(!aaSearchHit(s,aaQuery(mod,'tSearch')))return false;
-    return true;
-  }).sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
-  const records=(mod==='attendance'?attendanceData:assignmentsData);
-  // Only the positive status counts, inside the selected year/month.
-  const byStudent={};
-  records.forEach(r=>{
-    if(String(r.Status||'').toLowerCase()!==c.pos)return;
-    const d=String(r.Date||'').trim();if(d.length<7)return;
-    const y=d.slice(0,4),m=String(parseInt(d.slice(5,7),10));
-    if(yr&&y!==yr)return;
-    if(mo&&m!==mo)return;
-    const id=String(r.StudentID||'').trim();if(!id)return;
-    let n=parseFloat(r.Count);if(isNaN(n)||n<=0)n=1;
-    (byStudent[id]=byStudent[id]||[]).push({date:d,count:n});
-  });
-  const rows=list.map(s=>{
-    const id=String(s.ID);
-    const hits=(byStudent[id]||[]).sort((a,b)=>a.date.localeCompare(b.date));
-    const days=hits.reduce((t,h)=>t+h.count,0);
-    const exp=aaExpectedFor(mod,s);          // this student's own expectation
-    const pct=exp?Math.round(days/exp*100):0;
-    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',days,exp,dates:hits,pct,tier:exp?aaTier(pct):'none'};
-  });
-  /* Health chips are counted from every student the other filters left, then the
-     table shows only the chosen band. st.summary stays the VISIBLE list, because
-     "Share list" and the per-row share index into it — sharing what is on screen
-     is the point of picking a band. */
-  const counts={green:0,amber:0,red:0,none:0};
-  rows.forEach(r=>{if(counts[r.tier]!==undefined)counts[r.tier]++;});
-  const band=st.health||'';
-  st.summary=band?rows.filter(r=>r.tier===band):rows;
-  const chip=(k,label)=>counts[k]?`<button class="pay-chip aa-hchip aa-h-${k} ${band===k?'active':''}" `
-    +`onclick="aaSetHealth('${mod}','${k}')"><span class="aa-hdot ${k}"></span>${counts[k]} ${label}</button>`:'';
-  const chipsEl=aEl(mod,'tChips');
-  if(chipsEl)chipsEl.innerHTML=
-    `<button class="pay-chip pay-chip-all ${band===''?'active':''}" onclick="aaSetHealth('${mod}','')">All ${rows.length}</button>`
-    +chip('red','At risk')+chip('amber','Watch')+chip('green','On track')+chip('none','Not rated');
-  aEl(mod,'tMeta').textContent=`· ${st.summary.length}${band?' of '+rows.length:''} student${rows.length===1?'':'s'} · ${aaPeriodLabel(mod)} · expected is per student, from their join date`;
-  if(!st.summary.length){card.innerHTML=`<div class="pay-empty">${band?'No student is in that band for this selection.':'No students match this selection.'}</div>`;return;}
-  const fmtDates=(arr)=>arr.length?arr.map(d=>{
-    return `<span class="aa-chip">${esc(chipDate(d.date))}${d.count>1?' ×'+d.count:''}</span>`;
-  }).join(' '):'<span class="aa-nodates">—</span>';
-  card.innerHTML=`<table class="pay-table"><thead><tr>
-    <th>Student</th><th>Tutor</th><th>${esc(c.daysLabel)}</th><th>${esc(c.datesLabel)}</th><th>%</th><th></th>
-    </tr></thead><tbody>${st.summary.map((s,i)=>`<tr data-sid="${esc(s.id)}" class="${String(s.id)===String(selectedStudentId)?'row-selected':''}">
-      <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
-      <td>${esc(s.tutor||'—')}</td>
-      <td>${s.days}${s.exp?' <span class="aa-of">of '+s.exp+'</span>':''}</td>
-      <td class="aa-dates-col">${fmtDates(s.dates)}</td>
-      <td><span class="aa-pct ${s.tier}">${s.exp?s.pct+'%':'—'}</span></td>
-      <td><button class="aa-wa-ico" title="Share on WhatsApp" onclick="aaShareOne('${mod}',${i})">${aaWaIcon()}</button></td>
-    </tr>`).join('')}</tbody></table>`;
+  const c=AA[mod],st=aaState[mod],p=c.p,card=aEl(mod,'trendTable');if(!card)return;
+  st.groupBy=st.groupBy||'tutor';
+  const months=trMonths(mod);
+  const pool=trPool(mod,months);
+  const by=st.groupBy;
+  const rows=trSortRows(trGroups(mod,pool,months,by));
+  st.rows=rows;st.months=months;st.pool=pool;
+  if(st.focus&&!months.some(x=>x.k===st.focus))st.focus='';
+  const unit=c.unit,verb=c.verb;
+  const tot={A:0,E:0,per:{}};pool.forEach(r=>{tot.A+=r.A;tot.E+=r.E;months.forEach(({k})=>{const q=tot.per[k]=tot.per[k]||{a:0,e:0};q.a+=r.per[k].a;q.e+=r.per[k].e;});});
+  aEl(mod,'tMeta').textContent=`· ${trPeriodLabel(mod,months)} · ${pool.length} student${pool.length===1?'':'s'}`;
+
+  // Breadcrumb
+  const tv=aEl(mod,'tTutor').value,bv=aEl(mod,'tBatch').value,sv=aEl(mod,'tStudent').value;
+  const crumbs=[{lvl:'all',t:'All'}];
+  if(tv)crumbs.push({lvl:'tutor',t:tv});
+  if(bv)crumbs.push({lvl:'batch',t:bv});
+  if(sv){const s=studentsData.find(x=>String(x.ID)===sv);crumbs.push({lvl:'student',t:s?s.Name:sv});}
+  aEl(mod,'tCrumbs').innerHTML=crumbs.length>1?crumbs.map((x,i)=>i===crumbs.length-1
+    ?`<span class="tr-crumb cur">${esc(x.t)}</span>`
+    :`<button class="tr-crumb" onclick="trCrumb('${mod}','${x.lvl}')">${esc(x.t)}</button><span>›</span>`).join(''):'';
+
+  // Tiles
+  const live=months.filter(x=>tot.per[x.k]&&tot.per[x.k].e>0);
+  const last=live[live.length-1],prev=live[live.length-2];
+  const pp=trPct(tot.A,tot.E);
+  const lp=last?trPct(tot.per[last.k].a,tot.per[last.k].e):null;
+  const dl=(last&&prev)?lp-trPct(tot.per[prev.k].a,tot.per[prev.k].e):null;
+  const missed=tot.E-tot.A,missers=pool.filter(r=>r.E-r.A>0).length;
+  aEl(mod,'tTiles').innerHTML=pool.length?`
+    <div class="tr-tile"><div class="tr-tile-l">${esc(trPeriodLabel(mod,months))}</div>
+      <div class="tr-tile-v">${pp===null?'—':pp+'%'}</div><div class="tr-tile-s">${trOf(mod,tot.A,tot.E)}</div></div>
+    <div class="tr-tile"><div class="tr-tile-l">${last?esc(last.long):'Latest month'}</div>
+      <div class="tr-tile-v">${lp===null?'—':lp+'%'}</div>
+      <div class="tr-tile-s">${dl===null?'No earlier month to compare':(dl>=0?`<span class="${dl>=5?'tr-up':'tr-flat'}">▲ ${dl} pts</span>`:`<span class="${dl<=-5?'tr-down':'tr-flat'}">▼ ${-dl} pts</span>`)+` vs ${esc(prev.long)}`}</div></div>
+    <div class="tr-tile"><div class="tr-tile-l">${c.trWord==='submissions'?'Not submitted':'Classes missed'}</div>
+      <div class="tr-tile-v">${missed}</div><div class="tr-tile-s">across ${missers} student${missers===1?'':'s'} this period</div></div>`:'';
+
+  // Group-by switch + hint
+  const G=[['tutor','Tutors'],['batch','Batches'],['student','Students']];
+  aEl(mod,'tGroup').innerHTML=G.map(([k,l])=>`<button class="${by===k?'on':''}" onclick="trSetGroup('${mod}','${k}')">${l}</button>`).join('');
+  aEl(mod,'tHint').textContent=by==='student'?'Lowest first · click a name to open the profile':`Lowest first · click a ${by} to see its ${by==='tutor'?'batches':'students'}`;
+  const cmpLbl=aEl(mod,'tCompareLbl');if(cmpLbl)cmpLbl.textContent=`Compare ${by==='tutor'?'tutors':by==='batch'?'batches':'students'}`;
+  const cmpBox=aEl(mod,'tCompare'),canCmp=rows.length>1;
+  if(cmpBox){cmpBox.disabled=!canCmp;cmpBox.checked=canCmp&&!!st.compare;cmpBox.closest('label').classList.toggle('off',!canCmp);}
+
+  trRenderChart(mod,months,tot,rows,canCmp&&!!st.compare);
+
+  if(!months.length){card.innerHTML=`<div class="pay-empty">Nothing to show yet — ${esc(c.trWord)} is counted from ${esc(AA_MONTHS_FULL[moduleStart(p).mo-1]+' '+moduleStart(p).y)} (Settings).</div>`;aEl(mod,'tPanels').innerHTML='';return;}
+  if(!rows.length){card.innerHTML='<div class="pay-empty">No students match this selection.</div>';aEl(mod,'tPanels').innerHTML='';return;}
+
+  // Table
+  const cell=(q,isStu)=>{
+    if(!q||!q.e)return (q&&q.raw)?`<span class="tr-na" title="${q.raw} recorded, none expected">${q.raw}</span>`:'<span class="tr-na">—</span>';
+    const pc=trPct(q.a,q.e);
+    const tip=isStu?(q.dates.length?`${c.datesLabel}: `+q.dates.map(d=>chipDate(d.date)+(d.count>1?' ×'+d.count:'')).join(', '):`None ${verb}`):trOf(mod,q.a,q.e);
+    return `<span class="aa-pct ${trTierOf(pc)}" title="${esc(tip)}">${pc}%</span><div class="tr-frac">${q.a}/${q.e}</div>`;
+  };
+  const label=by==='tutor'?'Tutor':by==='batch'?'Batch':'Student';
+  card.innerHTML=`<table class="pay-table tr-table"><thead><tr>
+      <th class="tr-sticky">${label}</th>
+      ${months.map(x=>`<th class="tr-mh ${st.focus===x.k?'on':''}" onclick="trFocus('${mod}','${x.k}')" title="${st.focus===x.k?'Back to the whole period':'Who missed in '+esc(x.long)+'?'}">${esc(x.lbl)}</th>`).join('')}
+      <th>Total</th><th>Trend</th>${by==='student'?'<th></th>':''}</tr></thead><tbody>
+    ${rows.map((r,i)=>{
+      const isStu=by==='student',pt=trPct(r.A,r.E);
+      const canDrill=isStu||!!r.key;
+      const name=canDrill?`<button class="tr-name" onclick="trDrill('${mod}','${by}','${jsq(r.key)}')">${esc(r.label)}</button>`:`<span class="tr-name plain">${esc(r.label)}</span>`;
+      return `<tr${isStu?` data-sid="${esc(r.key)}" class="${String(r.key)===String(selectedStudentId)?'row-selected':''}"`:''}>
+        <td class="tr-sticky">${name}<div class="tr-sub">${esc(r.sub)}</div></td>
+        ${months.map(x=>`<td class="${st.focus===x.k?'on':''}">${cell(r.per[x.k],isStu)}</td>`).join('')}
+        <td>${pt===null?'<span class="tr-na">—</span>':`<span class="aa-pct ${trTierOf(pt)}">${pt}%</span><div class="tr-frac">${r.A}/${r.E}</div>`}</td>
+        <td>${trArrow(trTrend(r.per,months))}</td>
+        ${isStu?`<td><button class="aa-wa-ico" title="Share on WhatsApp" onclick="aaShareOne('${mod}',${i})">${aaWaIcon()}</button></td>`:''}
+      </tr>`;}).join('')}
+    ${rows.length>1?`<tr class="tr-tot"><td class="tr-sticky">All shown<div class="tr-sub">${pool.length} student${pool.length===1?'':'s'}</div></td>
+      ${months.map(x=>{const q=tot.per[x.k];const pc=q&&q.e?trPct(q.a,q.e):null;return `<td class="${st.focus===x.k?'on':''}">${pc===null?'<span class="tr-na">—</span>':`${pc}%<div class="tr-frac">${q.a}/${q.e}</div>`}</td>`;}).join('')}
+      <td>${pp===null?'—':pp+'%'}<div class="tr-frac">${tot.A}/${tot.E}</div></td><td>${trArrow(trTrend(tot.per,months))}</td>${by==='student'?'<td></td>':''}</tr>`:''}
+    </tbody></table>`;
+  requestAnimationFrame(()=>{const sc=card.closest('.tr-scroll');if(sc&&!st.focus)sc.scrollLeft=sc.scrollWidth;});
+
+  trRenderPanels(mod,months,pool);
 };
 
-/* ── WhatsApp sharing (reuses the shared review modal) ── */
-// Each line carries its own expectation now — there is no single number for the group.
-function aaLine(mod,s){
-  if(!s.exp)return `${s.name}: ${s.days} ${AA[mod].verb} (joined too recently to rate)`;
-  return `${s.name}: ${s.days} of ${s.exp} ${AA[mod].verb}, ${s.pct}% ${aaEmoji(s.pct)}`;
+function trRenderChart(mod,months,tot,rows,compare){
+  const c=AA[mod],st=aaState[mod],cv=aEl(mod,'tChart');if(!cv||typeof Chart==='undefined')return;
+  if(st.chart){st.chart.destroy();st.chart=null;}
+  if(!months.length)return;
+  const fontMono=getComputedStyle(document.documentElement).getPropertyValue('--font-mono')||'monospace';
+  const labels=months.map(x=>x.lbl);
+  let datasets;
+  if(compare){
+    // The lowest first — they are why anyone switches Compare on. Colour follows the row's
+    // position in THIS list; the legend and tooltip carry the name, so colour is never alone.
+    datasets=rows.filter(r=>r.E>0).slice(0,TR_MAX_LINES).map((r,i)=>({
+      label:r.label,data:months.map(x=>{const q=r.per[x.k];return q&&q.e?trPct(q.a,q.e):null;}),
+      _a:months.map(x=>(r.per[x.k]||{}).a||0),_e:months.map(x=>(r.per[x.k]||{}).e||0),
+      borderColor:TR_COLORS[i],backgroundColor:TR_COLORS[i],borderWidth:2,pointRadius:4,pointHoverRadius:6,
+      pointBorderColor:'#fff',pointBorderWidth:2,tension:0,spanGaps:false,datalabels:{display:false}}));
+  }else{
+    datasets=[{label:c.trWord==='submissions'?'Submissions':'Attendance',
+      data:months.map(x=>{const q=tot.per[x.k];return q&&q.e?trPct(q.a,q.e):null;}),
+      _a:months.map(x=>(tot.per[x.k]||{}).a||0),_e:months.map(x=>(tot.per[x.k]||{}).e||0),
+      borderColor:'#008fa0',backgroundColor:'#008fa0',borderWidth:2,pointRadius:4,pointHoverRadius:6,
+      pointBorderColor:'#fff',pointBorderWidth:2,tension:0,spanGaps:false,
+      datalabels:{display:true,align:'top',anchor:'end',offset:4,color:'#0a373a',
+        font:{family:fontMono,size:10,weight:700},formatter:v=>v===null?'':v+'%'}}];
+  }
+  // Pale status bands behind the line: the same 75 / 50 cut-offs as the cell colours.
+  const bands={id:'trBands',beforeDraw(ch){const {ctx,chartArea:a,scales:{y}}=ch;if(!a)return;
+    const band=(lo,hi,col)=>{ctx.fillStyle=col;const t=y.getPixelForValue(hi),b=y.getPixelForValue(lo);ctx.fillRect(a.left,t,a.right-a.left,b-t);};
+    ctx.save();band(75,100,'rgba(138,182,0,.08)');band(50,75,'rgba(234,180,58,.09)');band(0,50,'rgba(215,98,65,.07)');ctx.restore();}};
+  const extra=compare&&rows.filter(r=>r.E>0).length>TR_MAX_LINES;
+  st.chart=new Chart(cv,{type:'line',data:{labels,datasets},plugins:[bands],options:{
+    responsive:true,maintainAspectRatio:false,layout:{padding:{top:18,right:8}},
+    interaction:{mode:'index',intersect:false},
+    onHover:(e,els)=>{e.native.target.style.cursor=els.length?'pointer':'default';},
+    onClick:(e,els)=>{if(els.length)trFocus(mod,months[els[0].index].k);},
+    plugins:{
+      legend:{display:compare,position:'bottom',labels:{font:{family:fontMono,size:11},color:'#5a8a8e',usePointStyle:true,boxWidth:8}},
+      title:{display:extra,text:`Showing the ${TR_MAX_LINES} lowest — the table below has all of them`,font:{family:fontMono,size:10,weight:'normal'},color:'#8db5b9',padding:{bottom:4}},
+      tooltip:{callbacks:{label:(it)=>{const d=it.dataset;if(it.raw===null)return `${d.label}: nothing expected`;
+        return `${d.label}: ${it.raw}% · ${trOf(mod,d._a[it.dataIndex],d._e[it.dataIndex])}`;}}}},
+    scales:{x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},grid:{display:false}},
+      y:{min:0,max:100,ticks:{stepSize:25,font:{family:fontMono,size:10},color:'#8db5b9',callback:v=>v+'%'},grid:{color:'#e6f0f1'}}}}});
+}
+
+function trRenderPanels(mod,months,pool){
+  const c=AA[mod],st=aaState[mod],box=aEl(mod,'tPanels');if(!box)return;
+  const f=st.focus,fm=months.find(x=>x.k===f);
+  const pick=(r)=>f?(r.per[f]||{a:0,e:0}):{a:r.A,e:r.E};
+  const list=pool.map(r=>{const q=pick(r);return {r,miss:q.e-q.a,a:q.a,e:q.e};}).filter(x=>x.e>0&&x.miss>0)
+    .sort((x,y)=>(y.miss-x.miss)||((x.a/x.e)-(y.a/y.e))||String(x.r.s.Name||'').localeCompare(String(y.r.s.Name||'')));
+  const total=list.reduce((t,x)=>t+x.miss,0);
+  const shown=st.showAll?list:list.slice(0,TR_TOP);
+  const when=fm?fm.long:trPeriodLabel(mod,months);
+  const missW=c.trWord==='submissions'?'not submitted':'missed';
+  const missBlock=`<div class="tr-panel">
+    <div class="tr-panel-h">Who's pulling ${esc(c.trWord)} down · ${esc(when)}</div>
+    <div class="tr-panel-s">${total?`${trMissN(mod,total)} in all. Ranked by how many each student ${missW==='missed'?'missed':'did not submit'}, with their share of the total.`:''}${f?` <button class="tr-more" onclick="trFocus('${mod}','${f}')">Show the whole period</button>`:''}</div>
+    ${list.length?shown.map(x=>{const sh=Math.round(x.miss/total*100);const s=x.r.s;
+      return `<div class="tr-li"><div><div class="tr-li-n"><button onclick="openProfile('${jsq(x.r.id)}')">${esc(s.Name||x.r.id)}</button></div>
+        <div class="tr-li-m">${esc([s.Tutor,s.Batch].filter(Boolean).join(' · '))}</div></div>
+        <div class="tr-li-v">${missW} ${x.miss} of ${x.e}<div class="tr-li-m">${sh}% of all ${missW}</div></div>
+        <div class="tr-bar"><span style="width:${sh}%"></span></div></div>`;}).join('')
+      +(list.length>TR_TOP?`<button class="tr-more" onclick="trToggleAll('${mod}')">${st.showAll?'Show top '+TR_TOP:'Show all '+list.length}</button>`:'')
+      :`<div class="tr-none">Nobody ${missW} anything${f?' in '+esc(fm.long):''}. 🎉</div>`}
+  </div>`;
+  // Dropping: the focus month (or the latest month with data) against the month before.
+  const ks=months.map(x=>x.k);
+  let tgt=f;
+  if(!tgt){for(let i=ks.length-1;i>=0;i--){if(pool.some(r=>r.per[ks[i]]&&r.per[ks[i]].e>0)){tgt=ks[i];break;}}}
+  const ti=ks.indexOf(tgt),pk=ti>0?ks[ti-1]:null;
+  const tm=months[ti],pm=pk?months[ti-1]:null;
+  let drop=[];
+  if(pk)drop=pool.map(r=>{const a=r.per[pk],b=r.per[tgt];if(!a||!b||!a.e||!b.e)return null;
+    const pa=trPct(a.a,a.e),pb=trPct(b.a,b.e);return {r,pa,pb,d:pb-pa};}).filter(x=>x&&x.d<=-TR_DROP).sort((x,y)=>x.d-y.d);
+  const dropBlock=`<div class="tr-panel">
+    <div class="tr-panel-h">Dropping${tm&&pm?` · ${esc(AA_MONTHS[pm.m-1])} → ${esc(AA_MONTHS[tm.m-1])}`:''}</div>
+    <div class="tr-panel-s">Down ${TR_DROP}+ points on the month before — worth a call before they reach At risk.</div>
+    ${!pk?'<div class="tr-none">Needs two months in the period to compare.</div>'
+      :(drop.length?drop.map(x=>`<div class="tr-li"><div><div class="tr-li-n"><button onclick="openProfile('${jsq(x.r.id)}')">${esc(x.r.s.Name||x.r.id)}</button></div>
+          <div class="tr-li-m">${esc([x.r.s.Tutor,x.r.s.Batch].filter(Boolean).join(' · '))}</div></div>
+          <div class="tr-li-v">${x.pa}% → ${x.pb}%<div class="tr-li-m tr-down">▼ ${-x.d} pts</div></div></div>`).join('')
+        :'<div class="tr-none">Nobody dropped that much.</div>')}
+  </div>`;
+  box.innerHTML=missBlock+dropBlock;
+}
+
+/* ── WhatsApp sharing and Excel ── */
+function trMonthLines(mod,r){
+  const c=AA[mod];
+  return aaState[mod].months.filter(x=>r.per[x.k]&&r.per[x.k].e>0)
+    .map(x=>{const q=r.per[x.k],pc=trPct(q.a,q.e);return `${x.lbl}: ${q.a} of ${q.e} (${pc}%) ${aaEmoji(pc)}`;});
 }
 window.aaShareOne=function(mod,i){
-  const c=AA[mod],s=aaState[mod].summary[i];if(!s)return;
-  const stu=studentsData.find(x=>String(x.ID)===String(s.id));
-  waTargetPhone=stu?String(stu.Contact||'').replace(/[^0-9+]/g,''):'';
-  $('waModalTitle').textContent=c.shareOne+' · '+s.name;
-  $('wa_Msg').value=`*${c.shareOne}*\nPeriod: ${aaPeriodLabel(mod)}\n\n${aaLine(mod,s)}`;
+  const c=AA[mod],st=aaState[mod],r=(st.rows||[])[i];if(!r||!r.stu)return;
+  const s=r.stu.s;waTargetPhone=String(s.Contact||'').replace(/[^0-9+]/g,'');
+  const pt=trPct(r.A,r.E);
+  $('waModalTitle').textContent=c.shareOne+' · '+(s.Name||r.key);
+  $('wa_Msg').value=`*${c.shareOne}* — ${s.Name||r.key}\nPeriod: ${trPeriodLabel(mod,st.months)}\n\n`
+    +trMonthLines(mod,r).join('\n')+(pt===null?'':`\n\nOverall: ${trOf(mod,r.A,r.E)} (${pt}%) ${aaEmoji(pt)}`);
   showModal('waModal');
 };
 window.aaShareAll=function(mod){
-  const c=AA[mod],rows=aaState[mod].summary;
+  const c=AA[mod],st=aaState[mod],rows=(st.rows||[]).filter(r=>r.E>0);
   if(!rows.length){toast('Nothing to share yet.');return;}
-  waTargetPhone='';   // broadcast: opens WhatsApp with no recipient preset
+  const recent=st.months.slice(-3);
+  waTargetPhone='';
   $('waModalTitle').textContent=c.shareAll;
-  $('wa_Msg').value=`*${c.shareAll}*\nPeriod: ${aaPeriodLabel(mod)}\n\n`+rows.map(s=>aaLine(mod,s)).join('\n');
+  $('wa_Msg').value=`*${c.shareAll}*\nPeriod: ${trPeriodLabel(mod,st.months)}\n\n`+rows.map(r=>{
+    const pt=trPct(r.A,r.E);
+    const rec=recent.map(x=>{const q=r.per[x.k];return q&&q.e?`${x.lbl} ${trPct(q.a,q.e)}%`:null;}).filter(Boolean).join(' · ');
+    return `${r.label}: ${pt}% ${aaEmoji(pt)}${rec?` (${rec})`:''}`;}).join('\n');
   showModal('waModal');
 };
+window.trDownload=function(mod){
+  if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
+  const c=AA[mod],st=aaState[mod],rows=st.rows||[],by=st.groupBy;
+  if(!rows.length){toast('Nothing to export.');return;}
+  const out=rows.map(r=>{
+    const o={};o[by==='tutor'?'Tutor':by==='batch'?'Batch':'Student']=r.label;
+    if(by==='student'){o.ID=r.key;o.Tutor=r.stu.s.Tutor||'';o.Batch=r.stu.s.Batch||'';o.Country=r.stu.s.Country||'';}
+    else o.Students=r.n;
+    st.months.forEach(x=>{const q=r.per[x.k];o[x.lbl+' %']=q&&q.e?trPct(q.a,q.e):'';o[x.lbl+' '+c.verb]=q&&q.e?`${q.a}/${q.e}`:'';});
+    o['Total %']=trPct(r.A,r.E)??'';o[`Total ${c.verb}`]=r.A;o['Total expected']=r.E;
+    return o;});
+  const ws=XLSX.utils.json_to_sheet(out);const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,c.trWord==='submissions'?'Submissions':'Attendance');
+  XLSX.writeFile(wb,`${c.trWord}-trend-${trPeriodLabel(mod,st.months).replace(/[^A-Za-z0-9]+/g,'-')}.xlsx`);
+};
+
 window.copyWaModal=async function(){
   const ta=$('wa_Msg'),btn=$('wa_CopyBtn');
   try{
