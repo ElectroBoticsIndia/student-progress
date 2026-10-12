@@ -1907,7 +1907,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-12c';
+const BUILD='2026-10-12d';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -2800,13 +2800,23 @@ function sessionsBetween(student,from,to){
    for the first time, and correct. The health bands treat anything at or above 75% as on
    track, so that still shows green. */
 const MAX_CLASSES_PER_MONTH=4;
+/* Today is never counted, on either side: tutors have until the end of the day to record a
+   class, so a class only becomes "expected" — and a record dated today only counts — from
+   tomorrow. (Until 12 Oct 2026 today's class was expected at once, so the current month
+   dipped every class day until attendance was saved.) The join date is read in any format
+   via aaNormDate; parseD alone could not read 15/09/2026 and misread 05/09/2026 as 9 May. */
+function glJoinDate(student){
+  const j=aaNormDate(student&&student['Join Date'],'auto');if(!j)return null;
+  const [y,m,d]=j.split('-').map(Number);return new Date(y,m-1,d);
+}
 function glExpected(year,month,student){
-  const today=new Date();
+  const t=new Date();const yesterday=new Date(t.getFullYear(),t.getMonth(),t.getDate()-1);
   const monthEnd=new Date(year,month,0);
   let from=new Date(year,month-1,1);
-  const jd=parseD(student&&student['Join Date']);
+  const jd=glJoinDate(student);
   if(jd&&jd>from)from=jd;
-  const to=today<monthEnd?today:monthEnd;
+  const to=yesterday<monthEnd?yesterday:monthEnd;
+  if(to<from)return 0;
   return Math.min(sessionsBetween(student,from,to),MAX_CLASSES_PER_MONTH);
 }
 function glTier(done,expected){
@@ -2820,6 +2830,7 @@ function glMonthRows(records,positive,selY){
   records.forEach(r=>{
     if(String(r.Status||'').toLowerCase()!==positive)return;
     const d=String(r.Date||'').trim();if(d.length<7)return;
+    if(d.slice(0,10)>=todayISO())return;   // today's records count from tomorrow (see glExpected)
     if(d.slice(0,4)!==String(selY))return;
     const m=parseInt(d.slice(5,7),10);if(!m)return;
     let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;
@@ -3703,6 +3714,7 @@ function payFilterVal(id){const el=$(id);return el?el.value:'';}
 function parseJoinYM(raw){
   const s=String(raw||'').trim();if(!s)return null;
   let m=s.match(/^(\d{4})-(\d{1,2})/);if(m)return {y:+m[1],mo:+m[2]};
+  const n=aaNormDate(s,'auto');if(n)return {y:+n.slice(0,4),mo:+n.slice(5,7)};   // 15/09/2026 etc.
   const d=new Date(s);if(!isNaN(d))return {y:d.getFullYear(),mo:d.getMonth()+1};
   return null;
 }
@@ -7060,7 +7072,7 @@ function buildAaScreen(mod){
         <label class="tr-compare"><input type="checkbox" id="${p}_tCompare" onchange="trSetCompare('${mod}',this.checked)"> <span id="${p}_tCompareLbl">Compare</span></label>
       </div>
       <div class="tr-chart-wrap"><canvas id="${p}_tChart"></canvas></div>
-      <div class="risk-criteria">${c.trWord==='submissions'?'Submitted':'Attended'} ÷ expected, per month: each student's own class day from their join date, at most 4 a month, the current month up to today. Each student counts at most 100% a month, so a makeup class cannot hide a missed one. 🟢 75%+ · 🟡 50–74% · 🔴 below 50%. Click a month heading (or a point on the chart) to see who missed that month.</div>
+      <div class="risk-criteria">${c.trWord==='submissions'?'Submitted':'Attended'} ÷ expected, per month: each student's own class day from their join date, at most 4 a month, the current month up to yesterday — today's classes count from tomorrow, giving tutors the day to record them. Each student counts at most 100% a month, so a makeup class cannot hide a missed one. 🟢 75%+ · 🟡 50–74% · 🔴 below 50%. Click a month heading (or a point on the chart) to see who missed that month.</div>
       <div class="tr-table-head">
         <div class="tr-seg" id="${p}_tGroup"></div>
         <span class="tr-hint" id="${p}_tHint"></span>
@@ -7388,7 +7400,7 @@ function aaPatchCache(mod,date,records,removedIds){
 
    % = attended (or submitted) ÷ expected, per student per month, with expected from
    glExpected(): the student's own class day, from their join date, at most 4 a month,
-   the current month only up to today — the same rule as the student detail page and
+   the current month only up to yesterday (today counts from tomorrow) — the same rule as the student detail page and
    At-Risk. Each student's month is capped at 100% before anything is added up, so a
    makeup class in one place cannot hide a missed one in another. Group figures pool
    attended and expected over everyone in the group.
@@ -7432,10 +7444,10 @@ function trPeriodLabel(mod,months){
 }
 // Positive records only, bucketed by student and month.
 function trIndex(mod){
-  const c=AA[mod],recs=mod==='attendance'?attendanceData:assignmentsData,idx={};
+  const c=AA[mod],recs=mod==='attendance'?attendanceData:assignmentsData,idx={},today=aaToday();
   recs.forEach(r=>{
     if(String(r.Status||'').toLowerCase()!==c.pos)return;
-    const d=aaNormDate(r.Date,'auto');if(!d)return;
+    const d=aaNormDate(r.Date,'auto');if(!d||d>=today)return;   // today counts from tomorrow
     const id=String(r.StudentID||'').trim();if(!id)return;
     let n=parseFloat(r.Count);if(isNaN(n)||n<=0)n=1;
     const by=(idx[id]=idx[id]||{});const o=(by[d.slice(0,7)]=by[d.slice(0,7)]||{n:0,dates:[]});
