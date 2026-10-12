@@ -1846,7 +1846,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-06c';
+const BUILD='2026-10-12a';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -2423,17 +2423,45 @@ async function loadStudentsList(){
   }catch(e){console.error('loadStudentsList',e);list.innerHTML='<div class="pay-empty">Could not load students: '+esc(e.code||e.message)+'</div>';}
 }
 
+/* Shared "smart narrowing" for filter bars — Students, Attendance and Assignments. Each
+   dropdown lists only the values found among the rows that match the OTHER dropdowns. A
+   choice that no longer fits resets to All, and since that reset can widen the other lists,
+   the pass repeats until nothing changes. (The old single pass in Attendance could leave a
+   list narrowed by a value that had just been cleared.) Values are compared exactly as the
+   tables filter them, so whatever a dropdown offers, the table can show. */
+function narrowFilterSelects(rows,defs){
+  const cur={};defs.forEach(d=>{const e=$(d.id);cur[d.id]=e?e.value:'';});
+  const val=(r,d)=>String(r[d.key]==null?'':r[d.key]);
+  let opts={};
+  for(let pass=0;pass<=defs.length;pass++){
+    opts={};
+    defs.forEach(d=>{
+      const others=defs.filter(o=>o!==d&&cur[o.id]);
+      opts[d.id]=[...new Set(rows.filter(r=>others.every(o=>val(r,o)===cur[o.id])).map(r=>val(r,d)).filter(Boolean))].sort();
+    });
+    let changed=false;
+    defs.forEach(d=>{if(cur[d.id]&&!opts[d.id].includes(cur[d.id])){cur[d.id]='';changed=true;}});
+    if(!changed)break;
+  }
+  defs.forEach(d=>{const sel=$(d.id);if(!sel)return;
+    sel.innerHTML=`<option value="">${esc(d.all)}</option>`+opts[d.id].map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    sel.value=cur[d.id];});
+}
+// Students the Status filter keeps — the pool every other Students dropdown is drawn from.
+function stuStatusRows(){
+  const f=($('stuFilterStatus')||{}).value||'';
+  const act=(s)=>(s.Status||'Active').toLowerCase()==='active';
+  return f===''?studentsData.filter(act):(f==='inactive'?studentsData.filter(s=>!act(s)):studentsData.slice());
+}
+function narrowStudentFilters(){
+  narrowFilterSelects(stuStatusRows(),[
+    {id:'stuFilterCountry',key:'Country',all:'All countries'},
+    {id:'stuFilterLevel',key:'Current Level',all:'All levels'},
+    {id:'stuFilterTutor',key:'Tutor',all:'All tutors'},
+    {id:'stuFilterBatch',key:'Batch',all:'All batches'}]);
+}
 function fillStudentFilters(){
-  const levels=[...new Set(studentsData.map(s=>s['Current Level']).filter(Boolean))].sort();
-  const tutors=[...new Set(studentsData.map(s=>s.Tutor).filter(Boolean))].sort();
-  const countries=[...new Set(studentsData.map(s=>s.Country).filter(Boolean))].sort();
-  const batches=[...new Set(studentsData.map(s=>s.Batch).filter(Boolean))].sort();
-  const keep=(sel,val)=>{const cur=sel.value;sel.value=[...sel.options].some(o=>o.value===cur)?cur:'';};
-  const setSel=(id,all,vals)=>{const sel=$(id);const cur=sel.value;sel.innerHTML=`<option value="">${all}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join('');if([...sel.options].some(o=>o.value===cur))sel.value=cur;};
-  setSel('stuFilterLevel','All levels',levels);
-  setSel('stuFilterTutor','All tutors',tutors);
-  setSel('stuFilterCountry','All countries',countries);
-  setSel('stuFilterBatch','All batches',batches);
+  narrowStudentFilters();
   if(!fillStudentFilters._wired){fillStudentFilters._wired=true;wireStuFilterNote();}
 }
 
@@ -2469,6 +2497,7 @@ window.clearStudentFilters=function(){
 };
 window.renderStudents=function(){
   const list=$('studentsList');
+  narrowStudentFilters();   // every filter change lands here, so the dropdowns follow it
   const q=($('stuSearch').value||'').trim().toLowerCase();
   const fLvl=$('stuFilterLevel').value,fTut=$('stuFilterTutor').value,fStat=$('stuFilterStatus').value;
   const fCountry=$('stuFilterCountry').value,fBatch=$('stuFilterBatch').value;
@@ -6821,10 +6850,14 @@ function goStudentsFiltered(type,value,extra){
     // counts ACTIVE students only. Force Status back to Active so the table cannot show
     // more rows than the bar or chip that was clicked.
     const stat=$('stuFilterStatus');if(stat)stat.value='';
+    // The dropdowns may still be narrowed by the filters just cleared; rebuild them full
+    // before choosing, then narrow again so the batch list is the chosen tutor's.
+    narrowStudentFilters();
     const map={level:'stuFilterLevel',country:'stuFilterCountry',tutor:'stuFilterTutor'};
     const sel=$(map[type]);
     // Charts label a blank field "Unknown"; there is no such filter value, so fall back to All.
     if(sel&&value&&value!=='Unknown'&&[...sel.options].some(o=>o.value===value))sel.value=value;
+    narrowStudentFilters();
     const bsel=$('stuFilterBatch');
     if(bsel&&extra&&extra.batch&&[...bsel.options].some(o=>o.value===extra.batch))bsel.value=extra.batch;
     setStuFilterNote(extra&&extra.note?extra.note:'');
@@ -7018,27 +7051,13 @@ function aaSpanEnd(mod){
   const last=new Date(+yr,+mo,0).getDate();
   return `${yr}-${String(mo).padStart(2,'0')}-${String(last).padStart(2,'0')}`;
 }
-function aaFillSel(id,allLabel,values,current){
-  const sel=$(id);if(!sel)return;
-  let html=`<option value="">${allLabel}</option>`+values.map(v=>`<option value="${esc(v)}"${v===current?' selected':''}>${esc(v)}</option>`).join('');
-  sel.innerHTML=html;
-  sel.value=values.includes(current)?current:'';
-}
-// Smart narrowing: each dropdown's options come from the OTHER two selections.
+// Smart narrowing (shared with Students): see narrowFilterSelects().
 function aaNarrow(mod,prefix){
-  const p=AA[mod].p;
-  const cv=$(p+'_'+prefix+'Country').value,bv=$(p+'_'+prefix+'Batch').value,tv=$(p+'_'+prefix+'Tutor').value;
-  const match=(s,useC,useB,useT)=>{
-    if(useC&&cv&&(s.Country||'')!==cv)return false;
-    if(useB&&bv&&(s.Batch||'')!==bv)return false;
-    if(useT&&tv&&(s.Tutor||'')!==tv)return false;
-    return true;
-  };
-  const list=aaActive();
-  const uniq=(arr,key)=>[...new Set(arr.map(s=>s[key]).filter(Boolean))].sort();
-  aaFillSel(p+'_'+prefix+'Country','All countries',uniq(list.filter(s=>match(s,false,true,true)),'Country'),cv);
-  aaFillSel(p+'_'+prefix+'Batch','All batches',uniq(list.filter(s=>match(s,true,false,true)),'Batch'),bv);
-  aaFillSel(p+'_'+prefix+'Tutor','All tutors',uniq(list.filter(s=>match(s,true,true,false)),'Tutor'),tv);
+  const id=(k)=>AA[mod].p+'_'+prefix+k;
+  narrowFilterSelects(aaActive(),[
+    {id:id('Country'),key:'Country',all:'All countries'},
+    {id:id('Batch'),key:'Batch',all:'All batches'},
+    {id:id('Tutor'),key:'Tutor',all:'All tutors'}]);
 }
 function aaFillMarkFilters(mod){aaNarrow(mod,'m');}
 function aaFillTrendFilters(mod){aaNarrow(mod,'t');aaFillTrendStudents(mod);}
