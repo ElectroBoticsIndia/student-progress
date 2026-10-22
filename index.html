@@ -995,6 +995,14 @@ table.band input:focus{border-color:var(--accent)}
 .task-pin-row{display:flex;align-items:center;gap:8px;margin:2px 0 12px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer}
 .task-pin-row .tt-star{color:var(--amber)}
 .tp-input{min-width:200px;font-family:var(--font-mono)}
+/* Students table: contact line under the name */
+.stu-nm{font-weight:500;color:var(--text)}
+.stu-cts{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;margin-top:3px;font-family:var(--font-mono);font-size:10.5px;color:var(--text-light)}
+.stu-ct-item{display:inline-flex;align-items:center;gap:4px}
+.stu-ct{display:inline-flex;align-items:center;gap:4px;color:var(--text-light);text-decoration:none;border-radius:4px;padding:1px 2px;word-break:break-all}
+a.stu-ct:hover{color:var(--accent-dark);background:var(--accent-light)}
+.stu-ct svg{flex-shrink:0;opacity:.8}
+.stu-ct-more{font-weight:700;color:var(--accent-dark);background:var(--accent-light);border-radius:10px;padding:0 5px;cursor:default}
 .tpp-table{margin-bottom:10px}
 .tpp-table td{vertical-align:middle}
 .tpp-in{width:100%;min-width:120px;cursor:text}
@@ -1144,7 +1152,7 @@ table.band input:focus{border-color:var(--accent)}
       <div class="stu-header">
         <div class="stu-title-wrap">
           <span class="table-title">Students <span id="stuHeadCount"></span></span>
-          <input type="text" id="stuSearch" class="stu-search" placeholder="Search name or ID…" oninput="renderStudents()">
+          <input type="text" id="stuSearch" class="stu-search" placeholder="Search name, ID, phone or email…" oninput="renderStudents()">
         </div>
         <div class="stu-actions">
           <button class="btn-add" id="btnAddStudent" onclick="openStudentForm()">
@@ -1907,7 +1915,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-12d';
+const BUILD='2026-10-22a';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -2556,6 +2564,28 @@ window.clearStudentFilters=function(){
   setStuFilterNote('');
   renderStudents();
 };
+/* Phone and email under the student's name. The phone opens WhatsApp, the email a new mail;
+   both stop the click there so the row does not also open the profile. A field holding
+   several emails shows the first and a "+n" whose tooltip lists them all. */
+const STU_ICO_WA='<svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.3.5-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.7-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3z"/></svg>';
+const STU_ICO_MAIL='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+function stuContactLine(s){
+  const bits=[];
+  const ph=String(s.Contact||'').trim();
+  if(ph){
+    // A field like "98123 45678 / 99400 11223" → WhatsApp the first number.
+    const first=ph.split(/[\/,;]|\s{2,}/)[0];const digits=first.replace(/\D/g,'');
+    bits.push(digits.length>=6
+      ?`<a class="stu-ct" href="https://wa.me/${digits}" target="_blank" rel="noopener" title="WhatsApp ${esc(first.trim())}" onclick="event.stopPropagation()">${STU_ICO_WA}<span>${esc(ph)}</span></a>`
+      :`<span class="stu-ct">${STU_ICO_WA}<span>${esc(ph)}</span></span>`);
+  }
+  const ems=splitEmailsClient(s.Email||'');
+  if(ems.length){
+    bits.push(`<a class="stu-ct" href="mailto:${esc(ems[0])}" title="Email ${esc(ems[0])}" onclick="event.stopPropagation()">${STU_ICO_MAIL}<span>${esc(ems[0])}</span></a>`
+      +(ems.length>1?`<span class="stu-ct-more" title="${esc(ems.join(', '))}">+${ems.length-1}</span>`:''));
+  }
+  return bits.length?`<div class="stu-cts">${bits.map(b=>`<span class="stu-ct-item">${b}</span>`).join('')}</div>`:'';
+}
 window.renderStudents=function(){
   const list=$('studentsList');
   narrowStudentFilters();   // every filter change lands here, so the dropdowns follow it
@@ -2569,7 +2599,12 @@ window.renderStudents=function(){
   if(fTut)rows=rows.filter(s=>(s.Tutor||'')===fTut);
   if(fCountry)rows=rows.filter(s=>(s.Country||'')===fCountry);
   if(fBatch)rows=rows.filter(s=>(s.Batch||'')===fBatch);
-  if(q)rows=rows.filter(s=>String(s.Name||'').toLowerCase().includes(q)||String(s.ID||'').toLowerCase().includes(q));
+  // Name, ID, email, or phone — the phone compared digits-only, so "98123 45678",
+  // "+91 9812345678" and a number pasted from WhatsApp all find the same student.
+  const qDigits=q.replace(/\D/g,'');
+  if(q)rows=rows.filter(s=>String(s.Name||'').toLowerCase().includes(q)||String(s.ID||'').toLowerCase().includes(q)
+    ||String(s.Email||'').toLowerCase().includes(q)
+    ||(qDigits.length>=4&&String(s.Contact||'').replace(/\D/g,'').includes(qDigits)));
   rows.sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
   filteredStudents=rows;
   const cl=$('stuCountLine');if(cl)cl.innerHTML=`<strong>${rows.length}</strong> shown`;
@@ -2580,7 +2615,7 @@ window.renderStudents=function(){
     <th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th>${canManageStudents()?'<th></th>':''}
     </tr></thead><tbody>${rows.map(s=>`<tr class="student-row${String(s.ID)===String(selectedStudentId)?' row-selected':''}" data-sid="${esc(s.ID)}" onclick="openProfile('${jsq(s.ID)}')">
       <td><strong class="stu-id-bold">${esc(s.ID)}</strong></td>
-      <td>${esc(s.Name||'—')}</td>
+      <td><div class="stu-nm">${esc(s.Name||'—')}</div>${stuContactLine(s)}</td>
       <td>${esc(s['Current Level']||'—')}</td>
       <td>${esc(s.Tutor||'—')}</td>
       <td>${esc(s.Country||'—')}</td>
@@ -6144,9 +6179,12 @@ const taskCanEditFields=(t)=>!t||isAdmin()||t.createdRole!=='admin';
    The admin pins items to track today. A pin is the DATE, kept in todayDates, rather than a
    yes/no flag. So the list empties itself at midnight with nothing to clear; yesterday's
    list stays on record, which is what the carry-forward offer reads; and the number of days
-   an item has spent on the list falls out of the same array. Only the admin pins (enforced
-   here — the rules are plain isStaff); everyone sees the list. */
-let taskLiveUnsub=null,taskLiveDay='',taskCarryHidden=null;
+   an item has spent on the list falls out of the same array. Admin and tutor logins both pin
+   (since 22 Oct 2026; admin only before). A pin from the shared tutor login is recorded under
+   the last "Updating as" name used in this session, or "Tutor login" if none yet. */
+let taskLiveUnsub=null,taskLiveDay='',taskCarryHidden=null,taskLastBy='';
+const taskCanPin=()=>userRole==='admin'||userRole==='tutor';
+const taskPinBy=()=>isAdmin()?TASK_ADMIN:(taskLastBy||'Tutor login');
 const TASK_PIN_ADD='Added to Today',TASK_PIN_DEL='Removed from Today';
 const TASK_CARRY_DAYS=7;          // offer to carry forward a list at most this old
 const taskKeyOf=(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -6169,7 +6207,7 @@ async function taskWritePins(items){
   const wb=writeBatch(db);
   const next=items.map(({t,dates,change})=>{
     const log=(Array.isArray(t.log)?t.log.slice():[]);
-    log.push({at,by:TASK_ADMIN,email,kind:'update',pin:true,note:'',changes:[change]});
+    log.push({at,by:taskPinBy(),email,kind:'update',pin:true,note:'',changes:[change]});
     wb.set(doc(db,'tasks',t._id),{todayDates:dates,log,updatedAt:serverTimestamp()},{merge:true});
     return {t,dates,log};
   });
@@ -6178,7 +6216,7 @@ async function taskWritePins(items){
 }
 window.taskTogglePin=async function(id,ev){
   if(ev)ev.stopPropagation();
-  if(!isAdmin())return;
+  if(!taskCanPin())return;
   const t=tasksData.find(x=>x._id===id);if(!t)return;
   const today=taskToday(),on=taskPinnedOn(t,today);
   const dates=on?taskPinDates(t).filter(d=>d!==today):taskPinDates(t).concat(today);
@@ -6208,7 +6246,7 @@ window.taskCarryHide=function(day){
   renderTaskToday();
 };
 window.taskCarryAdd=async function(){
-  const ci=taskCarryInfo();if(!ci||!isAdmin())return;
+  const ci=taskCarryInfo();if(!ci||!taskCanPin())return;
   const ids=new Set([...document.querySelectorAll('#taskTodayPanel .tt-carry-cb')].filter(c=>c.checked).map(c=>c.value));
   const pick=ci.items.filter(t=>ids.has(t._id));
   if(!pick.length){toast('Tick at least one item, or choose Not now.');return;}
@@ -6234,7 +6272,7 @@ function taskTodayGroups(){
 function renderTaskToday(){
   const box=$('taskTodayPanel');if(!box)return;
   if(tasksLoadErr||!tasksLoaded){box.innerHTML='';return;}
-  const today=taskToday(),admin=isAdmin();
+  const today=taskToday(),admin=taskCanPin();   // "admin" here = may pin (both staff roles)
   if(taskLiveDay&&taskLiveDay!==today&&activeTab==='tutor')startTaskLive();   // crossed midnight
   const {items,names,g}=taskTodayGroups();
   const done=items.filter(t=>(t.status||'open')==='done').length;
@@ -6437,7 +6475,7 @@ window.renderTasks=function(){
       if((t.dueMoves||0)>0)bits.push(`Due date moved ${t.dueMoves}×`);
       const pinned=taskPinnedOn(t,today),pinDays=taskPinDates(t).length;
       if(pinned&&pinDays>1)bits.push(`On Today\u2019s list ${pinDays} days`);
-      const pinBtn=isAdmin()
+      const pinBtn=taskCanPin()
         ?`<button class="task-pin ${pinned?'on':''}" title="${pinned?'Remove from today\u2019s list':'Track on today\u2019s list'}" onclick="taskTogglePin('${jsq(t._id)}',event)">${pinned?'★':'☆'}</button>`
         :(pinned?'<span class="task-pin on static" title="On today\u2019s list">★</span>':'');
       if(last&&last.note)bits.push(`Last: “${esc(String(last.note).slice(0,70))}${String(last.note).length>70?'…':''}” — ${esc(last.by||'')}`);
@@ -6515,7 +6553,7 @@ window.openTaskForm=async function(id){
   $('t_Due').value=t?(t.due||''):'';
   $('t_Status').value=t?(t.status||'open'):'open';
   $('t_Note').value='';
-  $('t_PinRow').style.display=isAdmin()?'':'none';
+  $('t_PinRow').style.display=taskCanPin()?'':'none';
   $('t_Pin').checked=!!(t&&taskPinnedToday(t));
   $('t_NoteLabel').textContent=t?'Add a note':'Note (optional)';
   // "Updating as" — only meaningful on the shared tutor login. Pre-filled with the
@@ -6570,6 +6608,7 @@ window.saveTask=async function(){
   const canF=taskCanEditFields(t);
   const who=isAdmin()?TASK_ADMIN:String($('t_By').value||'').trim();
   if(!who)return fail('Choose your name under “Updating as”, so the history says who made this change.');
+  if(!isAdmin())taskLastBy=who;
   const fields=canF?{
     title:$('t_Title').value.trim(),
     details:$('t_Details').value.trim(),
@@ -6582,7 +6621,7 @@ window.saveTask=async function(){
   const status=$('t_Status').value||'open';
   const note=$('t_Note').value.trim();
   const today=taskToday();
-  const pinWant=isAdmin()&&$('t_Pin').checked;
+  const pinWant=taskCanPin()&&$('t_Pin').checked;
   const email=String((currentUser&&currentUser.email)||'').toLowerCase();
   const ev={at:new Date().toISOString(),by:who,email};
   btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='modal-msg';
@@ -6608,7 +6647,7 @@ window.saveTask=async function(){
         if('tag' in patch)changes.push(`Tag ${t.tag||'none'} → ${patch.tag||'none'}`);
         if('title' in patch||'details' in patch)changes.push('Wording edited');
       }
-      if(isAdmin()&&pinWant!==taskPinnedOn(t,today)){
+      if(taskCanPin()&&pinWant!==taskPinnedOn(t,today)){
         patch.todayDates=pinWant?taskPinDates(t).concat(today):taskPinDates(t).filter(d=>d!==today);
         changes.push(pinWant?TASK_PIN_ADD:TASK_PIN_DEL);
       }
