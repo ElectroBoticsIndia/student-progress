@@ -1587,7 +1587,7 @@ a.stu-ct:hover{color:var(--accent-dark);background:var(--accent-light)}
         <button class="filter-clear" onclick="clearRiskFilters()">Clear</button>
       </div>
       <div class="pay-summary" id="riskSummary" style="padding:12px 20px 10px;"></div>
-      <div class="risk-criteria">Risk = attendance &lt; 50% or submissions &lt; 40% · Watch = attendance 50–60% or submissions 40–50% · On track = above both · No data = joined too recently to rate. Both are measured against the classes expected in the last 4 weeks (max 4), so an unmarked missed class counts as missed.</div>
+      <div class="risk-criteria">Risk = attendance &lt; 50% or submissions &lt; 40% · Watch = attendance 50–60% or submissions 40–50% · On track = above both · New = fewer than 2 classes since joining: their actual figures are shown, but they are not rated yet. Both are measured against the classes expected in the last 4 weeks (max 4), so an unmarked missed class counts as missed.</div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="riskTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
   </div>
@@ -1915,7 +1915,7 @@ function statusClass(st){const s=String(st||'').toLowerCase();
 
 /* Bump this whenever a build goes out. Printed on the login screen so a stale cached copy
    is obvious at a glance instead of being mistaken for an unfixed bug. */
-const BUILD='2026-10-22b';
+const BUILD='2026-11-06a';
 (function stampBuild(){
   const el=document.getElementById('buildTag');
   if(el)el.textContent='build '+BUILD;
@@ -5995,7 +5995,9 @@ function riskWindowFor(s,todayIso,hasToday){
   if(jIso){const [y,m,d]=jIso.split('-').map(Number);const jd=new Date(y,m-1,d);if(jd>from)from=jd;}
   let n=end<from?0:sessionsBetween(s,from,end)*EXPECTED_PER_WEEK;
   n=Math.min(n,RISK_WINDOW_WEEKS*EXPECTED_PER_WEEK);
-  return {fromIso:riskIso(startW),endIso:riskIso(end),expected:n<RISK_MIN_SESSIONS?0:n};
+  // Below RISK_MIN_SESSIONS the student is "New": their real figures are shown (since
+  // 6 Nov 2026), but they are not put in a band until they have had enough classes.
+  return {fromIso:riskIso(startW),endIso:riskIso(end),expected:n,isNew:n<RISK_MIN_SESSIONS};
 }
 function computeRisk(){
   const todayIso=riskIso(new Date());
@@ -6019,11 +6021,13 @@ function computeRisk(){
     const sumPos=(arr)=>arr.filter(r=>r.pos&&inW(r)).reduce((t,r)=>t+r.c,0);
     const expected=w.expected;
     const attended=Math.min(sumPos(a),expected),submitted=Math.min(sumPos(b),expected);
-    // Too new to rate: neither rate is meaningful yet, so both read "no data".
+    // A new joiner shows their actual figures (1 of 1 → 100%) but stays in the "New" band
+    // (internally 'nodata') rather than At risk / Watch / On track. With no class due yet at
+    // all, the rates are null and read "No data".
     const attRate=expected>0?attended/expected:null;
     const subRate=expected>0?submitted/expected:null;
     return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',batch:s.Batch||'',country:s.Country||'',level:s['Current Level']||'',
-      expected,attended,submitted,att_rate:attRate,sub_rate:subRate,risk:riskBand(attRate,subRate)};
+      expected,attended,submitted,isNew:w.isNew,att_rate:attRate,sub_rate:subRate,risk:w.isNew?'nodata':riskBand(attRate,subRate)};
   });
   const order={red:0,yellow:1,green:2,nodata:3};
   const comb=r=>(r.att_rate===null?1:r.att_rate)+(r.sub_rate===null?1:r.sub_rate);
@@ -6067,10 +6071,10 @@ window.renderRisk=function(){
   const c={red:0,yellow:0,green:0,nodata:0};inScope.forEach(s=>{c[s.risk]=(c[s.risk]||0)+1;});
   $('riskWindow').textContent='· rolling 4 weeks · shortened for recent joiners';
   const rc=(band,label,n)=>`<button class="risk-stat-btn${riskCol.risk===band?' active':''}" onclick="setRiskCol('risk','${band}')"><span class="risk-dot ${band}"></span>${n} ${label}</button>`;
-  $('riskSummary').innerHTML=`<button class="risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${c.red+c.yellow+c.green+c.nodata}</button>`+rc('red','at risk',c.red)+rc('yellow','watch',c.yellow)+rc('green','on track',c.green)+rc('nodata','no data',c.nodata);
+  $('riskSummary').innerHTML=`<button class="risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${c.red+c.yellow+c.green+c.nodata}</button>`+rc('red','at risk',c.red)+rc('yellow','watch',c.yellow)+rc('green','on track',c.green)+rc('nodata','new',c.nodata);
   const rows=inScope.filter(bandOk);
   window.riskVisibleRows=rows;
-  const bandLabel={red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'};
+  const bandLabel={red:'At risk',yellow:'Watch',green:'On track',nodata:'New'};
   const t=$('riskTable');
   if(!rows.length){t.innerHTML='<div class="pay-empty">No students match. (If everything is empty, import Attendance & Assignments first.)</div>';return;}
   t.innerHTML=`<table class="pay-table"><thead>
@@ -6086,7 +6090,7 @@ window.renderRisk=function(){
 window.clearRiskFilters=function(){riskCol={country:'',tutor:'',batch:'',risk:'',att:'',sub:''};renderRisk();};
 window.downloadRiskExcel=function(){
   if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
-  const rows=(window.riskVisibleRows||[]).map(s=>({'ID':s.id,'Name':s.name,'Tutor':s.tutor,'Country':s.country,'Batch':s.batch,'Attendance':rateLabel(s.att_rate),'Submissions':rateLabel(s.sub_rate),'Risk':({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[s.risk]}));
+  const rows=(window.riskVisibleRows||[]).map(s=>({'ID':s.id,'Name':s.name,'Tutor':s.tutor,'Country':s.country,'Batch':s.batch,'Attendance':rateLabel(s.att_rate),'Submissions':rateLabel(s.sub_rate),'Risk':({red:'At risk',yellow:'Watch',green:'On track',nodata:'New'})[s.risk]}));
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'At-Risk');
   XLSX.writeFile(wb,`ElectroBotics_AtRisk_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
@@ -6729,17 +6733,17 @@ window.renderTutorStats=function(){
   const tutors=Object.keys(map).sort();
   if(!tutors.length){el.innerHTML='<div class="pay-empty">No tutor data.</div>';return;}
   const pctBadge=(v,n,tip)=>{if(!n)return '<span class="ts-pct ts-na">—</span>';const p=Math.round((v/n)*100);const cls=p>=60?'ts-good':p>=50?'ts-watch':'ts-bad';return `<span class="ts-pct ${cls}" title="${esc(tip)}">${p}%</span>`;};
-  el.innerHTML=`<table class="pay-table ts-table"><thead><tr><th>Tutor</th><th>Students</th><th>Attendance</th><th>Submissions</th><th>On track</th><th>Watch</th><th>At risk</th><th>No data</th></tr></thead><tbody>${tutors.map(t=>{
+  el.innerHTML=`<table class="pay-table ts-table"><thead><tr><th>Tutor</th><th>Students</th><th>Attendance</th><th>Submissions</th><th>On track</th><th>Watch</th><th>At risk</th><th>New</th></tr></thead><tbody>${tutors.map(t=>{
     const g=map[t];
     const noteBtn=(cat)=>{const latest=latestTutorNote(t,cat);const tip=latest?`${latest.Author||'Note'} (${noteWhen(latest)}):\n${latest.Note||''}`:`${cat} notes — none yet`;return `<button class="ts-note-btn" title="${esc(tip)}" onclick="openTutorNotes('${jsq(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;};
     // Counts open At-Risk filtered to this tutor + band. "Unassigned" has no tutor value
     // the At-Risk filter could select, and a zero has nothing to show — both stay plain.
     const can=t!=='Unassigned';
     const cnt=(n,cls,band)=>(can&&n)
-      ?`<button class="ts-count ${cls} ts-link" title="Open At-Risk: ${esc(t)} · ${({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[band]}" onclick="riskDrill('${jsq(t)}','${band}')">${n}</button>`
+      ?`<button class="ts-count ${cls} ts-link" title="Open At-Risk: ${esc(t)} · ${({red:'At risk',yellow:'Watch',green:'On track',nodata:'New'})[band]}" onclick="riskDrill('${jsq(t)}','${band}')">${n}</button>`
       :`<span class="ts-count ${cls}">${n}</span>`;
     const nameCell=can?`<button class="ts-name-link" title="Open At-Risk for all of ${esc(t)}'s students" onclick="riskDrill('${jsq(t)}','')">${esc(t)}</button>`:`<strong>${esc(t)}</strong>`;
-    return `<tr><td>${nameCell}</td><td>${g.total}</td><td><span class="ts-cell">${pctBadge(g.att,g.exp,`${g.att} of ${g.exp} classes attended · ${g.rated} student${g.rated===1?'':'s'} rated`)}${noteBtn('Attendance')}</span></td><td><span class="ts-cell">${pctBadge(g.sub,g.exp,`${g.sub} of ${g.exp} submitted · ${g.rated} student${g.rated===1?'':'s'} rated`)}${noteBtn('Submission')}</span></td><td>${cnt(g.green,'ts-green','green')}</td><td>${cnt(g.yellow,'ts-yellow','yellow')}</td><td>${cnt(g.red,'ts-red','red')}</td><td>${cnt(g.nodata,'ts-nodata','nodata')}</td></tr>`;
+    return `<tr><td>${nameCell}</td><td>${g.total}</td><td><span class="ts-cell">${pctBadge(g.att,g.exp,`${g.att} of ${g.exp} classes attended · ${g.rated} student${g.rated===1?'':'s'} with classes due`)}${noteBtn('Attendance')}</span></td><td><span class="ts-cell">${pctBadge(g.sub,g.exp,`${g.sub} of ${g.exp} submitted · ${g.rated} student${g.rated===1?'':'s'} with classes due`)}${noteBtn('Submission')}</span></td><td>${cnt(g.green,'ts-green','green')}</td><td>${cnt(g.yellow,'ts-yellow','yellow')}</td><td>${cnt(g.red,'ts-red','red')}</td><td>${cnt(g.nodata,'ts-nodata','nodata')}</td></tr>`;
   }).join('')}</tbody></table>`;
 };
 window.openTutorNotes=function(tutor,category){
